@@ -31,7 +31,8 @@ export function AuditTable({ entries }: { entries: AuditLogEntry[] }) {
         Read-only audit trail &mdash; every category and assignment write appends an immutable
         row.
       </div>
-      <table className="w-full text-left text-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[760px] text-left text-sm">
         <thead>
           <tr className="border-b border-ink-100 bg-ink-50 text-[11px] uppercase tracking-wide text-ink-500">
             <th className="px-4 py-2.5 font-semibold">Timestamp</th>
@@ -82,6 +83,7 @@ export function AuditTable({ entries }: { entries: AuditLogEntry[] }) {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

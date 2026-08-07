@@ -27,7 +27,7 @@ export default function ClusterExplorerPage() {
           </div>
         </div>
       ) : (
-        <div className="flex h-[calc(100vh-6.5rem)] gap-4">
+        <div className="flex h-auto flex-col gap-4 lg:h-[calc(100vh-6.5rem)] lg:flex-row">
           <ClusterList
             clusters={clusterExplorerEntries}
             activeId={activeId}

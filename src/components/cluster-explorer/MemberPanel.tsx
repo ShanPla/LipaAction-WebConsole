@@ -10,15 +10,15 @@ export function MemberPanel({ cluster }: { cluster: ClusterExplorerEntry }) {
   const { showToast } = useToast();
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
-      <div className="flex items-center justify-between border-b border-ink-100 px-4 py-3">
+    <div className="flex min-h-[16rem] flex-1 flex-col overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
+      <div className="flex flex-col gap-2 border-b border-ink-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-ink-900">
             {cluster.id} &middot; {cluster.category}, {cluster.memberCount} reports clustered
           </p>
           <p className="text-xs text-ink-500">{cluster.centroidLabel}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
             size="sm"

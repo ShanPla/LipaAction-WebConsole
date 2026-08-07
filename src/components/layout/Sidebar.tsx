@@ -22,15 +22,19 @@ function NavLink({
   label,
   icon,
   active,
+  onNavigate,
 }: {
   href: string;
   label: string;
   icon: string;
   active: boolean;
+  onNavigate?: () => void;
 }) {
   return (
     <Link
       href={href}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
       className={cx(
         "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
         active
@@ -46,7 +50,7 @@ function NavLink({
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
   const pathname = usePathname();
 
   return (
@@ -64,7 +68,12 @@ export function Sidebar() {
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
         <div className="flex flex-col gap-0.5">
           {primaryNav.map((item) => (
-            <NavLink key={item.href} {...item} active={pathname === item.href} />
+            <NavLink
+              key={item.href}
+              {...item}
+              active={pathname === item.href}
+              onNavigate={onNavigate}
+            />
           ))}
         </div>
 
@@ -74,7 +83,12 @@ export function Sidebar() {
           </p>
           <div className="flex flex-col gap-0.5">
             {secondaryNav.map((item) => (
-              <NavLink key={item.href} {...item} active={pathname === item.href} />
+              <NavLink
+                key={item.href}
+                {...item}
+                active={pathname === item.href}
+                onNavigate={onNavigate}
+              />
             ))}
           </div>
         </div>
@@ -85,7 +99,12 @@ export function Sidebar() {
           </p>
           <div className="flex flex-col gap-0.5">
             {bottomNav.map((item) => (
-              <NavLink key={item.href} {...item} active={pathname === item.href} />
+              <NavLink
+                key={item.href}
+                {...item}
+                active={pathname === item.href}
+                onNavigate={onNavigate}
+              />
             ))}
           </div>
         </div>

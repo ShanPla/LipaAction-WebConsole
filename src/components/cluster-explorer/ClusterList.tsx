@@ -17,7 +17,7 @@ export function ClusterList({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="flex w-64 shrink-0 flex-col overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
+    <div className="flex w-full shrink-0 flex-col overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel lg:w-64 lg:max-h-none max-h-64">
       <div className="border-b border-ink-100 px-3 py-2.5">
         <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">
           Clusters &middot; {clusters.length}
