@@ -1,6 +1,7 @@
 "use client";
 
 import { cx } from "@/lib/utils";
+import { useToast } from "@/components/ui/Toast";
 import type { SettingsSectionId } from "@/types";
 
 const sections: { id: SettingsSectionId; label: string }[] = [
@@ -18,6 +19,8 @@ export function SettingsNav({
   active: SettingsSectionId;
   onChange: (id: SettingsSectionId) => void;
 }) {
+  const { showToast } = useToast();
+
   return (
     <div className="w-56 shrink-0 overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
       <nav className="flex flex-col p-1.5">
@@ -36,7 +39,10 @@ export function SettingsNav({
           </button>
         ))}
         <div className="my-1 border-t border-ink-100" />
-        <button className="rounded-md px-3 py-2 text-left text-sm font-medium text-priority-critical hover:bg-priority-criticalBg">
+        <button
+          onClick={() => showToast("Signed out (mockup only — no session was active)", "info")}
+          className="rounded-md px-3 py-2 text-left text-sm font-medium text-priority-critical hover:bg-priority-criticalBg"
+        >
           Sign out
         </button>
       </nav>

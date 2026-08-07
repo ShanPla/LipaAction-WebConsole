@@ -15,7 +15,7 @@ export function HistoryTable({ records }: { records: ValidationRecord[] }) {
       <div className="rounded-card border border-ink-100 bg-white px-4 py-10 text-center shadow-panel">
         <p className="text-sm font-medium text-ink-700">No validation records yet</p>
         <p className="mt-1 text-xs text-ink-500">
-          Records appear here once reports in your barangay's queue have been confirmed or
+          Records appear here once reports in your barangay&apos;s queue have been confirmed or
           rejected.
         </p>
       </div>

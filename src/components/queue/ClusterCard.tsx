@@ -1,9 +1,14 @@
+"use client";
+
 import { Button } from "@/components/ui/Button";
 import { ReporterChip } from "@/components/ui/ReporterChip";
 import { PriorityBadge } from "@/components/ui/Badge";
+import { useToast } from "@/components/ui/Toast";
 import type { SituationCluster } from "@/types";
 
 export function ClusterCard({ cluster }: { cluster: SituationCluster }) {
+  const { showToast } = useToast();
+
   return (
     <div className="mb-4 overflow-hidden rounded-card border border-priority-critical/30 bg-priority-criticalBg/40">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-priority-critical/20 px-4 py-2.5">
@@ -21,10 +26,20 @@ export function ClusterCard({ cluster }: { cluster: SituationCluster }) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() =>
+              showToast(`${cluster.id} split into ${cluster.memberCount} commitments`, "info")
+            }
+          >
             Split into commitments
           </Button>
-          <Button variant="primary" size="sm">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => showToast(`${cluster.id} validated as one cluster`, "success")}
+          >
             Validate as one cluster
           </Button>
         </div>

@@ -1,9 +1,14 @@
+"use client";
+
 import { PriorityBadge } from "@/components/ui/Badge";
 import { ReporterChip } from "@/components/ui/ReporterChip";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import type { ClusterExplorerEntry } from "@/types";
 
 export function MemberPanel({ cluster }: { cluster: ClusterExplorerEntry }) {
+  const { showToast } = useToast();
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
       <div className="flex items-center justify-between border-b border-ink-100 px-4 py-3">
@@ -14,13 +19,25 @@ export function MemberPanel({ cluster }: { cluster: ClusterExplorerEntry }) {
           <p className="text-xs text-ink-500">{cluster.centroidLabel}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => showToast(`Flagged ${cluster.id} as a wrong duplicate match`, "danger")}
+          >
             Wrong duplicate match
           </Button>
-          <Button variant="secondary" size="sm">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => showToast(`${cluster.id} split into separate clusters`, "info")}
+          >
             Split into separate clusters
           </Button>
-          <Button variant="primary" size="sm">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => showToast(`Merged selected members into ${cluster.id}`, "success")}
+          >
             Merge selected
           </Button>
         </div>

@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { cx } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
+import { auditSummary } from "@/data/mockAuditLog";
 
 const filterOptions = ["Today", "Last 7d", "State changes only", "PII access", "All actors"];
 
 export function AuditFilters() {
   const [active, setActive] = useState("Last 7d");
+  const { showToast } = useToast();
 
   return (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -27,7 +30,11 @@ export function AuditFilters() {
           </button>
         ))}
       </div>
-      <Button variant="secondary" size="sm">
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => showToast(`Exported ${auditSummary.totalEvents} events as CSV`, "success")}
+      >
         Export CSV
       </Button>
     </div>

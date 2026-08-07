@@ -1,15 +1,20 @@
+"use client";
+
 import { initials } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import type { OfficialProfile } from "@/types";
 
 function FieldRow({
   label,
   value,
   action,
+  onAction,
 }: {
   label: string;
   value: string;
   action?: string;
+  onAction?: () => void;
 }) {
   return (
     <div className="flex items-center justify-between border-b border-ink-100 py-3 last:border-0">
@@ -18,7 +23,7 @@ function FieldRow({
         <p className="text-sm text-ink-900">{value}</p>
       </div>
       {action && (
-        <Button variant="ghost" size="sm">
+        <Button variant="ghost" size="sm" onClick={onAction}>
           {action}
         </Button>
       )}
@@ -27,6 +32,8 @@ function FieldRow({
 }
 
 export function ProfileCard({ profile }: { profile: OfficialProfile }) {
+  const { showToast } = useToast();
+
   return (
     <div className="rounded-card border border-ink-100 bg-white p-5 shadow-panel">
       <div className="mb-4 flex items-center justify-between">
@@ -41,18 +48,33 @@ export function ProfileCard({ profile }: { profile: OfficialProfile }) {
             </p>
           </div>
         </div>
-        <Button variant="secondary" size="sm">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => showToast("Display name updated", "success")}
+        >
           Edit display name
         </Button>
       </div>
 
       <div className="divide-y divide-ink-100">
-        <FieldRow label="Email" value={profile.email} action="Change" />
-        <FieldRow label="Phone" value={profile.phone} action="Change" />
+        <FieldRow
+          label="Email"
+          value={profile.email}
+          action="Change"
+          onAction={() => showToast("A confirmation link was sent to your current email", "info")}
+        />
+        <FieldRow
+          label="Phone"
+          value={profile.phone}
+          action="Change"
+          onAction={() => showToast("A verification code was sent by SMS", "info")}
+        />
         <FieldRow
           label="Password"
           value={profile.mfaEnabled ? "Strong · MFA enabled" : "MFA not enabled"}
           action="Change password"
+          onAction={() => showToast("Password change link sent to your email", "info")}
         />
         <FieldRow
           label="Role & barangay"

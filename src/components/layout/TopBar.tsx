@@ -22,10 +22,14 @@ export function TopBar({
       </nav>
 
       <div className="flex items-center gap-3">
-        <div className="hidden items-center gap-2 rounded-md border border-ink-100 bg-ink-50 px-2.5 py-1.5 text-xs text-ink-500 md:flex">
+        <label className="hidden items-center gap-2 rounded-md border border-ink-100 bg-ink-50 px-2.5 py-1.5 text-xs text-ink-500 md:flex">
           <span aria-hidden>🔍</span>
-          Search report ID, reporter, address&hellip;
-        </div>
+          <input
+            type="search"
+            placeholder="Search report ID, reporter, address…"
+            className="w-56 bg-transparent text-xs text-ink-700 placeholder:text-ink-500 focus:outline-none"
+          />
+        </label>
         {actions}
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-500 text-xs font-semibold text-white">
           {initials(currentOfficial.name)}

@@ -1,3 +1,4 @@
 {
-    "liveServer.settings.multiRootWorkspaceName": "lipaaction-barangay-console"
+    "liveServer.settings.multiRootWorkspaceName": "lipaaction-barangay-console",
+    "js/ts.tsdk.path": "node_modules\\typescript\\lib"
 }

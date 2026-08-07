@@ -18,7 +18,7 @@ export function AuditTable({ entries }: { entries: AuditLogEntry[] }) {
       <div className="rounded-card border border-ink-100 bg-white px-4 py-10 text-center shadow-panel">
         <p className="text-sm font-medium text-ink-700">No audit events in this range</p>
         <p className="mt-1 text-xs text-ink-500">
-          Try widening the date filter, or switch to "All actors" above.
+          Try widening the date filter, or switch to &quot;All actors&quot; above.
         </p>
       </div>
     );

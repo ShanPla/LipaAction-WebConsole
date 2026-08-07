@@ -28,7 +28,7 @@ function PrivacySection() {
           <span className="mt-0.5 text-brand-600" aria-hidden>
             •
           </span>
-          Identity-withheld reports never expose the reporter's name in any surface you can
+          Identity-withheld reports never expose the reporter&apos;s name in any surface you can
           access.
         </li>
         <li className="flex items-start gap-2">
