@@ -10,6 +10,18 @@ const tierToPriority: Record<ValidationRecord["tier"], "Critical" | "High" | "Lo
 };
 
 export function HistoryTable({ records }: { records: ValidationRecord[] }) {
+  if (records.length === 0) {
+    return (
+      <div className="rounded-card border border-ink-100 bg-white px-4 py-10 text-center shadow-panel">
+        <p className="text-sm font-medium text-ink-700">No validation records yet</p>
+        <p className="mt-1 text-xs text-ink-500">
+          Records appear here once reports in your barangay's queue have been confirmed or
+          rejected.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
       <table className="w-full text-left text-sm">

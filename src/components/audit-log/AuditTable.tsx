@@ -13,6 +13,17 @@ const actionToneMap: Record<AuditLogEntry["actionType"], "neutral" | "brand" | "
 };
 
 export function AuditTable({ entries }: { entries: AuditLogEntry[] }) {
+  if (entries.length === 0) {
+    return (
+      <div className="rounded-card border border-ink-100 bg-white px-4 py-10 text-center shadow-panel">
+        <p className="text-sm font-medium text-ink-700">No audit events in this range</p>
+        <p className="mt-1 text-xs text-ink-500">
+          Try widening the date filter, or switch to "All actors" above.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
       <div className="flex items-center gap-2 border-b border-ink-100 bg-brand-50 px-4 py-2 text-xs text-brand-700">
