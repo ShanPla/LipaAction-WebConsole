@@ -1,19 +1,10 @@
-import { AppShell } from "@/components/layout/AppShell";
-import { AuditSummaryTiles } from "@/components/audit-log/AuditSummaryTiles";
-import { AuditFilters } from "@/components/audit-log/AuditFilters";
-import { AuditTable } from "@/components/audit-log/AuditTable";
-import { auditLogEntries, auditSummary } from "@/data/mockAuditLog";
+import { requireBarangayOfficial } from "@/lib/auth";
+import { AuditLogClient } from "./AuditLogClient";
 
-export default function AuditLogPage() {
-  return (
-    <AppShell breadcrumb={["Brgy. Tambo", "Audit Log"]}>
-      <AuditSummaryTiles summary={auditSummary} />
-      <AuditFilters />
-      <AuditTable entries={auditLogEntries} />
-      <p className="mt-3 text-xs text-ink-500">
-        Showing {auditLogEntries.length} of {auditSummary.totalEvents} events &middot;
-        retention: 180 days (verification/sanction events retained indefinitely)
-      </p>
-    </AppShell>
-  );
+// This page depends on the signed-in user's session — never statically prerender it.
+export const dynamic = "force-dynamic";
+
+export default async function AuditLogPage() {
+  await requireBarangayOfficial();
+  return <AuditLogClient />;
 }
