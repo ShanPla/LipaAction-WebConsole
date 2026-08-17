@@ -16,14 +16,17 @@ import {
 } from "@/data/mockQueue";
 import type { QueueTabId } from "@/types";
 
-export function QueueClient() {
+import type { OfficialProfile } from "@/lib/auth";
+
+export function QueueClient({ official }: { official: OfficialProfile }) {
   const [activeTab, setActiveTab] = useState<QueueTabId>("emergency");
   const rows = queueByTab[activeTab];
   const { showToast } = useToast();
 
   return (
     <AppShell
-      breadcrumb={["Brgy. Tambo", "Queue"]}
+      breadcrumb={[official.barangayName, "Queue"]}
+      official={official}
       actions={
         <>
           <Button

@@ -1,13 +1,15 @@
-import { initials } from "@/lib/utils";
-import { currentOfficial } from "@/data/mockSettings";
+import { ProfileMenu } from "./ProfileMenu";
+import type { OfficialProfile } from "@/lib/auth";
 
 export function TopBar({
   breadcrumb,
   actions,
+  official,
   onMenuClick,
 }: {
   breadcrumb: string[];
   actions?: React.ReactNode;
+  official: OfficialProfile;
   onMenuClick?: () => void;
 }) {
   return (
@@ -47,9 +49,7 @@ export function TopBar({
           />
         </label>
         {actions}
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-xs font-semibold text-white">
-          {initials(currentOfficial.name)}
-        </span>
+        <ProfileMenu official={official} />
       </div>
     </header>
   );

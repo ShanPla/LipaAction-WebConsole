@@ -14,6 +14,7 @@ export interface OfficialProfile {
   fullName: string | null;
   role: BarangayRole;
   barangayId: string;
+  barangayName: string;
 }
 
 /**
@@ -35,7 +36,7 @@ export async function requireBarangayOfficial(): Promise<OfficialProfile> {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, full_name, role, barangay_id")
+    .select("id, full_name, role, barangay_id, barangays ( name )")
     .eq("id", user.id)
     .single();
 
@@ -50,11 +51,19 @@ export async function requireBarangayOfficial(): Promise<OfficialProfile> {
     redirect("/not-authorized");
   }
 
+  // Supabase's join comes back as an array even for a to-one relationship
+  // unless the FK is marked unique — normalize it to a single value here so
+  // every caller downstream just gets a plain string.
+  const barangayName = Array.isArray(profile.barangays)
+    ? profile.barangays[0]?.name
+    : (profile.barangays as { name: string } | null)?.name;
+
   return {
     id: profile.id,
     fullName: profile.full_name,
     role: profile.role,
     barangayId: profile.barangay_id,
+    barangayName: barangayName ?? "Unknown barangay",
   };
 }
 

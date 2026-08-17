@@ -5,6 +5,6 @@ import { AuditLogClient } from "./AuditLogClient";
 export const dynamic = "force-dynamic";
 
 export default async function AuditLogPage() {
-  await requireBarangayOfficial();
-  return <AuditLogClient />;
+  const official = await requireBarangayOfficial();
+  return <AuditLogClient official={official} />;
 }

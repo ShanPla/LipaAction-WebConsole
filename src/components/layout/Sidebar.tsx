@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cx, initials } from "@/lib/utils";
-import { currentOfficial } from "@/data/mockSettings";
+import { cx, initials, roleLabel } from "@/lib/utils";
+import type { OfficialProfile } from "@/lib/auth";
 
 const primaryNav = [
   { href: "/queue", label: "Queue", icon: "▤" },
@@ -50,8 +50,15 @@ function NavLink({
   );
 }
 
-export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
+export function Sidebar({
+  official,
+  onNavigate,
+}: {
+  official: OfficialProfile;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
+  const displayName = official.fullName ?? "Unnamed official";
 
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-ink-100 bg-white">
@@ -112,12 +119,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
 
       <div className="flex items-center gap-2.5 border-t border-ink-100 px-4 py-3">
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-500 text-xs font-semibold text-white">
-          {initials(currentOfficial.name)}
+          {initials(displayName)}
         </span>
-        <div className="leading-tight">
-          <p className="text-xs font-semibold text-ink-900">{currentOfficial.name}</p>
-          <p className="text-[11px] text-ink-500">
-            Brgy. Secretary · {currentOfficial.barangay}
+        <div className="min-w-0 leading-tight">
+          <p className="truncate text-xs font-semibold text-ink-900">{displayName}</p>
+          <p className="truncate text-[11px] text-ink-500">
+            {roleLabel(official.role)} · {official.barangayName}
           </p>
         </div>
       </div>

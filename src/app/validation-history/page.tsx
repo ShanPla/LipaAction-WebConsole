@@ -5,6 +5,6 @@ import { ValidationHistoryClient } from "./ValidationHistoryClient";
 export const dynamic = "force-dynamic";
 
 export default async function ValidationHistoryPage() {
-  await requireBarangayOfficial();
-  return <ValidationHistoryClient />;
+  const official = await requireBarangayOfficial();
+  return <ValidationHistoryClient official={official} />;
 }

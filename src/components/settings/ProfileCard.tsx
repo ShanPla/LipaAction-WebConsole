@@ -3,7 +3,7 @@
 import { initials } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import type { OfficialProfile } from "@/types";
+import type { MockOfficialProfile } from "@/types";
 
 function FieldRow({
   label,
@@ -31,7 +31,7 @@ function FieldRow({
   );
 }
 
-export function ProfileCard({ profile }: { profile: OfficialProfile }) {
+export function ProfileCard({ profile }: { profile: MockOfficialProfile }) {
   const { showToast } = useToast();
 
   return (

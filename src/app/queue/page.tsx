@@ -5,6 +5,6 @@ import { QueueClient } from "./QueueClient";
 export const dynamic = "force-dynamic";
 
 export default async function QueuePage() {
-  await requireBarangayOfficial();
-  return <QueueClient />;
+  const official = await requireBarangayOfficial();
+  return <QueueClient official={official} />;
 }

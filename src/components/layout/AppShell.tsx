@@ -3,14 +3,17 @@
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
+import type { OfficialProfile } from "@/lib/auth";
 
 export function AppShell({
   breadcrumb,
   actions,
+  official,
   children,
 }: {
   breadcrumb: string[];
   actions?: React.ReactNode;
+  official: OfficialProfile;
   children: React.ReactNode;
 }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -19,7 +22,7 @@ export function AppShell({
     <div className="flex h-screen w-full overflow-hidden bg-ink-50">
       {/* Desktop sidebar */}
       <div className="hidden lg:block">
-        <Sidebar />
+        <Sidebar official={official} />
       </div>
 
       {/* Mobile off-canvas sidebar */}
@@ -31,7 +34,7 @@ export function AppShell({
             onClick={() => setMobileNavOpen(false)}
           />
           <div className="relative z-50 h-full">
-            <Sidebar onNavigate={() => setMobileNavOpen(false)} />
+            <Sidebar official={official} onNavigate={() => setMobileNavOpen(false)} />
           </div>
         </div>
       )}
@@ -40,6 +43,7 @@ export function AppShell({
         <TopBar
           breadcrumb={breadcrumb}
           actions={actions}
+          official={official}
           onMenuClick={() => setMobileNavOpen(true)}
         />
         <main id="main-content" className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">

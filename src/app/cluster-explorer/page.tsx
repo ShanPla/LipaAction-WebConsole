@@ -5,6 +5,6 @@ import { ClusterExplorerClient } from "./ClusterExplorerClient";
 export const dynamic = "force-dynamic";
 
 export default async function ClusterExplorerPage() {
-  await requireBarangayOfficial();
-  return <ClusterExplorerClient />;
+  const official = await requireBarangayOfficial();
+  return <ClusterExplorerClient official={official} />;
 }

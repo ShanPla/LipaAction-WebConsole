@@ -6,8 +6,9 @@ import { ClusterList } from "@/components/cluster-explorer/ClusterList";
 import { MemberPanel } from "@/components/cluster-explorer/MemberPanel";
 import { MapPanel } from "@/components/cluster-explorer/MapPanel";
 import { clusterExplorerEntries } from "@/data/mockClusters";
+import type { OfficialProfile } from "@/lib/auth";
 
-export function ClusterExplorerClient() {
+export function ClusterExplorerClient({ official }: { official: OfficialProfile }) {
   const hasClusters = clusterExplorerEntries.length > 0;
   const [activeId, setActiveId] = useState(
     hasClusters ? clusterExplorerEntries[0].id : ""
@@ -15,7 +16,7 @@ export function ClusterExplorerClient() {
   const activeCluster = clusterExplorerEntries.find((c) => c.id === activeId);
 
   return (
-    <AppShell breadcrumb={["Brgy. Tambo", "Cluster Explorer"]}>
+    <AppShell breadcrumb={[official.barangayName, "Cluster Explorer"]} official={official}>
       {!hasClusters ? (
         <div className="flex h-[calc(100vh-6.5rem)] items-center justify-center rounded-card border border-ink-100 bg-white shadow-panel">
           <div className="text-center">

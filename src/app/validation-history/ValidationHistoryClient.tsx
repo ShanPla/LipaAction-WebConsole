@@ -3,10 +3,11 @@ import { SummaryTiles } from "@/components/validation-history/SummaryTiles";
 import { HistoryFilters } from "@/components/validation-history/HistoryFilters";
 import { HistoryTable } from "@/components/validation-history/HistoryTable";
 import { validationRecords, validationSummary } from "@/data/mockValidationHistory";
+import type { OfficialProfile } from "@/lib/auth";
 
-export function ValidationHistoryClient() {
+export function ValidationHistoryClient({ official }: { official: OfficialProfile }) {
   return (
-    <AppShell breadcrumb={["Brgy. Tambo", "Validation History"]}>
+    <AppShell breadcrumb={[official.barangayName, "Validation History"]} official={official}>
       <SummaryTiles summary={validationSummary} />
       <HistoryFilters />
       <HistoryTable records={validationRecords} />

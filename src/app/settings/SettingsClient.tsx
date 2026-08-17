@@ -8,6 +8,7 @@ import { LanguageSection } from "@/components/settings/LanguageSection";
 import { NotificationsSection } from "@/components/settings/NotificationsSection";
 import { currentOfficial, notificationPreferences } from "@/data/mockSettings";
 import type { SettingsSectionId } from "@/types";
+import type { OfficialProfile } from "@/lib/auth";
 
 function PrivacySection() {
   return (
@@ -56,14 +57,19 @@ function AboutSection() {
   );
 }
 
-export function SettingsClient() {
+export function SettingsClient({ official }: { official: OfficialProfile }) {
   const [activeSection, setActiveSection] = useState<SettingsSectionId>("profile");
 
   return (
-    <AppShell breadcrumb={["Brgy. Tambo", "Settings"]}>
+    <AppShell breadcrumb={[official.barangayName, "Settings"]} official={official}>
       <div className="flex gap-4">
         <SettingsNav active={activeSection} onChange={setActiveSection} />
         <div className="flex-1 space-y-4">
+          {/* TODO: ProfileCard still renders mock data (currentOfficial) — email,
+              phone, MFA status, and role-grant info aren't fetched from Supabase
+              yet. AppShell/Sidebar/TopBar now show the REAL signed-in official
+              (via the `official` prop above); this card is the one piece of
+              Settings still not wired to real data. Separate task. */}
           {activeSection === "profile" && <ProfileCard profile={currentOfficial} />}
           {activeSection === "language" && <LanguageSection />}
           {activeSection === "notifications" && (

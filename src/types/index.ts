@@ -111,7 +111,12 @@ export interface AuditSummary {
   uniqueActors: number;
 }
 
-export interface OfficialProfile {
+// NOTE: this is the mock-data shape for the (not-yet-wired-to-real-data)
+// Settings > Profile section. Deliberately named differently from
+// lib/auth.ts's OfficialProfile (the REAL signed-in official from Supabase,
+// used by AppShell/Sidebar/TopBar) — they used to share the name
+// "OfficialProfile" which was a genuine mix-up risk once both existed.
+export interface MockOfficialProfile {
   name: string;
   role: string;
   barangay: string;

@@ -5,6 +5,6 @@ import { SettingsClient } from "./SettingsClient";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  await requireBarangayOfficial();
-  return <SettingsClient />;
+  const official = await requireBarangayOfficial();
+  return <SettingsClient official={official} />;
 }

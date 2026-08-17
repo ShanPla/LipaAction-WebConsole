@@ -1,6 +1,6 @@
-import type { NotificationPreferences, OfficialProfile } from "@/types";
+import type { NotificationPreferences, MockOfficialProfile } from "@/types";
 
-export const currentOfficial: OfficialProfile = {
+export const currentOfficial: MockOfficialProfile = {
   name: "Maria Lourdes R.",
   role: "Barangay Secretary",
   barangay: "Brgy. Tambo",
