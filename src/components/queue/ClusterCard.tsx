@@ -59,8 +59,12 @@ export function ClusterCard({ cluster }: { cluster: SituationCluster }) {
               </div>
               <p className="mb-1.5 truncate text-sm text-ink-900">{member.summary}</p>
               <div className="flex flex-wrap items-center gap-3 text-xs text-ink-500">
-                <span>{member.location}</span>
-                <span aria-hidden>·</span>
+                {member.location && (
+                  <>
+                    <span>{member.location}</span>
+                    <span aria-hidden>·</span>
+                  </>
+                )}
                 <span>{member.timestamp}</span>
                 <span aria-hidden>·</span>
                 <ReporterChip reporter={member.reporter} />

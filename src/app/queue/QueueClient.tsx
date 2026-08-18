@@ -8,19 +8,19 @@ import { QueueTabs } from "@/components/queue/QueueTabs";
 import { ReportRow } from "@/components/queue/ReportRow";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import {
-  activeFloodingCluster,
-  queueByTab,
-  queueKpiSummary,
-  queueTabMeta,
-} from "@/data/mockQueue";
 import type { QueueTabId } from "@/types";
-
 import type { OfficialProfile } from "@/lib/auth";
+import type { QueueData } from "@/lib/data/queue";
 
-export function QueueClient({ official }: { official: OfficialProfile }) {
+export function QueueClient({
+  official,
+  queueData,
+}: {
+  official: OfficialProfile;
+  queueData: QueueData;
+}) {
   const [activeTab, setActiveTab] = useState<QueueTabId>("emergency");
-  const rows = queueByTab[activeTab];
+  const rows = queueData.queueByTab[activeTab];
   const { showToast } = useToast();
 
   return (
@@ -53,11 +53,13 @@ export function QueueClient({ official }: { official: OfficialProfile }) {
         </>
       }
     >
-      <KpiHeader summary={queueKpiSummary} />
+      <KpiHeader summary={queueData.kpiSummary} />
 
-      {activeTab === "emergency" && <ClusterCard cluster={activeFloodingCluster} />}
+      {activeTab === "emergency" && queueData.activeCluster && (
+        <ClusterCard cluster={queueData.activeCluster} />
+      )}
 
-      <QueueTabs tabs={queueTabMeta} activeTab={activeTab} onChange={setActiveTab} />
+      <QueueTabs tabs={queueData.queueTabMeta} activeTab={activeTab} onChange={setActiveTab} />
 
       <div className="overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
         {rows.length === 0 ? (
@@ -70,8 +72,7 @@ export function QueueClient({ official }: { official: OfficialProfile }) {
       </div>
 
       <p className="mt-3 text-xs text-ink-500">
-        Showing {rows.length} report{rows.length === 1 ? "" : "s"} &middot; sorted by SLA due
-        time
+        Showing {rows.length} report{rows.length === 1 ? "" : "s"}
       </p>
     </AppShell>
   );

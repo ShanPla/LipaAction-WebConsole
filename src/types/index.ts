@@ -3,12 +3,7 @@
 
 export type PriorityTier = "Critical" | "High" | "Medium" | "Low";
 
-export type QueueTabId =
-  | "emergency"
-  | "standard"
-  | "recall"
-  | "duplicates"
-  | "validated";
+export type QueueTabId = "emergency" | "standard" | "duplicates" | "validated";
 
 export interface KpiSummary {
   fastTriageCount: number;
@@ -28,7 +23,7 @@ export interface QueueReport {
   category: string; // e.g. "Vehicular accident"
   priority: PriorityTier;
   summary: string;
-  location: string;
+  location?: string; // no address text in real data — only present for mock/demo data
   timestamp: string; // display string, e.g. "2m ago"
   reporter: ReporterInfo;
   isClusterMember?: boolean;
