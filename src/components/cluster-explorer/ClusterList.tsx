@@ -48,7 +48,8 @@ export function ClusterList({
               </div>
               <span className="text-sm font-medium text-ink-900">{cluster.category}</span>
               <span className="text-xs text-ink-500">
-                {cluster.memberCount} members &middot; {cluster.radiusMeters}m radius
+                {cluster.memberCount} members
+                {cluster.radiusMeters !== undefined && ` · ${cluster.radiusMeters}m radius`}
               </span>
             </button>
           );

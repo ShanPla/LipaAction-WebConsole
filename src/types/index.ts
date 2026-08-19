@@ -56,7 +56,7 @@ export interface ClusterExplorerEntry {
   category: string;
   memberCount: number;
   status: "Critical" | "High" | "Standard";
-  radiusMeters: number;
+  radiusMeters?: number; // no real geospatial computation exists yet — mock/demo only
   centroidLabel: string;
   members: ClusterMemberDetail[];
 }

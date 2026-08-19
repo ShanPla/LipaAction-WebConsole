@@ -9,11 +9,15 @@ export function MapPanel({ cluster }: { cluster: ClusterExplorerEntry }) {
         <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">
           Spatial extent
         </p>
-        <p className="text-xs text-ink-500">{cluster.radiusMeters}m radius around centroid</p>
+        <p className="text-xs text-ink-500">
+          {cluster.radiusMeters !== undefined
+            ? `${cluster.radiusMeters}m radius around centroid`
+            : "Precise spatial extent not available yet"}
+        </p>
       </div>
 
       <div className="relative flex-1 bg-ink-50">
-        <svg viewBox="0 0 240 240" className="h-full w-full" role="img" aria-label="Cluster spatial map">
+        <svg viewBox="0 0 240 240" className="h-full w-full" role="img" aria-label="Cluster spatial map (schematic, not to scale)">
           <rect width="240" height="240" fill="#eef1ed" />
           {/* road-like guide lines to suggest a map without claiming real geodata */}
           <line x1="0" y1="120" x2="240" y2="120" stroke="#d7ddd4" strokeWidth="2" />
