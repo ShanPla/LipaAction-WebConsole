@@ -15,14 +15,10 @@ export interface OfficialProfile {
   role: BarangayRole;
   barangayId: string;
   barangayName: string;
+  email: string | null;
+  phone: string | null;
 }
 
-/**
- * Call this at the top of every gated page's Server Component. Redirects to
- * /login if there's no session, or to /not-authorized if the signed-in user's
- * role isn't one of the barangay roles this console is for. Returns the
- * profile otherwise, so the page can use the official's real identity.
- */
 export async function requireBarangayOfficial(): Promise<OfficialProfile> {
   const supabase = createClient();
 
@@ -36,7 +32,7 @@ export async function requireBarangayOfficial(): Promise<OfficialProfile> {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, full_name, role, barangay_id, barangays ( name )")
+    .select("id, full_name, role, barangay_id, phone, barangays ( name )")
     .eq("id", user.id)
     .single();
 
@@ -64,6 +60,10 @@ export async function requireBarangayOfficial(): Promise<OfficialProfile> {
     role: profile.role,
     barangayId: profile.barangay_id,
     barangayName: barangayName ?? "Unknown barangay",
+    // user.email comes from the already-fetched auth session — no extra
+    // query needed. profile.phone is a real, already-fetchable column.
+    email: user.email ?? null,
+    phone: profile.phone,
   };
 }
 

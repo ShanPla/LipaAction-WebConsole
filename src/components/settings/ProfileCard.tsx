@@ -1,9 +1,9 @@
 "use client";
 
-import { initials } from "@/lib/utils";
+import { initials, roleLabel } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import type { MockOfficialProfile } from "@/types";
+import type { OfficialProfile } from "@/lib/auth";
 
 function FieldRow({
   label,
@@ -31,20 +31,21 @@ function FieldRow({
   );
 }
 
-export function ProfileCard({ profile }: { profile: MockOfficialProfile }) {
+export function ProfileCard({ official }: { official: OfficialProfile }) {
   const { showToast } = useToast();
+  const displayName = official.fullName ?? "Unnamed official";
 
   return (
     <div className="rounded-card border border-ink-100 bg-white p-5 shadow-panel">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-base font-semibold text-white">
-            {initials(profile.name)}
+            {initials(displayName)}
           </span>
           <div>
-            <p className="text-base font-semibold text-ink-900">{profile.name}</p>
+            <p className="text-base font-semibold text-ink-900">{displayName}</p>
             <p className="text-xs text-ink-500">
-              {profile.role} &middot; {profile.barangay}, {profile.city}
+              {roleLabel(official.role)} &middot; {official.barangayName}
             </p>
           </div>
         </div>
@@ -60,27 +61,27 @@ export function ProfileCard({ profile }: { profile: MockOfficialProfile }) {
       <div className="divide-y divide-ink-100">
         <FieldRow
           label="Email"
-          value={profile.email}
+          value={official.email ?? "Not set"}
           action="Change"
           onAction={() => showToast("A confirmation link was sent to your current email", "info")}
         />
         <FieldRow
           label="Phone"
-          value={profile.phone}
+          value={official.phone ?? "Not set"}
           action="Change"
           onAction={() => showToast("A verification code was sent by SMS", "info")}
         />
         <FieldRow
           label="Password"
-          value={profile.mfaEnabled ? "Strong · MFA enabled" : "MFA not enabled"}
+          value="Manage your account password"
           action="Change password"
           onAction={() => showToast("Password change link sent to your email", "info")}
         />
-        <FieldRow
-          label="Role & barangay"
-          value={`Granted by ${profile.roleGrantedBy} on ${profile.roleGrantedDate}`}
-        />
       </div>
+
+      {/* MFA status and role-grant history (who granted this role, when) aren't
+          tracked anywhere in the schema yet — intentionally not shown here
+          rather than fabricated. Revisit if those columns get added. */}
     </div>
   );
 }

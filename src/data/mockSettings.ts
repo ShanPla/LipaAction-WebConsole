@@ -1,17 +1,7 @@
-import type { NotificationPreferences, MockOfficialProfile } from "@/types";
+import type { NotificationPreferences } from "@/types";
 
-export const currentOfficial: MockOfficialProfile = {
-  name: "Maria Lourdes R.",
-  role: "Barangay Secretary",
-  barangay: "Brgy. Tambo",
-  city: "Lipa City, Batangas",
-  email: "m*****@lipa.gov.ph",
-  phone: "+63 9** *** **20",
-  mfaEnabled: true,
-  roleGrantedBy: "Punong Barangay Reynaldo C. Ilagan",
-  roleGrantedDate: "Sept 12, 2025",
-};
-
+// currentOfficial / MockOfficialProfile removed — ProfileCard now uses the
+// real, signed-in OfficialProfile from src/lib/auth.ts instead.
 export const notificationPreferences: NotificationPreferences = {
   audibleAlertNewEmergency: true,
   slaBreachBrowserNotification: true,
