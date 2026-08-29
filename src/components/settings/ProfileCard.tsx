@@ -71,17 +71,14 @@ export function ProfileCard({ official }: { official: OfficialProfile }) {
           action="Change"
           onAction={() => showToast("A verification code was sent by SMS", "info")}
         />
-        <FieldRow
-          label="Password"
-          value="Manage your account password"
-          action="Change password"
-          onAction={() => showToast("Password change link sent to your email", "info")}
-        />
       </div>
 
-      {/* MFA status and role-grant history (who granted this role, when) aren't
-          tracked anywhere in the schema yet — intentionally not shown here
-          rather than fabricated. Revisit if those columns get added. */}
+      {/* No "Change password" row — this system is passwordless (email OTP /
+          magic-link only, shouldCreateUser: false, no signInWithPassword
+          anywhere). A password-change affordance would imply a login path
+          that doesn't exist here. MFA status and role-grant history (who
+          granted this role, when) also aren't tracked anywhere in the
+          schema — intentionally not shown rather than fabricated. */}
     </div>
   );
 }
