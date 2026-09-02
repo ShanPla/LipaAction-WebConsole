@@ -9,18 +9,18 @@ interface UpdateResult {
 }
 
 /**
- * Real Validate/Reject action. RLS's ir_update_barangay policy is what
- * actually authorizes this — a barangay_official/admin can only update
- * incident_reports rows in their own barangay. This function doesn't
- * re-check that itself; if the update is disallowed, Supabase just returns
- * zero rows affected (not a thrown error), which is surfaced below.
+ * THE CUTOVER — review_report() is now the ONLY path to validate/reject a
+ * report. As of the 2026-08-31 db push, prod's incident_reports_review_
+ * stamped CHECK constraint means a raw update({ status: 'validated' |
+ * 'rejected' }) fails with 23514 — there is no fallback, and none should
+ * be added back. Same function name/signature as before this swap
+ * (updateReportStatus(reportId, status, reason)), so ReportRow.tsx and the
+ * ReasonPromptModal flow needed ZERO changes for this cutover — only this
+ * function's internals changed.
  *
- * `reason` is accepted but NOT YET PERSISTED — the review_reason column and
- * the review_report() RPC that actually stamps it don't exist on production
- * yet (PR #12, pending). Captured here now so the UI (the Reject reason
- * prompt) is cutover-ready: when review_report() goes live, only this
- * function's internals change — ReportRow.tsx and its reason prompt don't
- * need to change at all.
+ * RLS scopes what review_report() is allowed to do (own-barangay for
+ * barangay roles, city-wide for municipal_admin) — this function doesn't
+ * re-check that itself.
  */
 export async function updateReportStatus(
   reportId: string,
@@ -29,42 +29,33 @@ export async function updateReportStatus(
 ): Promise<UpdateResult> {
   const supabase = createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: "Not signed in." };
-  }
-
   if (status === "rejected" && (!reason || reason.trim() === "")) {
     return { success: false, message: "A reason is required to reject a report." };
   }
 
-  // Only set validated_by for the validated case — this column specifically
-  // tracks who validated a report. reason is intentionally NOT written
-  // anywhere yet (see doc comment above) — TODO once review_report() lands:
-  // swap this whole function body for a supabase.rpc('review_report', ...)
-  // call, which will persist reason into the new review_reason column.
-  const update: { status: string; validated_by?: string } = { status };
-  if (status === "validated") {
-    update.validated_by = user.id;
-  }
-
-  const { data, error } = await supabase
-    .from("incident_reports")
-    .update(update)
-    .eq("id", reportId)
-    .select("id");
+  const { error } = await supabase.rpc("review_report", {
+    p_report_id: reportId,
+    p_decision: status,
+    p_reason: reason ?? null,
+  });
 
   if (error) {
-    return { success: false, message: error.message };
-  }
-
-  if (!data || data.length === 0) {
-    // RLS silently blocked the update (wrong barangay, wrong role, etc.) —
-    // no Postgres error is thrown for this, so it has to be checked here.
-    return { success: false, message: "Not permitted to update this report." };
+    // 22023: bad decision value, or missing/empty reason on reject (the RPC
+    // enforces this server-side too, not just our client-side check above).
+    if (error.code === "22023") {
+      return { success: false, message: error.message };
+    }
+    // 42501: not authorized — wrong role, wrong barangay, report not found,
+    // or it already left the pending_priority/prioritized window.
+    if (error.code === "42501") {
+      return { success: false, message: "Not permitted — wrong barangay, or already past review." };
+    }
+    // 55000: terminal-state conflict — someone else reviewed this report
+    // between when the queue loaded and when this action fired.
+    if (error.code === "55000") {
+      return { success: false, message: "Someone else already reviewed this report." };
+    }
+    return { success: false, message: "Something went wrong. Try again." };
   }
 
   revalidatePath("/queue");
