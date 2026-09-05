@@ -16,6 +16,7 @@ interface RawReport {
   identity_withheld: boolean;
   created_at: string;
   cluster_id: string | null;
+  reviewed_at: string | null;
 }
 
 export interface QueueData {
@@ -43,7 +44,7 @@ export async function getBarangayQueue(
   const { data, error } = await supabase
     .from("incident_reports")
     .select(
-      "id, category, description, priority_name, status, entry_tier, identity_withheld, created_at, cluster_id"
+      "id, category, description, priority_name, status, entry_tier, identity_withheld, created_at, cluster_id, reviewed_at"
     )
     .eq("incident_barangay_id", barangayId)
     .order("created_at", { ascending: false });
@@ -103,7 +104,12 @@ export async function getBarangayQueue(
     // agency_routing's resolved_at is wired in for a true resolution-time
     // metric.
     medianMinutes: medianAgeMinutes(pending),
-    validatedCount: rows.filter((r) => r.status === "validated").length,
+    // Genuinely "today" now. This previously counted every validated report
+    // ever while the tile was labelled "Validated today", so it only ever
+    // read correctly on a barangay's first day of use.
+    validatedCount: rows.filter(
+      (r) => r.status === "validated" && r.reviewed_at !== null && isToday(r.reviewed_at)
+    ).length,
   };
 
   const queueByTab: Record<QueueTabId, QueueReport[]> = {
@@ -163,6 +169,31 @@ function timeAgo(isoString: string): string {
   const diffHr = Math.floor(diffMin / 60);
   if (diffHr < 24) return `${diffHr}h ago`;
   return `${Math.floor(diffHr / 24)}d ago`;
+}
+
+// Philippine Standard Time, fixed at UTC+8 — the country observes no DST.
+const MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+/**
+ * True when `isoString` falls on today's date in Manila.
+ *
+ * Deliberately not the server's local day: this runs server-side, so in a
+ * deployed environment "local" is whatever the host is set to (UTC on most
+ * platforms). A UTC day boundary would roll the count over at 8am Manila
+ * time — mid-shift for the officials reading the tile.
+ *
+ * Reports reviewed before the review_report() cutover have no reviewed_at and
+ * are excluded by the caller: there's no way to know what day they were
+ * handled, and guessing would inflate today's number.
+ */
+function isToday(isoString: string): boolean {
+  const shifted = new Date(new Date(isoString).getTime() + MANILA_OFFSET_MS);
+  const nowShifted = new Date(Date.now() + MANILA_OFFSET_MS);
+  return (
+    shifted.getUTCFullYear() === nowShifted.getUTCFullYear() &&
+    shifted.getUTCMonth() === nowShifted.getUTCMonth() &&
+    shifted.getUTCDate() === nowShifted.getUTCDate()
+  );
 }
 
 function medianAgeMinutes(rows: RawReport[]): number {

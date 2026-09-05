@@ -3,10 +3,9 @@ import { ReporterChip } from "@/components/ui/ReporterChip";
 import { cx } from "@/lib/utils";
 import type { ValidationRecord } from "@/types";
 
-const tierToPriority: Record<ValidationRecord["tier"], "Critical" | "High" | "Low"> = {
-  Critical: "Critical",
-  Standard: "High",
-  Log: "Low",
+const entryTierLabels: Record<ValidationRecord["entryTier"], string> = {
+  emergency: "Emergency",
+  other_reports: "Standard intake",
 };
 
 export function HistoryTable({
@@ -40,7 +39,7 @@ export function HistoryTable({
         <thead>
           <tr className="border-b border-ink-100 bg-ink-50 text-[11px] uppercase tracking-wide text-ink-500">
             <th className="px-4 py-2.5 font-semibold">Report</th>
-            <th className="px-4 py-2.5 font-semibold">Category / Tier</th>
+            <th className="px-4 py-2.5 font-semibold">Category / Priority</th>
             <th className="px-4 py-2.5 font-semibold">Verdict</th>
             <th className="px-4 py-2.5 font-semibold">Validating official</th>
             <th className="px-4 py-2.5 font-semibold">Reporter</th>
@@ -57,8 +56,13 @@ export function HistoryTable({
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-ink-700">{record.category}</span>
-                  <PriorityBadge priority={tierToPriority[record.tier]} />
+                  <PriorityBadge priority={record.priority} />
                 </div>
+                {/* Intake tier, kept as plain text so it can't be mistaken for
+                    a second priority reading. */}
+                <p className="mt-0.5 text-[11px] text-ink-500">
+                  {entryTierLabels[record.entryTier]}
+                </p>
               </td>
               <td className="px-4 py-3 align-top">
                 <Badge tone={record.verdict === "Confirmed" ? "success" : "warning"}>

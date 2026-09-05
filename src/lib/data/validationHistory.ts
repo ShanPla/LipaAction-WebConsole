@@ -103,15 +103,12 @@ function toValidationRecord(
   return {
     reportId: r.id,
     category: r.category,
-    // No real "Log" tier column — approximated from entry_tier: standard
-    // reports (not Emergency) map to Log, Emergency reports split
-    // Critical/Standard by priority_name.
-    tier:
-      r.entry_tier === "other_reports"
-        ? "Log"
-        : r.priority_name === "Critical"
-          ? "Critical"
-          : "Standard",
+    // Both are real columns, passed through as-is. No derivation: the earlier
+    // "tier" collapsed priority and intake tier into one value, and the table
+    // then read that value back as a priority — so an emergency report with
+    // priority_name 'Low' rendered as a High badge.
+    priority: (r.priority_name ?? "Low") as ValidationRecord["priority"],
+    entryTier: r.entry_tier,
     verdict: r.status === "validated" ? "Confirmed" : "Rejected",
     // Pre-cutover rows can have a NULL reviewed_by (nobody stamped them),
     // and a reviewer whose profiles row isn't readable falls through the

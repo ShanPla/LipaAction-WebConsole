@@ -64,7 +64,12 @@ export interface ClusterExplorerEntry {
 export interface ValidationRecord {
   reportId: string;
   category: string;
-  tier: "Critical" | "Standard" | "Log";
+  // The report's real priority_name. Previously a derived "tier"
+  // (Critical/Standard/Log) that the table then re-mapped onto a priority
+  // badge — which displayed a Low report as "High". Priority and intake tier
+  // are separate axes and are now carried, and rendered, separately.
+  priority: PriorityTier;
+  entryTier: "emergency" | "other_reports";
   verdict: "Confirmed" | "Rejected";
   validatingOfficial: string;
   timestamp: string; // display string, e.g. "Sep 05, 21:47"

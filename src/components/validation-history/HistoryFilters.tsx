@@ -127,7 +127,8 @@ function downloadCsv(records: ValidationRecord[]) {
   const header = [
     "Report ID",
     "Category",
-    "Tier",
+    "Priority",
+    "Entry tier",
     "Verdict",
     "Reason",
     "Validating official",
@@ -138,7 +139,8 @@ function downloadCsv(records: ValidationRecord[]) {
   const rows = records.map((r) => [
     r.reportId,
     r.category,
-    r.tier,
+    r.priority,
+    r.entryTier,
     r.verdict,
     r.reason ?? "",
     r.validatingOfficial,
