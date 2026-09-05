@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { initials, roleLabel } from "@/lib/utils";
+import { displayName, initials, roleLabel } from "@/lib/utils";
 import { signOut } from "@/app/actions/auth";
 import type { OfficialProfile } from "@/lib/auth";
 
 export function ProfileMenu({ official }: { official: OfficialProfile }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const displayName = official.fullName ?? "Unnamed official";
+  const name = displayName(official.fullName);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -35,10 +35,10 @@ export function ProfileMenu({ official }: { official: OfficialProfile }) {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`Account menu for ${displayName}`}
+        aria-label={`Account menu for ${name}`}
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-xs font-semibold text-white transition-shadow hover:ring-2 hover:ring-brand-200"
       >
-        {initials(displayName)}
+        {initials(name)}
       </button>
 
       {open && (
@@ -47,7 +47,7 @@ export function ProfileMenu({ official }: { official: OfficialProfile }) {
           className="absolute right-0 top-10 z-50 w-56 overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel"
         >
           <div className="border-b border-ink-100 px-3.5 py-3">
-            <p className="truncate text-sm font-semibold text-ink-900">{displayName}</p>
+            <p className="truncate text-sm font-semibold text-ink-900">{name}</p>
             <p className="truncate text-xs text-ink-500">
               {roleLabel(official.role)} · {official.barangayName}
             </p>

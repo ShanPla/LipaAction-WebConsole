@@ -22,6 +22,20 @@ export function roleLabel(role: string): string {
 }
 
 /**
+ * An official's name as it should appear on screen.
+ *
+ * `fullName ?? "Unnamed official"` is not enough: `??` only catches null and
+ * undefined, so an empty or whitespace-only profiles.full_name fell through
+ * and rendered as a blank name with a blank avatar. This console can't write
+ * such a value — updateDisplayName rejects it — but `profiles` is shared with
+ * the mobile app and the other dashboard, and rows are also inserted by hand.
+ */
+export function displayName(fullName: string | null | undefined): string {
+  const trimmed = fullName?.trim() ?? "";
+  return trimmed.length > 0 ? trimmed : "Unnamed official";
+}
+
+/**
  * Renders a minute count at a scale a person can read at a glance.
  *
  * A backlog measured in minutes stops being legible fast — a report sitting

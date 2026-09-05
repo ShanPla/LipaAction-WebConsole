@@ -23,7 +23,12 @@ export function ClusterCard({ cluster }: { cluster: SituationCluster }) {
       // Partial success is the normal case here, not an edge case: another
       // official can review one member between page load and this click. Say
       // exactly what happened rather than rounding it to success.
-      if (failures.length === 0) {
+      // `validated > 0` guards the success branch: a zero-length member list
+      // would otherwise report [Validated all 0 reports] as a success and mark
+      // the cluster resolved. Not reachable today — a cluster needs 2+ members
+      // to render — but a success toast for work that did not happen is the
+      // exact failure this button was fixed to stop making.
+      if (failures.length === 0 && validated > 0) {
         setResolved(true);
         showToast(`Validated all ${validated} reports in ${cluster.id}`, "success");
       } else if (validated > 0) {

@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { displayName } from "@/lib/utils";
 import type { ValidationRecord, ValidationSummary } from "@/types";
 
 interface RawReviewedReport {
@@ -75,7 +76,7 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
       .in("id", reviewerIds);
     if (reviewers) {
       for (const r of reviewers) {
-        reviewerNames.set(r.id, r.full_name ?? "Unnamed official");
+        reviewerNames.set(r.id, displayName(r.full_name));
       }
     }
   }
