@@ -18,6 +18,11 @@ interface RawReviewedReport {
 export interface ValidationHistoryData {
   summary: ValidationSummary;
   records: ValidationRecord[];
+  // Travels with the data so the client can say the view is capped without
+  // importing anything from this module at runtime — it's "server-only", and
+  // a value import from a "use client" component would drag it into the
+  // browser bundle and fail the build. Types erase; constants don't.
+  limit: number;
 }
 
 const HISTORY_LIMIT = 50;
@@ -88,7 +93,7 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
     identityWithheld: rows.filter((r) => r.identity_withheld).length,
   };
 
-  return { summary, records };
+  return { summary, records, limit: HISTORY_LIMIT };
 }
 
 function toValidationRecord(
@@ -114,7 +119,11 @@ function toValidationRecord(
     validatingOfficial: r.reviewed_by
       ? reviewerNames.get(r.reviewed_by) ?? "Unnamed official"
       : "Unknown official",
+    // Pre-cutover rows have no reviewed_at, so created_at stands in — for both
+    // the display string and the raw value the range filter compares against,
+    // so the two can never disagree about which moment a row belongs to.
     timestamp: formatReviewedAt(r.reviewed_at ?? r.created_at),
+    reviewedAt: r.reviewed_at ?? r.created_at,
     reporter: {
       // Privacy-by-design: officials never see a reporter's name, withheld
       // or not. Same rule as the queue.
@@ -131,6 +140,7 @@ function emptyValidationHistoryData(): ValidationHistoryData {
   return {
     summary: { total: 0, confirmed: 0, confirmedFalse: 0, identityWithheld: 0 },
     records: [],
+    limit: HISTORY_LIMIT,
   };
 }
 

@@ -67,7 +67,10 @@ export interface ValidationRecord {
   tier: "Critical" | "Standard" | "Log";
   verdict: "Confirmed" | "Rejected";
   validatingOfficial: string;
-  timestamp: string;
+  timestamp: string; // display string, e.g. "Sep 05, 21:47"
+  // Raw ISO of the same moment. `timestamp` is preformatted for display and
+  // can't be compared, so date-range filtering reads this instead.
+  reviewedAt: string;
   reporter: ReporterInfo;
   trustDelta?: string; // no real trust-score column — mock/demo only
   // Real data from the review_report() cutover (incident_reports.review_reason).

@@ -9,14 +9,26 @@ const tierToPriority: Record<ValidationRecord["tier"], "Critical" | "High" | "Lo
   Log: "Low",
 };
 
-export function HistoryTable({ records }: { records: ValidationRecord[] }) {
+export function HistoryTable({
+  records,
+  // Distinguishes "this barangay has reviewed nothing yet" from "your filters
+  // excluded everything" — the same empty table means two very different
+  // things, and the second one is the user's own doing.
+  isFiltered = false,
+}: {
+  records: ValidationRecord[];
+  isFiltered?: boolean;
+}) {
   if (records.length === 0) {
     return (
       <div className="rounded-card border border-ink-100 bg-white px-4 py-10 text-center shadow-panel">
-        <p className="text-sm font-medium text-ink-700">No validation records yet</p>
+        <p className="text-sm font-medium text-ink-700">
+          {isFiltered ? "No records match these filters" : "No validation records yet"}
+        </p>
         <p className="mt-1 text-xs text-ink-500">
-          Records appear here once reports in your barangay&apos;s queue have been confirmed or
-          rejected.
+          {isFiltered
+            ? "Try a wider date range, or clear the outcome and official filters."
+            : "Records appear here once reports in your barangay's queue have been confirmed or rejected."}
         </p>
       </div>
     );
