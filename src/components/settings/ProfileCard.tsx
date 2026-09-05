@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { initials, roleLabel } from "@/lib/utils";
+import { displayName, initials, roleLabel } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { TextPromptModal } from "@/components/ui/TextPromptModal";
 import { useToast } from "@/components/ui/Toast";
@@ -27,11 +27,11 @@ export function ProfileCard({ official }: { official: OfficialProfile }) {
   const [isPending, startTransition] = useTransition();
   const [showNamePrompt, setShowNamePrompt] = useState(false);
 
-  const displayName = official.fullName ?? "Unnamed official";
+  const name = displayName(official.fullName);
 
-  function handleSaveName(name: string) {
+  function handleSaveName(nextName: string) {
     startTransition(async () => {
-      const result = await updateDisplayName(name);
+      const result = await updateDisplayName(nextName);
       if (result.success) {
         setShowNamePrompt(false);
         showToast("Display name updated", "success");
@@ -46,10 +46,10 @@ export function ProfileCard({ official }: { official: OfficialProfile }) {
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-base font-semibold text-white">
-            {initials(displayName)}
+            {initials(name)}
           </span>
           <div>
-            <p className="text-base font-semibold text-ink-900">{displayName}</p>
+            <p className="text-base font-semibold text-ink-900">{name}</p>
             <p className="text-xs text-ink-500">
               {roleLabel(official.role)} &middot; {official.barangayName}
             </p>
@@ -92,7 +92,7 @@ export function ProfileCard({ official }: { official: OfficialProfile }) {
           title="Edit display name"
           description="This is the name shown on reports you validate or reject, and in your barangay's audit trail."
           label="Display name"
-          initialValue={official.fullName ?? ""}
+          initialValue={official.fullName?.trim() ?? ""}
           confirmLabel="Save"
           maxLength={MAX_NAME_LENGTH}
           busy={isPending}

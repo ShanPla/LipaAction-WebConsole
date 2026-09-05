@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cx, initials, roleLabel } from "@/lib/utils";
+import { cx, displayName, initials, roleLabel } from "@/lib/utils";
 import type { OfficialProfile } from "@/lib/auth";
 
 const primaryNav = [
@@ -58,7 +58,7 @@ export function Sidebar({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const displayName = official.fullName ?? "Unnamed official";
+  const name = displayName(official.fullName);
 
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-ink-100 bg-white">
@@ -119,10 +119,10 @@ export function Sidebar({
 
       <div className="flex items-center gap-2.5 border-t border-ink-100 px-4 py-3">
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-500 text-xs font-semibold text-white">
-          {initials(displayName)}
+          {initials(name)}
         </span>
         <div className="min-w-0 leading-tight">
-          <p className="truncate text-xs font-semibold text-ink-900">{displayName}</p>
+          <p className="truncate text-xs font-semibold text-ink-900">{name}</p>
           <p className="truncate text-[11px] text-ink-500">
             {roleLabel(official.role)} · {official.barangayName}
           </p>
