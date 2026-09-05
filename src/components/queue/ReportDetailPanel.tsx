@@ -4,6 +4,7 @@ import { PriorityBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ReporterChip } from "@/components/ui/ReporterChip";
 import { ReasonPromptModal } from "@/components/ui/ReasonPromptModal";
+import { useDismissOnEscape } from "@/components/ui/useDismissOnEscape";
 import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
 import type { QueueReport } from "@/types";
 
@@ -47,6 +48,10 @@ export function ReportDetailPanel({
       onClose();
     }
   );
+
+  // Disabled while the reject prompt is stacked on top, so Escape backs
+  // out one layer at a time, and while a decision is in flight.
+  useDismissOnEscape(onClose, !isRejecting && !isPending);
 
   const d = report.details;
 
