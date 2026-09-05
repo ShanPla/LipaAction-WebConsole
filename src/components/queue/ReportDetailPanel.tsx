@@ -4,7 +4,7 @@ import { PriorityBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ReporterChip } from "@/components/ui/ReporterChip";
 import { ReasonPromptModal } from "@/components/ui/ReasonPromptModal";
-import { useReportReview, type Verdict } from "./useReportReview";
+import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
 import type { QueueReport } from "@/types";
 
 const entryTierLabels: Record<QueueReport["details"]["entryTier"], string> = {
@@ -117,7 +117,7 @@ export function ReportDetailPanel({
               }
             />
             <Row label="Confidence" value={d.confidenceBand ?? notProvided} />
-            <Row label="Status" value={d.status} />
+            <Row label="Status" value={statusLabel(d.status)} />
             {d.clusterId && (
               <Row
                 label="Duplicate cluster"
@@ -138,13 +138,24 @@ export function ReportDetailPanel({
           </div>
         </div>
 
-        <footer className="sticky bottom-0 flex justify-end gap-2 border-t border-ink-100 bg-white px-5 py-3">
-          <Button variant="secondary" size="sm" disabled={isPending} onClick={openReject}>
-            Reject
-          </Button>
-          <Button variant="primary" size="sm" disabled={isPending} onClick={validate}>
-            Validate
-          </Button>
+        {/* A report opened from the Recent validated tab is already decided —
+            review_report() would refuse it with 42501. Show the outcome
+            rather than offering an action that cannot succeed. */}
+        <footer className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-ink-100 bg-white px-5 py-3">
+          {isReviewable(d.status) ? (
+            <>
+              <Button variant="secondary" size="sm" disabled={isPending} onClick={openReject}>
+                Reject
+              </Button>
+              <Button variant="primary" size="sm" disabled={isPending} onClick={validate}>
+                Validate
+              </Button>
+            </>
+          ) : (
+            <p className="text-xs text-ink-500">
+              Already reviewed — no further action available here.
+            </p>
+          )}
         </footer>
       </aside>
 
@@ -167,7 +178,9 @@ function attachmentSummary(hasPhoto: boolean, hasVideo: boolean): string {
   if (hasPhoto && hasVideo) return "Photo and video";
   if (hasPhoto) return "Photo";
   if (hasVideo) return "Video";
-  return "None";
+  // Not "None" — a description can arrive from the app as the literal string
+  // "None", and the two sat three rows apart meaning different things.
+  return "No photo or video";
 }
 
 function formatTimestamp(isoString: string): string {

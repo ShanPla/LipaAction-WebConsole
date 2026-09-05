@@ -4,7 +4,7 @@ import { PriorityBadge } from "@/components/ui/Badge";
 import { ReporterChip } from "@/components/ui/ReporterChip";
 import { Button } from "@/components/ui/Button";
 import { ReasonPromptModal } from "@/components/ui/ReasonPromptModal";
-import { useReportReview, type Verdict } from "./useReportReview";
+import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
 import type { QueueReport } from "@/types";
 
 export function ReportRow({
@@ -67,20 +67,32 @@ export function ReportRow({
           </div>
         </button>
         <div className="flex shrink-0 items-center gap-2">
-          <Button variant="secondary" size="sm" disabled={isPending} onClick={openReject}>
-            Reject
-          </Button>
-          {/* data-validate-button: QueueClient's [Validate next] finds the
-              first one of these to scroll to and focus. */}
-          <Button
-            variant="primary"
-            size="sm"
-            data-validate-button
-            disabled={isPending}
-            onClick={validate}
-          >
-            Validate
-          </Button>
+          {/* The Recent validated tab renders this same row. A report already
+              past review shows its outcome instead of buttons that would only
+              fail — and leaving no [data-validate-button] behind is also what
+              keeps [Validate next] from landing on a decided report. */}
+          {isReviewable(report.details.status) ? (
+            <>
+              <Button variant="secondary" size="sm" disabled={isPending} onClick={openReject}>
+                Reject
+              </Button>
+              {/* data-validate-button: QueueClient's [Validate next] finds the
+                  first one of these to scroll to and focus. */}
+              <Button
+                variant="primary"
+                size="sm"
+                data-validate-button
+                disabled={isPending}
+                onClick={validate}
+              >
+                Validate
+              </Button>
+            </>
+          ) : (
+            <span className="text-xs font-medium text-ink-500">
+              {statusLabel(report.details.status)}
+            </span>
+          )}
         </div>
       </div>
 
