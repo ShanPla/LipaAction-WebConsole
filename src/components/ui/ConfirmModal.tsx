@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "./Button";
+import { useDismissOnEscape } from "./useDismissOnEscape";
 
 /**
  * Plain yes/no confirmation. ReasonPromptModal covers the case where a reason
@@ -25,6 +26,9 @@ export function ConfirmModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  // Not while the cluster write is running.
+  useDismissOnEscape(onCancel, !busy);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <button

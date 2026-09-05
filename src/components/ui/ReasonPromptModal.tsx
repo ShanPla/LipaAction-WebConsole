@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "./Button";
+import { useDismissOnEscape } from "./useDismissOnEscape";
 
 export function ReasonPromptModal({
   title,
@@ -17,6 +18,7 @@ export function ReasonPromptModal({
   onConfirm: (reason: string) => void;
 }) {
   const [reason, setReason] = useState("");
+  useDismissOnEscape(onCancel);
   const trimmed = reason.trim();
 
   return (

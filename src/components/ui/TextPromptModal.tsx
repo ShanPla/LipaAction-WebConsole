@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "./Button";
+import { useDismissOnEscape } from "./useDismissOnEscape";
 
 /**
  * Single-line text prompt with Save/Cancel.
@@ -33,6 +34,8 @@ export function TextPromptModal({
   onConfirm: (value: string) => void;
 }) {
   const [value, setValue] = useState(initialValue);
+  // Not while saving — same reason Cancel is disabled then.
+  useDismissOnEscape(onCancel, !busy);
   const trimmed = value.trim();
   // Nothing typed, or nothing changed — no point submitting either.
   const canSubmit = trimmed.length > 0 && trimmed !== initialValue.trim() && !busy;
