@@ -17,6 +17,19 @@ interface RawReport {
   created_at: string;
   cluster_id: string | null;
   reviewed_at: string | null;
+  // Detail-drawer fields. Fetched with the list rather than on demand: the
+  // whole set is one row that RLS already allows, so a second per-report
+  // round trip would buy nothing.
+  severity_self_rating: string | null;
+  safety_net_confirmation: string | null;
+  anyone_hurt: string | null;
+  is_ongoing: boolean | null;
+  has_photo: boolean;
+  has_video: boolean;
+  discreet_reporting: boolean;
+  priority_class: number | null;
+  priority_score: number | null;
+  confidence_band: string | null;
 }
 
 export interface QueueData {
@@ -44,7 +57,7 @@ export async function getBarangayQueue(
   const { data, error } = await supabase
     .from("incident_reports")
     .select(
-      "id, category, description, priority_name, status, entry_tier, identity_withheld, created_at, cluster_id, reviewed_at"
+      "id, category, description, priority_name, status, entry_tier, identity_withheld, created_at, cluster_id, reviewed_at, severity_self_rating, safety_net_confirmation, anyone_hurt, is_ongoing, has_photo, has_video, discreet_reporting, priority_class, priority_score, confidence_band"
     )
     .eq("incident_barangay_id", barangayId)
     .order("created_at", { ascending: false });
@@ -144,6 +157,23 @@ function toQueueReport(r: RawReport): QueueReport {
       // (privacy-by-design) — this matches that, not a data gap.
       name: r.identity_withheld ? "Identity withheld" : "Verified reporter",
       identityWithheld: r.identity_withheld,
+    },
+    details: {
+      entryTier: r.entry_tier,
+      status: r.status,
+      description: r.description,
+      severitySelfRating: r.severity_self_rating,
+      safetyNetConfirmation: r.safety_net_confirmation,
+      anyoneHurt: r.anyone_hurt,
+      isOngoing: r.is_ongoing,
+      hasPhoto: r.has_photo,
+      hasVideo: r.has_video,
+      discreetReporting: r.discreet_reporting,
+      priorityClass: r.priority_class,
+      priorityScore: r.priority_score,
+      confidenceBand: r.confidence_band,
+      clusterId: r.cluster_id,
+      submittedAt: r.created_at,
     },
   };
 }
