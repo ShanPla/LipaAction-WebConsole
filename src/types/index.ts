@@ -18,6 +18,33 @@ export interface ReporterInfo {
   trustScore?: number;
 }
 
+/**
+ * The fuller picture of a report, shown in the detail drawer.
+ *
+ * Every field here is a real incident_reports column. The free-text ones
+ * (severitySelfRating, anyoneHurt, safetyNetConfirmation) are rendered
+ * verbatim rather than mapped to friendlier labels — their value vocabulary
+ * is set by the mobile app, not by this console, so relabelling them here
+ * would be guessing.
+ */
+export interface ReportDetails {
+  entryTier: "emergency" | "other_reports";
+  status: string;
+  description: string | null;
+  severitySelfRating: string | null;
+  safetyNetConfirmation: string | null;
+  anyoneHurt: string | null;
+  isOngoing: boolean | null;
+  hasPhoto: boolean;
+  hasVideo: boolean;
+  discreetReporting: boolean;
+  priorityClass: number | null;
+  priorityScore: number | null;
+  confidenceBand: string | null;
+  clusterId: string | null;
+  submittedAt: string; // exact ISO timestamp, not the relative display string
+}
+
 export interface QueueReport {
   id: string; // e.g. "24-2024-2312"
   category: string; // e.g. "Vehicular accident"
@@ -27,6 +54,7 @@ export interface QueueReport {
   timestamp: string; // display string, e.g. "2m ago"
   reporter: ReporterInfo;
   isClusterMember?: boolean;
+  details: ReportDetails;
 }
 
 export interface SituationCluster {

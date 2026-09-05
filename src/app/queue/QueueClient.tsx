@@ -6,9 +6,11 @@ import { KpiHeader } from "@/components/queue/KpiHeader";
 import { ClusterCard } from "@/components/queue/ClusterCard";
 import { QueueTabs } from "@/components/queue/QueueTabs";
 import { ReportRow } from "@/components/queue/ReportRow";
+import { ReportDetailPanel } from "@/components/queue/ReportDetailPanel";
+import type { Verdict } from "@/components/queue/useReportReview";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import type { QueueTabId } from "@/types";
+import type { QueueReport, QueueTabId } from "@/types";
 import type { OfficialProfile } from "@/lib/auth";
 import type { QueueData } from "@/lib/data/queue";
 
@@ -23,6 +25,11 @@ export function QueueClient({
   const rows = queueData.queueByTab[activeTab];
   const { showToast } = useToast();
   const listRef = useRef<HTMLDivElement>(null);
+
+  // Held here rather than inside each row: a report can be resolved from its
+  // row or from the detail drawer, and both surfaces have to agree.
+  const [resolved, setResolved] = useState<Record<string, Verdict>>({});
+  const [selected, setSelected] = useState<QueueReport | null>(null);
 
   /**
    * Moves the official to the next report awaiting a decision: scrolls the
@@ -77,13 +84,33 @@ export function QueueClient({
             No reports in this queue right now.
           </p>
         ) : (
-          rows.map((report) => <ReportRow key={report.id} report={report} />)
+          rows.map((report) => (
+            <ReportRow
+              key={report.id}
+              report={report}
+              resolvedAs={resolved[report.id]}
+              onResolved={(verdict) =>
+                setResolved((prev) => ({ ...prev, [report.id]: verdict }))
+              }
+              onOpenDetails={() => setSelected(report)}
+            />
+          ))
         )}
       </div>
 
       <p className="mt-3 text-xs text-ink-500">
         Showing {rows.length} report{rows.length === 1 ? "" : "s"}
       </p>
+
+      {selected && (
+        <ReportDetailPanel
+          report={selected}
+          onClose={() => setSelected(null)}
+          onResolved={(verdict) =>
+            setResolved((prev) => ({ ...prev, [selected.id]: verdict }))
+          }
+        />
+      )}
     </AppShell>
   );
 }
