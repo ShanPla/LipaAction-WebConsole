@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { KpiHeader } from "@/components/queue/KpiHeader";
 import { ClusterCard } from "@/components/queue/ClusterCard";
@@ -22,35 +22,42 @@ export function QueueClient({
   const [activeTab, setActiveTab] = useState<QueueTabId>("emergency");
   const rows = queueData.queueByTab[activeTab];
   const { showToast } = useToast();
+  const listRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Moves the official to the next report awaiting a decision: scrolls the
+   * top row of the active tab into view and puts focus on its Validate
+   * button, so the keyboard is already where the work is.
+   *
+   * It does NOT validate anything. The button previously claimed to open a
+   * report for validation, but there is no report detail view in this app —
+   * the queue row is the whole surface. If a detail view is added later, this
+   * becomes [open the next report] with no change to the button itself.
+   */
+  function handleValidateNext() {
+    const target = listRef.current?.querySelector<HTMLButtonElement>("[data-validate-button]");
+    if (!target) {
+      showToast("Nothing left in this tab to validate", "info");
+      return;
+    }
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.focus();
+  }
 
   return (
     <AppShell
       breadcrumb={[official.barangayName, "Queue"]}
       official={official}
+      /* [Manual report] was removed here. incident_reports has exactly one
+         INSERT policy — ir_insert_resident, auth_role() = 'resident' AND
+         user_id = auth.uid() — so a barangay official cannot file a report at
+         all, on anyone's behalf. The button fired a toast saying a form had
+         opened; no form existed, and none could work without a backend
+         change. */
       actions={
-        <>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => showToast("Manual report form opened", "info")}
-          >
-            Manual report
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() =>
-              showToast(
-                rows.length > 0
-                  ? `Opened ${rows[0].id} for validation`
-                  : "Queue is empty — nothing to validate",
-                "info"
-              )
-            }
-          >
-            Validate next
-          </Button>
-        </>
+        <Button variant="primary" size="sm" onClick={handleValidateNext}>
+          Validate next
+        </Button>
       }
     >
       <KpiHeader summary={queueData.kpiSummary} />
@@ -61,7 +68,10 @@ export function QueueClient({
 
       <QueueTabs tabs={queueData.queueTabMeta} activeTab={activeTab} onChange={setActiveTab} />
 
-      <div className="overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
+      <div
+        ref={listRef}
+        className="overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel"
+      >
         {rows.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-ink-500">
             No reports in this queue right now.

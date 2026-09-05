@@ -82,7 +82,15 @@ export function ReportRow({ report }: { report: QueueReport }) {
           >
             Reject
           </Button>
-          <Button variant="primary" size="sm" disabled={isPending} onClick={handleValidate}>
+          {/* data-validate-button: QueueClient's [Validate next] finds the
+              first one of these to scroll to and focus. */}
+          <Button
+            variant="primary"
+            size="sm"
+            data-validate-button
+            disabled={isPending}
+            onClick={handleValidate}
+          >
             Validate
           </Button>
         </div>
