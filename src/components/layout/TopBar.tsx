@@ -1,15 +1,26 @@
 import { ProfileMenu } from "./ProfileMenu";
 import type { OfficialProfile } from "@/lib/auth";
 
+export interface TopBarSearch {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  label: string;
+}
+
 export function TopBar({
   breadcrumb,
   actions,
   official,
+  search,
   onMenuClick,
 }: {
   breadcrumb: string[];
   actions?: React.ReactNode;
   official: OfficialProfile;
+  // Omitted by pages that don't filter. The box used to render everywhere
+  // while being wired to nothing — a permanently dead input on five pages.
+  search?: TopBarSearch;
   onMenuClick?: () => void;
 }) {
   return (
@@ -38,16 +49,20 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-3">
-        <label className="hidden items-center gap-2 rounded-md border border-ink-100 bg-ink-50 px-2.5 py-1.5 text-xs text-ink-500 md:flex">
-          <span aria-hidden>🔍</span>
-          <span className="sr-only">Search report ID, reporter, or address</span>
-          <input
-            type="search"
-            aria-label="Search report ID, reporter, or address"
-            placeholder="Search report ID, reporter, address…"
-            className="w-56 bg-transparent text-xs text-ink-700 placeholder:text-ink-500 focus:outline-none"
-          />
-        </label>
+        {search && (
+          <label className="hidden items-center gap-2 rounded-md border border-ink-100 bg-ink-50 px-2.5 py-1.5 text-xs text-ink-500 md:flex">
+            <span aria-hidden>🔍</span>
+            <span className="sr-only">{search.label}</span>
+            <input
+              type="search"
+              aria-label={search.label}
+              placeholder={search.placeholder}
+              value={search.value}
+              onChange={(e) => search.onChange(e.target.value)}
+              className="w-56 bg-transparent text-xs text-ink-700 placeholder:text-ink-500 focus:outline-none"
+            />
+          </label>
+        )}
         {actions}
         <ProfileMenu official={official} />
       </div>
