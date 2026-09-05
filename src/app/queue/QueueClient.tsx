@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { KpiHeader } from "@/components/queue/KpiHeader";
 import { ClusterCard } from "@/components/queue/ClusterCard";
@@ -22,8 +22,26 @@ export function QueueClient({
   queueData: QueueData;
 }) {
   const [activeTab, setActiveTab] = useState<QueueTabId>("emergency");
-  const rows = queueData.queueByTab[activeTab];
+  const [query, setQuery] = useState("");
   const { showToast } = useToast();
+
+  // Filters the active tab's rows only. Report ID, category, and description
+  // are the searchable fields — deliberately not reporter or address, which
+  // the old placeholder advertised: reporter names are never exposed to
+  // officials, and incident_reports has no address column at all.
+  const rows = useMemo(() => {
+    const tabRows = queueData.queueByTab[activeTab];
+    const trimmed = query.trim().toLowerCase();
+    if (trimmed.length === 0) return tabRows;
+    return tabRows.filter((report) =>
+      [report.id, report.category, report.summary].some((field) =>
+        field.toLowerCase().includes(trimmed)
+      )
+    );
+  }, [queueData.queueByTab, activeTab, query]);
+
+  const unfilteredCount = queueData.queueByTab[activeTab].length;
+  const isFiltered = query.trim().length > 0;
   const listRef = useRef<HTMLDivElement>(null);
 
   // Held here rather than inside each row: a report can be resolved from its
@@ -66,6 +84,12 @@ export function QueueClient({
           Validate next
         </Button>
       }
+      search={{
+        value: query,
+        onChange: setQuery,
+        placeholder: "Search report ID, category, description…",
+        label: "Search this tab by report ID, category, or description",
+      }}
     >
       <KpiHeader summary={queueData.kpiSummary} />
 
@@ -81,7 +105,9 @@ export function QueueClient({
       >
         {rows.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-ink-500">
-            No reports in this queue right now.
+            {isFiltered
+              ? `No reports in this tab match “${query.trim()}”.`
+              : "No reports in this queue right now."}
           </p>
         ) : (
           rows.map((report) => (
@@ -99,7 +125,9 @@ export function QueueClient({
       </div>
 
       <p className="mt-3 text-xs text-ink-500">
-        Showing {rows.length} report{rows.length === 1 ? "" : "s"}
+        {isFiltered
+          ? `Showing ${rows.length} of ${unfilteredCount} report${unfilteredCount === 1 ? "" : "s"} in this tab`
+          : `Showing ${rows.length} report${rows.length === 1 ? "" : "s"}`}
       </p>
 
       {selected && (

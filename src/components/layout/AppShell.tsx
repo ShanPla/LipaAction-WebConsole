@@ -2,18 +2,20 @@
 
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
-import { TopBar } from "./TopBar";
+import { TopBar, type TopBarSearch } from "./TopBar";
 import type { OfficialProfile } from "@/lib/auth";
 
 export function AppShell({
   breadcrumb,
   actions,
   official,
+  search,
   children,
 }: {
   breadcrumb: string[];
   actions?: React.ReactNode;
   official: OfficialProfile;
+  search?: TopBarSearch;
   children: React.ReactNode;
 }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -44,6 +46,7 @@ export function AppShell({
           breadcrumb={breadcrumb}
           actions={actions}
           official={official}
+          search={search}
           onMenuClick={() => setMobileNavOpen(true)}
         />
         <main id="main-content" className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
