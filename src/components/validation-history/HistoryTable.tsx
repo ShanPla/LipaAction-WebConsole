@@ -48,10 +48,21 @@ export function HistoryTable({ records }: { records: ValidationRecord[] }) {
                   <PriorityBadge priority={tierToPriority[record.tier]} />
                 </div>
               </td>
-              <td className="px-4 py-3">
+              <td className="px-4 py-3 align-top">
                 <Badge tone={record.verdict === "Confirmed" ? "success" : "warning"}>
                   {record.verdict === "Confirmed" ? "✓ Confirmed" : "✕ Rejected"}
                 </Badge>
+                {/* Rejection reason (incident_reports.review_reason). Only
+                    rejected rows carry one — the RPC leaves it NULL on
+                    validate — so this row is absent, not empty, otherwise. */}
+                {record.reason && (
+                  <p
+                    className="mt-1 max-w-[220px] text-xs leading-snug text-ink-500"
+                    title={record.reason}
+                  >
+                    {record.reason}
+                  </p>
+                )}
               </td>
               <td className="px-4 py-3 text-xs text-ink-700">{record.validatingOfficial}</td>
               <td className="px-4 py-3">

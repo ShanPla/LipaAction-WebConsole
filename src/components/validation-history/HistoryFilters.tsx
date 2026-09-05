@@ -4,12 +4,16 @@ import { useState } from "react";
 import { cx } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import { validationSummary } from "@/data/mockValidationHistory";
 
 const rangeOptions = ["Today", "Last 7d", "All officials"];
 const outcomeOptions = ["All outcomes", "Confirmed", "Rejected"];
 
-export function HistoryFilters() {
+// NOTE: these controls are still presentational — they hold local state but
+// don't filter the table, and Export CSV only fires a toast. The row set comes
+// from getValidationHistory() server-side. `total` is the count of rows
+// actually on screen (capped at 50), passed in so this component no longer
+// depends on the deleted mock data.
+export function HistoryFilters({ total }: { total: number }) {
   const [range, setRange] = useState("Last 7d");
   const [outcome, setOutcome] = useState("All outcomes");
   const { showToast } = useToast();
@@ -45,7 +49,7 @@ export function HistoryFilters() {
         variant="secondary"
         size="sm"
         onClick={() =>
-          showToast(`Exported ${validationSummary.total} records as CSV`, "success")
+          showToast(`Exported ${total} records as CSV`, "success")
         }
       >
         Export CSV

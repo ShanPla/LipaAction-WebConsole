@@ -69,7 +69,10 @@ export interface ValidationRecord {
   validatingOfficial: string;
   timestamp: string;
   reporter: ReporterInfo;
-  trustDelta?: string;
+  trustDelta?: string; // no real trust-score column — mock/demo only
+  // Real data from the review_report() cutover (incident_reports.review_reason).
+  // Only present on rejected rows — the RPC only fills it on rejection.
+  reason?: string;
 }
 
 export interface ValidationSummary {
