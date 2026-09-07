@@ -140,8 +140,13 @@ export function LoginForm() {
 
         {step === "code" && (
           <form onSubmit={handleVerifyCode}>
+            {/* No digit count in this copy on purpose. The OTP length is a
+                Supabase project Auth setting, not something this repo
+                controls — it emits 8 digits today, and the [6-digit]
+                inherited from the mockup contradicted what officials
+                actually received. */}
             <p className="mb-3 text-xs text-ink-500">
-              We sent a 6-digit code to <span className="font-medium text-ink-700">{email}</span>.
+              We sent a sign-in code to <span className="font-medium text-ink-700">{email}</span>.
               Enter it below — no need to open your email in a new tab.
             </p>
 
