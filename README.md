@@ -64,11 +64,11 @@ role, and barangay are shown throughout the interface.
 
 | Page | Status |
 |------|--------|
-| **Queue** | Live. Shows the barangay's pending reports in four tabs — Emergency Fast-triage, Standard intake, Flagged duplicates, Recent validated. Validate and Reject write to the database; rejection requires a reason. A duplicate cluster can be validated as one action. |
-| **Cluster Explorer** | Live. Groups pending reports that share a `cluster_id`, the output of the duplicate-flagging algorithm. |
+| **Queue** | Live. Shows the barangay's pending reports in four tabs — Emergency Fast-triage, Standard intake, Flagged duplicates, Recent validated — with a search box and a detail drawer showing everything the barangay holds on a report. Validate and Reject write to the database; rejection requires a reason. Opening a report's details is reported to the audit trail. A duplicate cluster can be validated as one action. |
+| **Cluster Explorer** | Live query, currently empty. Groups pending reports that share a `cluster_id`. The duplicate-detection service computes clusters but does not yet write them back to reports, so no report carries a `cluster_id` and the page has nothing to show. |
 | **Validation History** | Live. Reviewed reports (validated or rejected) with the reviewing official, timestamp, rejection reason, and outcome filters. Exports the visible rows to CSV. |
 | **Settings** | Profile is live (name, role, barangay, email, phone); the display name is editable. Language and notification preferences are interface-only. |
-| **Audit Log** | Placeholder data. Blocked on the backend: no barangay role currently has read access to the audit table, and the audit write path is not yet populated. |
+| **Audit Log** | Placeholder data, labelled as such on the page. The console writes to the audit trail (validations, rejections, and report views), but no barangay role can read it back: which columns the barangay desk may see is a data-protection decision pending with the adviser, and read access will be granted through a function that exposes only those columns, not through a table policy. |
 
 All report data is scoped to the signed-in official's own barangay by Row Level
 Security in the database. The application does not, and cannot, widen that scope.
@@ -79,6 +79,13 @@ Officials never see a reporter's name, whether or not the resident chose to with
 their identity. The interface shows only "Verified reporter" or "Identity withheld".
 This is deliberate — the system exposes no reporter-name field to officials at all —
 and it applies to every page, the CSV export included.
+
+Access is logged as well as restricted. Opening a report's detail drawer — the point at
+which the reporter's own account of the incident reaches an official's screen — calls
+the backend's `log_report_view` function, which records the official, the report, and
+the resident whose data was viewed. The console never supplies the resident's identity
+to that call; the backend resolves it from the report. Validations and rejections are
+logged by the same mechanism through `review_report`.
 
 ## Folder structure
 
@@ -122,13 +129,22 @@ and is marked `server-only`.
 These are gaps in the data available to the console, not unfinished interface work.
 In each case the console shows nothing rather than an approximation.
 
-- **Audit Log** is on placeholder data until the backend grants barangay roles read
-  access to audit events and populates the audit trail.
-- **Cluster geodata.** There is no dedicated clusters table, so the Cluster Explorer
-  has no real centroid or radius to show, and no per-report proximity signals. The
+- **Audit Log** is on placeholder data, and the page says so. Read access for barangay
+  roles is waiting on a decision about which audit columns the desk may see; it is a
+  data-protection question rather than an engineering one.
+- **Report-view logging** depends on the backend's `log_report_view` function, which
+  is written and awaiting deployment. Until it is deployed, the console's calls to it
+  have no effect; the console needs no change when it arrives.
+- **Cluster data.** The duplicate-detection service does not yet write cluster
+  assignments back to reports, so the Cluster Explorer and the queue's Flagged
+  duplicates tab are empty against live data. There is also no dedicated clusters
+  table, so no centroid, radius, or per-report proximity signals exist to show; the
   spatial panel says so rather than displaying invented figures.
-- **Manual report intake and cluster splitting** are not offered. Neither is
-  permitted by the current database policies.
+- **Manual report intake** is not offered. Reports are attributable to a resident
+  account by design, so intake on a walk-in resident's behalf requires a decision on
+  attribution before it can be built.
+- **Cluster splitting and merging** are not offered. Barangay roles cannot write
+  cluster assignments, and a manual split would be undone by the next detection pass.
 - **Report addresses.** Reports carry a geographic point, not an address string, so
   no location text is displayed.
 - **Validation History** shows the 50 most recent reviewed reports. Filters apply to
