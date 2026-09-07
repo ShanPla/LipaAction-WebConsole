@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { ReporterChip } from "@/components/ui/ReporterChip";
 import { ReasonPromptModal } from "@/components/ui/ReasonPromptModal";
 import { useDismissOnEscape } from "@/components/ui/useDismissOnEscape";
+import { useFocusTrap } from "@/components/ui/useFocusTrap";
 import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
 import type { QueueReport } from "@/types";
 
@@ -54,6 +55,8 @@ export function ReportDetailPanel({
   // Disabled while the reject prompt is stacked on top, so Escape backs
   // out one layer at a time, and while a decision is in flight.
   useDismissOnEscape(onClose, !isRejecting && !isPending);
+  // Same stacking rule for Tab: while the reject prompt is up, it owns focus.
+  const dialogRef = useFocusTrap<HTMLElement>(!isRejecting);
 
   // The access trail is written here, on mount, rather than where the row is
   // clicked: opening this panel is the moment the reporter's own account of
@@ -71,10 +74,12 @@ export function ReportDetailPanel({
       <button aria-label="Close report details" className="absolute inset-0 bg-ink-900/40" onClick={onClose} />
 
       <aside
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-detail-title"
-        className="relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-ink-100 bg-white shadow-panel"
+        className="relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-ink-100 bg-white shadow-panel focus:outline-none"
       >
         <header className="sticky top-0 flex items-start justify-between gap-3 border-b border-ink-100 bg-white px-5 py-4">
           <div className="min-w-0">

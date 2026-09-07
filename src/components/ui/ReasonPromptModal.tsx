@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "./Button";
 import { useDismissOnEscape } from "./useDismissOnEscape";
+import { useFocusTrap } from "./useFocusTrap";
 
 export function ReasonPromptModal({
   title,
@@ -19,6 +20,7 @@ export function ReasonPromptModal({
 }) {
   const [reason, setReason] = useState("");
   useDismissOnEscape(onCancel);
+  const dialogRef = useFocusTrap<HTMLDivElement>();
   const trimmed = reason.trim();
 
   return (
@@ -29,10 +31,12 @@ export function ReasonPromptModal({
         onClick={onCancel}
       />
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="reason-prompt-title"
-        className="relative w-full max-w-sm rounded-card border border-ink-100 bg-white p-5 shadow-panel"
+        className="relative w-full max-w-sm rounded-card border border-ink-100 bg-white p-5 shadow-panel focus:outline-none"
       >
         <p id="reason-prompt-title" className="mb-1 text-sm font-semibold text-ink-900">
           {title}

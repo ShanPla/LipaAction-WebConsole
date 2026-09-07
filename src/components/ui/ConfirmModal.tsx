@@ -2,6 +2,7 @@
 
 import { Button } from "./Button";
 import { useDismissOnEscape } from "./useDismissOnEscape";
+import { useFocusTrap } from "./useFocusTrap";
 
 /**
  * Plain yes/no confirmation. ReasonPromptModal covers the case where a reason
@@ -28,6 +29,10 @@ export function ConfirmModal({
 }) {
   // Not while the cluster write is running.
   useDismissOnEscape(onCancel, !busy);
+  // No autoFocus inside: focus lands on the dialog itself so the title is
+  // announced first, and the first Tab reaches Cancel before the commit
+  // button — the safe order for an action that writes several reports.
+  const dialogRef = useFocusTrap<HTMLDivElement>();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
@@ -38,10 +43,12 @@ export function ConfirmModal({
         disabled={busy}
       />
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-modal-title"
-        className="relative w-full max-w-sm rounded-card border border-ink-100 bg-white p-5 shadow-panel"
+        className="relative w-full max-w-sm rounded-card border border-ink-100 bg-white p-5 shadow-panel focus:outline-none"
       >
         <p id="confirm-modal-title" className="mb-1 text-sm font-semibold text-ink-900">
           {title}

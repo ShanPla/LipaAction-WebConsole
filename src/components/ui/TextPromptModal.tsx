@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "./Button";
 import { useDismissOnEscape } from "./useDismissOnEscape";
+import { useFocusTrap } from "./useFocusTrap";
 
 /**
  * Single-line text prompt with Save/Cancel.
@@ -36,6 +37,7 @@ export function TextPromptModal({
   const [value, setValue] = useState(initialValue);
   // Not while saving — same reason Cancel is disabled then.
   useDismissOnEscape(onCancel, !busy);
+  const dialogRef = useFocusTrap<HTMLFormElement>();
   const trimmed = value.trim();
   // Nothing typed, or nothing changed — no point submitting either.
   const canSubmit = trimmed.length > 0 && trimmed !== initialValue.trim() && !busy;
@@ -54,11 +56,13 @@ export function TextPromptModal({
         disabled={busy}
       />
       <form
+        ref={dialogRef}
+        tabIndex={-1}
         onSubmit={handleSubmit}
         role="dialog"
         aria-modal="true"
         aria-labelledby="text-prompt-title"
-        className="relative w-full max-w-sm rounded-card border border-ink-100 bg-white p-5 shadow-panel"
+        className="relative w-full max-w-sm rounded-card border border-ink-100 bg-white p-5 shadow-panel focus:outline-none"
       >
         <p id="text-prompt-title" className="mb-1 text-sm font-semibold text-ink-900">
           {title}
