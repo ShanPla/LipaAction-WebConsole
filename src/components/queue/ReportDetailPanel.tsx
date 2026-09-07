@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { logReportView } from "@/app/actions/audit";
 import { PriorityBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ReporterChip } from "@/components/ui/ReporterChip";
@@ -52,6 +54,15 @@ export function ReportDetailPanel({
   // Disabled while the reject prompt is stacked on top, so Escape backs
   // out one layer at a time, and while a decision is in flight.
   useDismissOnEscape(onClose, !isRejecting && !isPending);
+
+  // The access trail is written here, on mount, rather than where the row is
+  // clicked: opening this panel is the moment the reporter's own account of
+  // the incident reaches an official's screen, and that is the event the DPA
+  // trail exists to record. Fire-and-forget — logReportView never throws and
+  // never blocks the read.
+  useEffect(() => {
+    void logReportView(report.id);
+  }, [report.id]);
 
   const d = report.details;
 
