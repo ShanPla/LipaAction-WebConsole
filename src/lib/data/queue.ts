@@ -45,6 +45,11 @@ export interface QueueData {
   activeCluster: SituationCluster | null;
   queueByTab: Record<QueueTabId, QueueReport[]>;
   queueTabMeta: { id: QueueTabId; label: string; count: number }[];
+  // True when the queries failed and the empty shape above is a fallback,
+  // not the truth. The page must say so — an outage rendered as [No reports
+  // in this queue right now] is the one message an emergency console must
+  // never show by accident.
+  loadFailed: boolean;
 }
 
 /**
@@ -96,16 +101,13 @@ export async function getBarangayQueue(
       .gte("reviewed_at", dayStart),
   ]);
 
-  if (
-    pendingRes.error ||
-    !pendingRes.data ||
-    validatedRes.error ||
-    !validatedRes.data ||
-    todayRes.error
-  ) {
+  const failure = pendingRes.error ?? validatedRes.error ?? todayRes.error;
+  if (failure || !pendingRes.data || !validatedRes.data) {
     // Fail closed to an empty queue rather than crashing the whole page on a
-    // transient query error.
-    return emptyQueueData();
+    // transient query error — but say so in the returned data, and put the
+    // real reason in the server log, where table and column names belong.
+    console.error("[queue] load failed", failure?.code, failure?.message);
+    return failedQueueData();
   }
 
   const pending = pendingRes.data as RawReport[];
@@ -174,7 +176,7 @@ export async function getBarangayQueue(
     { id: "validated", label: "Recent validated", count: validated.length },
   ];
 
-  return { kpiSummary, activeCluster, queueByTab, queueTabMeta };
+  return { kpiSummary, activeCluster, queueByTab, queueTabMeta, loadFailed: false };
 }
 
 function toQueueReport(r: RawReport): QueueReport {
@@ -213,7 +215,7 @@ function toQueueReport(r: RawReport): QueueReport {
   };
 }
 
-function emptyQueueData(): QueueData {
+function failedQueueData(): QueueData {
   return {
     kpiSummary: { fastTriageCount: 0, standardIntakeCount: 0, medianMinutes: 0, validatedCount: 0 },
     activeCluster: null,
@@ -224,6 +226,7 @@ function emptyQueueData(): QueueData {
       { id: "duplicates", label: "Flagged duplicates", count: 0 },
       { id: "validated", label: "Recent validated", count: 0 },
     ],
+    loadFailed: true,
   };
 }
 

@@ -8,6 +8,6 @@ export const dynamic = "force-dynamic";
 
 export default async function ClusterExplorerPage() {
   const official = await requireBarangayOfficial();
-  const clusters = await getBarangayClusters(official.barangayId, official.barangayName);
-  return <ClusterExplorerClient official={official} clusters={clusters} />;
+  const clusterData = await getBarangayClusters(official.barangayId, official.barangayName);
+  return <ClusterExplorerClient official={official} clusterData={clusterData} />;
 }

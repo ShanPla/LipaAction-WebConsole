@@ -10,6 +10,7 @@ import {
   type RangeFilter,
 } from "@/components/validation-history/HistoryFilters";
 import { HistoryTable } from "@/components/validation-history/HistoryTable";
+import { DataUnavailableBanner } from "@/components/layout/DataUnavailableBanner";
 // Type-only — validationHistory.ts is "server-only", so importing any runtime
 // value from it here would pull it into the client bundle. The row cap arrives
 // as data (historyData.limit) instead.
@@ -24,7 +25,7 @@ export function ValidationHistoryClient({
   official: OfficialProfile;
   historyData: ValidationHistoryData;
 }) {
-  const { summary: loadedSummary, records, limit } = historyData;
+  const { summary: loadedSummary, records, limit, loadFailed } = historyData;
 
   const [range, setRange] = useState<RangeFilter>("all");
   const [outcome, setOutcome] = useState<OutcomeFilter>("all");
@@ -51,6 +52,7 @@ export function ValidationHistoryClient({
 
   return (
     <AppShell breadcrumb={[official.barangayName, "Validation History"]} official={official}>
+      {loadFailed && <DataUnavailableBanner what="Validation History" />}
       <SummaryTiles summary={visibleSummary} />
       <HistoryFilters
         range={range}

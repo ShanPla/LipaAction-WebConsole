@@ -24,6 +24,9 @@ export interface ValidationHistoryData {
   // a value import from a "use client" component would drag it into the
   // browser bundle and fail the build. Types erase; constants don't.
   limit: number;
+  // True when the query failed and the empty result is a fallback. The page
+  // shows a banner instead of [No validation records yet].
+  loadFailed: boolean;
 }
 
 const HISTORY_LIMIT = 50;
@@ -60,7 +63,10 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
     .order("reviewed_at", { ascending: false, nullsFirst: false })
     .limit(HISTORY_LIMIT);
 
-  if (error || !data) return emptyValidationHistoryData();
+  if (error || !data) {
+    console.error("[validation-history] load failed", error?.code, error?.message);
+    return failedValidationHistoryData();
+  }
 
   const rows = data as RawReviewedReport[];
 
@@ -94,7 +100,7 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
     identityWithheld: rows.filter((r) => r.identity_withheld).length,
   };
 
-  return { summary, records, limit: HISTORY_LIMIT };
+  return { summary, records, limit: HISTORY_LIMIT, loadFailed: false };
 }
 
 function toValidationRecord(
@@ -134,11 +140,12 @@ function toValidationRecord(
   };
 }
 
-function emptyValidationHistoryData(): ValidationHistoryData {
+function failedValidationHistoryData(): ValidationHistoryData {
   return {
     summary: { total: 0, confirmed: 0, confirmedFalse: 0, identityWithheld: 0 },
     records: [],
     limit: HISTORY_LIMIT,
+    loadFailed: true,
   };
 }
 

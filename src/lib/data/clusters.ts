@@ -15,6 +15,14 @@ interface RawReport {
   cluster_id: string | null;
 }
 
+export interface ClusterData {
+  clusters: ClusterExplorerEntry[];
+  // True when the query failed. An empty list is the normal state of this
+  // page today (nothing writes cluster_id yet), so without this flag an
+  // outage and the expected emptiness would be the same screen.
+  loadFailed: boolean;
+}
+
 /**
  * Groups this barangay's pending incident_reports by cluster_id — the
  * duplicate-flagging algorithm's output. A cluster only counts as an actual
@@ -32,7 +40,7 @@ interface RawReport {
 export async function getBarangayClusters(
   barangayId: string,
   barangayName: string
-): Promise<ClusterExplorerEntry[]> {
+): Promise<ClusterData> {
   const supabase = createClient();
 
   const { data, error } = await supabase
@@ -43,7 +51,10 @@ export async function getBarangayClusters(
     // Ascending so the earliest-created report in each group is "Primary".
     .order("created_at", { ascending: true });
 
-  if (error || !data) return [];
+  if (error || !data) {
+    console.error("[cluster-explorer] load failed", error?.code, error?.message);
+    return { clusters: [], loadFailed: true };
+  }
 
   const rows = data as RawReport[];
   const pending = rows.filter((r) => PENDING_STATUSES.includes(r.status));
@@ -91,7 +102,7 @@ export async function getBarangayClusters(
     });
   }
 
-  return entries.sort((a, b) => b.memberCount - a.memberCount);
+  return { clusters: entries.sort((a, b) => b.memberCount - a.memberCount), loadFailed: false };
 }
 
 function statusFromPriority(priority: string): ClusterExplorerEntry["status"] {

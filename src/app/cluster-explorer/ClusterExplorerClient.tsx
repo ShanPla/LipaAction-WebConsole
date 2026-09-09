@@ -5,22 +5,26 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ClusterList } from "@/components/cluster-explorer/ClusterList";
 import { MemberPanel } from "@/components/cluster-explorer/MemberPanel";
 import { MapPanel } from "@/components/cluster-explorer/MapPanel";
-import type { ClusterExplorerEntry } from "@/types";
+import { DataUnavailableBanner } from "@/components/layout/DataUnavailableBanner";
 import type { OfficialProfile } from "@/lib/auth";
+// Type-only import from a server-only module — erased at compile time.
+import type { ClusterData } from "@/lib/data/clusters";
 
 export function ClusterExplorerClient({
   official,
-  clusters,
+  clusterData,
 }: {
   official: OfficialProfile;
-  clusters: ClusterExplorerEntry[];
+  clusterData: ClusterData;
 }) {
+  const { clusters, loadFailed } = clusterData;
   const hasClusters = clusters.length > 0;
   const [activeId, setActiveId] = useState(hasClusters ? clusters[0].id : "");
   const activeCluster = clusters.find((c) => c.id === activeId);
 
   return (
     <AppShell breadcrumb={[official.barangayName, "Cluster Explorer"]} official={official}>
+      {loadFailed && <DataUnavailableBanner what="Cluster Explorer" />}
       {!hasClusters ? (
         <div className="flex h-[calc(100vh-6.5rem)] items-center justify-center rounded-card border border-ink-100 bg-white shadow-panel">
           <div className="text-center">
