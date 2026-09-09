@@ -1,5 +1,10 @@
-import Link from "next/link";
+import { signOut } from "@/app/actions/auth";
 
+// Sign-out is the only sensible exit here. The previous [Back to sign in]
+// link left the session cookie in place, so an account with the wrong role
+// (an agency user, say) looped /login → /queue → /not-authorized with no way
+// to clear it from the UI: /login now bounces a signed-in user straight back
+// to /queue.
 export default function NotAuthorizedPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-ink-50 px-4">
@@ -10,9 +15,14 @@ export default function NotAuthorizedPage() {
           for barangay officials only — if you believe this is a mistake, contact your Punong
           Barangay or the LipaAction pilot support desk.
         </p>
-        <Link href="/login" className="text-xs font-medium text-brand-600 hover:underline">
-          Back to sign in
-        </Link>
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="text-xs font-medium text-brand-600 hover:underline"
+          >
+            Sign out and use a different account
+          </button>
+        </form>
       </div>
     </div>
   );

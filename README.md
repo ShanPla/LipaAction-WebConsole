@@ -57,8 +57,13 @@ Accounts are created by an administrator in Supabase.
 
 Every page checks the signed-in user's profile role on the server before rendering.
 Only `barangay_official`, `barangay_admin`, and `senior_barangay_admin` are admitted;
-any other role is redirected to `/not-authorized`. The signed-in official's name,
-role, and barangay are shown throughout the interface.
+any other role is redirected to `/not-authorized`, which offers sign-out so a
+differently-scoped account can be used instead. A signed-in user who opens `/login`
+is sent to the console. The signed-in official's name, role, and barangay are shown
+throughout the interface.
+
+All times are shown in Philippine Standard Time regardless of where the server or the
+official's browser is set.
 
 ## Pages
 

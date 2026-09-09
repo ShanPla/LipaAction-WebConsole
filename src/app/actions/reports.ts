@@ -8,6 +8,26 @@ interface UpdateResult {
   message?: string;
 }
 
+// Same wording as profile.ts, so an expired session reads the same
+// everywhere it can surface.
+const SESSION_EXPIRED = "Your session expired. Sign in again.";
+
+/**
+ * Whether the caller still has a session. Checked before calling
+ * review_report(): without this, an expired cookie made the RPC run
+ * unauthenticated and fail with 42501, which messageForReviewError() rightly
+ * translates to [wrong barangay, or already past review] — telling the
+ * official their report had been taken by someone else when they had simply
+ * been signed out. The check is about the message, not security; RLS still
+ * decides what the RPC may do.
+ */
+async function hasSession(supabase: ReturnType<typeof createClient>): Promise<boolean> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user !== null;
+}
+
 /**
  * THE CUTOVER — review_report() is now the ONLY path to validate/reject a
  * report. As of the 2026-08-31 db push, prod's incident_reports_review_
@@ -31,6 +51,10 @@ export async function updateReportStatus(
 
   if (status === "rejected" && (!reason || reason.trim() === "")) {
     return { success: false, message: "A reason is required to reject a report." };
+  }
+
+  if (!(await hasSession(supabase))) {
+    return { success: false, message: SESSION_EXPIRED };
   }
 
   const { error } = await supabase.rpc("review_report", {
@@ -89,6 +113,15 @@ export async function validateReports(reportIds: string[]): Promise<BulkValidate
   const supabase = createClient();
   const failures: BulkValidateResult["failures"] = [];
   let validated = 0;
+
+  // One check for the whole set, not one per member: every member would
+  // fail for the same reason, and the toast shows failures[0].message.
+  if (!(await hasSession(supabase))) {
+    return {
+      validated: 0,
+      failures: reportIds.map((reportId) => ({ reportId, message: SESSION_EXPIRED })),
+    };
+  }
 
   for (const reportId of reportIds) {
     const { error } = await supabase.rpc("review_report", {
