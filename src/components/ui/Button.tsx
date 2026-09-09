@@ -18,22 +18,31 @@ const sizeStyles: Record<string, string> = {
   md: "text-sm px-3.5 py-2",
 };
 
+/**
+ * The button's classes on their own, for a link that should look like one.
+ * A <button> nested in an <a> is invalid interactive nesting — screen readers
+ * announce two controls, and keyboard activation is inconsistent. Style the
+ * anchor instead.
+ */
+export function buttonClassName(
+  variant: ButtonProps["variant"] = "secondary",
+  size: ButtonProps["size"] = "md",
+  className?: string
+): string {
+  return cx(
+    "inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors",
+    "disabled:opacity-50 disabled:cursor-not-allowed",
+    variantStyles[variant],
+    sizeStyles[size],
+    className
+  );
+}
+
 export function Button({
   variant = "secondary",
   size = "md",
   className,
   ...props
 }: ButtonProps) {
-  return (
-    <button
-      className={cx(
-        "inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors",
-        "disabled:opacity-50 disabled:cursor-not-allowed",
-        variantStyles[variant],
-        sizeStyles[size],
-        className
-      )}
-      {...props}
-    />
-  );
+  return <button className={buttonClassName(variant, size, className)} {...props} />;
 }

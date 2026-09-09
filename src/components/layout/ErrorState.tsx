@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClassName } from "@/components/ui/Button";
 
 /**
  * What an official sees when a console page throws.
@@ -44,10 +44,8 @@ export function ErrorState({
           <Button variant="primary" size="sm" onClick={reset}>
             Try again
           </Button>
-          <Link href="/queue">
-            <Button variant="secondary" size="sm">
-              Back to Queue
-            </Button>
+          <Link href="/queue" className={buttonClassName("secondary", "sm")}>
+            Back to Queue
           </Link>
         </div>
 

@@ -8,7 +8,7 @@ import { playChime } from "@/lib/chime";
 import { usePreferences } from "@/lib/preferences";
 import { KpiHeader } from "@/components/queue/KpiHeader";
 import { ClusterCard } from "@/components/queue/ClusterCard";
-import { QueueTabs } from "@/components/queue/QueueTabs";
+import { QueueTabs, queuePanelDomId, queueTabDomId } from "@/components/queue/QueueTabs";
 import { ReportRow } from "@/components/queue/ReportRow";
 import { ReportDetailPanel } from "@/components/queue/ReportDetailPanel";
 import type { Verdict } from "@/components/queue/useReportReview";
@@ -182,6 +182,9 @@ export function QueueClient({
 
       <div
         ref={listRef}
+        role="tabpanel"
+        id={queuePanelDomId(activeTab)}
+        aria-labelledby={queueTabDomId(activeTab)}
         className="overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel"
       >
         {rows.length === 0 ? (

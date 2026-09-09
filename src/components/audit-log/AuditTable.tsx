@@ -33,13 +33,14 @@ export function AuditTable({ entries }: { entries: AuditLogEntry[] }) {
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] text-left text-sm">
+        <caption className="sr-only">Sample audit events, for layout only</caption>
         <thead>
           <tr className="border-b border-ink-100 bg-ink-50 text-[11px] uppercase tracking-wide text-ink-500">
-            <th className="px-4 py-2.5 font-semibold">Timestamp</th>
-            <th className="px-4 py-2.5 font-semibold">Actor</th>
-            <th className="px-4 py-2.5 font-semibold">Action</th>
-            <th className="px-4 py-2.5 font-semibold">Affected entity</th>
-            <th className="px-4 py-2.5 font-semibold">Before &rarr; After</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">Timestamp</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">Actor</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">Action</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">Affected entity</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">Before to after</th>
           </tr>
         </thead>
         <tbody>
@@ -53,7 +54,10 @@ export function AuditTable({ entries }: { entries: AuditLogEntry[] }) {
               </td>
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-ink-100 text-[10px] font-semibold text-ink-700">
+                  <span
+                    aria-hidden
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-ink-100 text-[10px] font-semibold text-ink-700"
+                  >
                     {entry.actorName === "System" ? "⚙" : initials(entry.actorName)}
                   </span>
                   <div className="leading-tight">

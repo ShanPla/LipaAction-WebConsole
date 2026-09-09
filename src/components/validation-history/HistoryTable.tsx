@@ -36,14 +36,18 @@ export function HistoryTable({
   return (
     <div className="overflow-x-auto rounded-card border border-ink-100 bg-white shadow-panel">
       <table className="w-full min-w-[720px] text-left text-sm">
+        <caption className="sr-only">
+          Reviewed reports: report, category and priority, verdict, validating official,
+          reporter, and time reviewed
+        </caption>
         <thead>
           <tr className="border-b border-ink-100 bg-ink-50 text-[11px] uppercase tracking-wide text-ink-500">
-            <th className="px-4 py-2.5 font-semibold">Report</th>
-            <th className="px-4 py-2.5 font-semibold">Category / Priority</th>
-            <th className="px-4 py-2.5 font-semibold">Verdict</th>
-            <th className="px-4 py-2.5 font-semibold">Validating official</th>
-            <th className="px-4 py-2.5 font-semibold">Reporter</th>
-            <th className="px-4 py-2.5 font-semibold">Timestamp</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">Report</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">Category / Priority</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">Verdict</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">Validating official</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">Reporter</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">Timestamp</th>
           </tr>
         </thead>
         <tbody>

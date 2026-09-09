@@ -43,8 +43,13 @@ export function ReasonPromptModal({
         </p>
         <p className="mb-3 text-xs text-ink-500">{description}</p>
 
+        <label className="mb-1 block text-xs font-medium text-ink-500" htmlFor="reason-prompt-input">
+          Reason &middot; <span className="font-normal">dahilan</span>
+        </label>
         <textarea
+          id="reason-prompt-input"
           autoFocus
+          required
           rows={3}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
