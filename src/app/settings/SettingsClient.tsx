@@ -6,7 +6,6 @@ import { SettingsNav } from "@/components/settings/SettingsNav";
 import { ProfileCard } from "@/components/settings/ProfileCard";
 import { LanguageSection } from "@/components/settings/LanguageSection";
 import { NotificationsSection } from "@/components/settings/NotificationsSection";
-import { notificationPreferences } from "@/data/mockSettings";
 import type { SettingsSectionId } from "@/types";
 import type { OfficialProfile } from "@/lib/auth";
 
@@ -66,10 +65,8 @@ export function SettingsClient({ official }: { official: OfficialProfile }) {
         <SettingsNav active={activeSection} onChange={setActiveSection} />
         <div className="flex-1 space-y-4">
           {activeSection === "profile" && <ProfileCard official={official} />}
-          {activeSection === "language" && <LanguageSection />}
-          {activeSection === "notifications" && (
-            <NotificationsSection initial={notificationPreferences} />
-          )}
+          {activeSection === "language" && <LanguageSection role={official.role} />}
+          {activeSection === "notifications" && <NotificationsSection role={official.role} />}
           {activeSection === "privacy" && <PrivacySection />}
           {activeSection === "about" && <AboutSection />}
         </div>

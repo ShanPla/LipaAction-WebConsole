@@ -145,11 +145,6 @@ export interface AuditSummary {
   uniqueActors: number;
 }
 
-export interface NotificationPreferences {
-  audibleAlertNewEmergency: boolean;
-  slaBreachBrowserNotification: boolean;
-}
-
 export type SettingsSectionId =
   | "profile"
   | "language"
