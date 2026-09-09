@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { startOfManilaDay } from "@/lib/utils";
 import { AppShell } from "@/components/layout/AppShell";
 import { SummaryTiles } from "@/components/validation-history/SummaryTiles";
 import {
@@ -96,10 +97,10 @@ function matchesRange(record: ValidationRecord, range: RangeFilter): boolean {
   const reviewed = new Date(record.reviewedAt).getTime();
   if (Number.isNaN(reviewed)) return false;
 
+  // Manila's day, not the browser's — the rows were stamped in Manila by the
+  // server, and a laptop set to another zone must not shift the boundary.
   if (range === "today") {
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    return reviewed >= startOfToday.getTime();
+    return reviewed >= startOfManilaDay().getTime();
   }
 
   return reviewed >= Date.now() - 7 * 24 * 60 * 60 * 1000;

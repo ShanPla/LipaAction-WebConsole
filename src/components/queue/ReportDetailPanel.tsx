@@ -204,8 +204,12 @@ function attachmentSummary(hasPhoto: boolean, hasVideo: boolean): string {
   return "No photo or video";
 }
 
+// Pinned to Manila even though this runs in the browser: Validation History
+// formats the same instants on the server in Asia/Manila, and an official
+// whose laptop is set to another zone would otherwise see the two disagree.
 function formatTimestamp(isoString: string): string {
   return new Date(isoString).toLocaleString("en-US", {
+    timeZone: "Asia/Manila",
     month: "short",
     day: "numeric",
     year: "numeric",

@@ -56,3 +56,25 @@ export function formatDuration(minutes: number): string {
   const remainderHours = hours % 24;
   return remainderHours === 0 ? `${days}d` : `${days}d ${remainderHours}h`;
 }
+// Philippine Standard Time, fixed at UTC+8 — the country observes no DST, so
+// a constant offset is exact, not an approximation.
+const MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Midnight at the start of today in Manila, as an instant.
+ *
+ * Every "today" in this console means the officials' day, not the machine's.
+ * Server code runs in whatever zone the host is set to (UTC once deployed),
+ * and client code runs in whatever zone the official's laptop is set to;
+ * `new Date().setHours(0, 0, 0, 0)` would give a different boundary in each,
+ * and a UTC boundary rolls the day over at 8am Manila — mid-shift.
+ *
+ * Shared by the queue's [Validated today] count (server) and Validation
+ * History's Today filter (client), so the two can never disagree about which
+ * day a review belongs to. Takes `now` as a parameter only for testability.
+ */
+export function startOfManilaDay(now: number = Date.now()): Date {
+  const shifted = now + MANILA_OFFSET_MS;
+  return new Date(Math.floor(shifted / DAY_MS) * DAY_MS - MANILA_OFFSET_MS);
+}

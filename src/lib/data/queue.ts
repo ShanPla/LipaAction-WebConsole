@@ -1,10 +1,18 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { startOfManilaDay } from "@/lib/utils";
 import type { KpiSummary, QueueReport, QueueTabId, SituationCluster } from "@/types";
 
 // Statuses that still belong in an active working queue. Anything past this
 // (validated/routed/resolved/rejected) has already been acted on.
 const PENDING_STATUSES = ["pending_priority", "prioritized"];
+
+// The Recent validated tab is a glance at what just happened, not a history;
+// Validation History is the full record.
+const VALIDATED_LIMIT = 20;
+
+const REPORT_COLUMNS =
+  "id, category, description, priority_name, status, entry_tier, identity_withheld, created_at, cluster_id, reviewed_at, severity_self_rating, safety_net_confirmation, anyone_hurt, is_ongoing, has_photo, has_video, discreet_reporting, priority_class, priority_score, confidence_band";
 
 interface RawReport {
   id: string;
@@ -54,29 +62,57 @@ export async function getBarangayQueue(
 ): Promise<QueueData> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
-    .from("incident_reports")
-    .select(
-      "id, category, description, priority_name, status, entry_tier, identity_withheld, created_at, cluster_id, reviewed_at, severity_self_rating, safety_net_confirmation, anyone_hurt, is_ongoing, has_photo, has_video, discreet_reporting, priority_class, priority_score, confidence_band"
-    )
-    .eq("incident_barangay_id", barangayId)
-    .order("created_at", { ascending: false });
+  // Three narrow queries rather than one wide one. This used to select every
+  // report the barangay had ever filed and partition by status in JS — fine
+  // at one report, thousands of rows per page load after a year in service.
+  // Pending is the working set and stays uncapped (its size is the backlog
+  // itself); validated is capped in SQL; today's count is a HEAD request
+  // that returns no rows at all.
+  const dayStart = startOfManilaDay().toISOString();
+  const [pendingRes, validatedRes, todayRes] = await Promise.all([
+    supabase
+      .from("incident_reports")
+      .select(REPORT_COLUMNS)
+      .eq("incident_barangay_id", barangayId)
+      .in("status", PENDING_STATUSES)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("incident_reports")
+      .select(REPORT_COLUMNS)
+      .eq("incident_barangay_id", barangayId)
+      .eq("status", "validated")
+      // nullsFirst: false — pre-cutover rows have no reviewed_at and would
+      // otherwise float to the top of a newest-first list.
+      .order("reviewed_at", { ascending: false, nullsFirst: false })
+      .limit(VALIDATED_LIMIT),
+    // Pre-cutover rows (reviewed_at IS NULL) fall out of a >= comparison on
+    // their own, which is the intended exclusion: there's no knowing what
+    // day they were handled.
+    supabase
+      .from("incident_reports")
+      .select("id", { count: "exact", head: true })
+      .eq("incident_barangay_id", barangayId)
+      .eq("status", "validated")
+      .gte("reviewed_at", dayStart),
+  ]);
 
-  if (error || !data) {
+  if (
+    pendingRes.error ||
+    !pendingRes.data ||
+    validatedRes.error ||
+    !validatedRes.data ||
+    todayRes.error
+  ) {
     // Fail closed to an empty queue rather than crashing the whole page on a
     // transient query error.
     return emptyQueueData();
   }
 
-  const rows = data as RawReport[];
-  const pending = rows.filter((r) => PENDING_STATUSES.includes(r.status));
+  const pending = pendingRes.data as RawReport[];
 
   const emergency = pending.filter((r) => r.entry_tier === "emergency").map(toQueueReport);
   const standard = pending.filter((r) => r.entry_tier === "other_reports").map(toQueueReport);
-  const validated = rows
-    .filter((r) => r.status === "validated")
-    .slice(0, 20)
-    .map(toQueueReport);
+  const validated = (validatedRes.data as RawReport[]).map(toQueueReport);
 
   // Duplicates: pending reports that share a cluster_id with at least one
   // other pending report (the duplicate-flagging algorithm's output).
@@ -117,12 +153,11 @@ export async function getBarangayQueue(
     // agency_routing's resolved_at is wired in for a true resolution-time
     // metric.
     medianMinutes: medianAgeMinutes(pending),
-    // Genuinely "today" now. This previously counted every validated report
-    // ever while the tile was labelled "Validated today", so it only ever
-    // read correctly on a barangay's first day of use.
-    validatedCount: rows.filter(
-      (r) => r.status === "validated" && r.reviewed_at !== null && isToday(r.reviewed_at)
-    ).length,
+    // Today in Manila — see startOfManilaDay. Counted in SQL rather than from
+    // the validated tab's rows, which are capped at VALIDATED_LIMIT and would
+    // undercount a busy day. This previously counted every validated report
+    // ever while the tile was labelled [Validated today].
+    validatedCount: todayRes.count ?? 0,
   };
 
   const queueByTab: Record<QueueTabId, QueueReport[]> = {
@@ -199,31 +234,6 @@ function timeAgo(isoString: string): string {
   const diffHr = Math.floor(diffMin / 60);
   if (diffHr < 24) return `${diffHr}h ago`;
   return `${Math.floor(diffHr / 24)}d ago`;
-}
-
-// Philippine Standard Time, fixed at UTC+8 — the country observes no DST.
-const MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;
-
-/**
- * True when `isoString` falls on today's date in Manila.
- *
- * Deliberately not the server's local day: this runs server-side, so in a
- * deployed environment "local" is whatever the host is set to (UTC on most
- * platforms). A UTC day boundary would roll the count over at 8am Manila
- * time — mid-shift for the officials reading the tile.
- *
- * Reports reviewed before the review_report() cutover have no reviewed_at and
- * are excluded by the caller: there's no way to know what day they were
- * handled, and guessing would inflate today's number.
- */
-function isToday(isoString: string): boolean {
-  const shifted = new Date(new Date(isoString).getTime() + MANILA_OFFSET_MS);
-  const nowShifted = new Date(Date.now() + MANILA_OFFSET_MS);
-  return (
-    shifted.getUTCFullYear() === nowShifted.getUTCFullYear() &&
-    shifted.getUTCMonth() === nowShifted.getUTCMonth() &&
-    shifted.getUTCDate() === nowShifted.getUTCDate()
-  );
 }
 
 function medianAgeMinutes(rows: RawReport[]): number {

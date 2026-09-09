@@ -142,8 +142,13 @@ function emptyValidationHistoryData(): ValidationHistoryData {
   };
 }
 
+// Formatted on the server, so the zone must be explicit: without it this
+// renders in the host's zone, and a deployed host runs UTC — every row and
+// the CSV would read eight hours early. Manila has no DST, so the fixed zone
+// is exact. Keep in step with ReportDetailPanel's formatTimestamp.
 function formatReviewedAt(isoString: string): string {
   return new Date(isoString).toLocaleString("en-US", {
+    timeZone: "Asia/Manila",
     month: "short",
     day: "numeric",
     hour: "2-digit",
