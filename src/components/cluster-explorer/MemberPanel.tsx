@@ -2,13 +2,20 @@
 
 import { PriorityBadge } from "@/components/ui/Badge";
 import { ReporterChip } from "@/components/ui/ReporterChip";
-import { Button } from "@/components/ui/Button";
-import { useToast } from "@/components/ui/Toast";
 import type { ClusterExplorerEntry } from "@/types";
 
+/**
+ * Read-only member list. Three controls from the mockup used to sit in the
+ * header — [Wrong duplicate match], [Split into separate clusters], [Merge
+ * selected] — each firing a toast that claimed the change had been made
+ * while writing nothing. Removed rather than wired: cluster membership is
+ * incident_reports.cluster_id, which no barangay role can write, and nothing
+ * populates it yet anyway (the dedup flagger never writes back). When
+ * write-back ships, a recomputation pass would undo a manual split unless a
+ * pin/override design exists — it doesn't. Re-add only with a backend path.
+ * Same reasoning as ClusterCard's removed [Split into commitments].
+ */
 export function MemberPanel({ cluster }: { cluster: ClusterExplorerEntry }) {
-  const { showToast } = useToast();
-
   return (
     <div className="flex min-h-[16rem] flex-1 flex-col overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
       <div className="flex flex-col gap-2 border-b border-ink-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -18,29 +25,9 @@ export function MemberPanel({ cluster }: { cluster: ClusterExplorerEntry }) {
           </p>
           <p className="text-xs text-ink-500">{cluster.centroidLabel}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => showToast(`Flagged ${cluster.id} as a wrong duplicate match`, "danger")}
-          >
-            Wrong duplicate match
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => showToast(`${cluster.id} split into separate clusters`, "info")}
-          >
-            Split into separate clusters
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => showToast(`Merged selected members into ${cluster.id}`, "success")}
-          >
-            Merge selected
-          </Button>
-        </div>
+        <p className="text-xs text-ink-500">
+          Validate members from the Queue &middot; Mga aksyon sa Queue
+        </p>
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">

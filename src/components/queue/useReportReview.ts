@@ -72,7 +72,9 @@ export function useReportReview(reportId: string, onResolved: (verdict: Verdict)
       const result = await updateReportStatus(reportId, "rejected", reason);
       if (result.success) {
         onResolved("rejected");
-        showToast(`${reportId} rejected`, "danger");
+        // Rejected reports leave the queue entirely — no tab shows them, by
+        // design — so say where they went, or the official goes looking.
+        showToast(`${reportId} rejected — moved to Validation History`, "danger");
       } else {
         showToast(result.message ?? "Failed to update report", "danger");
       }
