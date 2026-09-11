@@ -32,7 +32,8 @@ export interface ValidationHistoryData {
 const HISTORY_LIMIT = 50;
 
 /**
- * Fetches this barangay's reviewed reports (status validated/rejected) —
+ * Fetches this barangay's reviewed reports (validated — including those since
+ * routed or resolved — and rejected) —
  * built on top of the review_report() cutover (reviewed_by/reviewed_at/
  * review_reason), so no audit_logs involvement is needed at all: barangay
  * roles can already SELECT incident_reports table-wide for their own
@@ -55,7 +56,16 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
       "id, category, priority_name, status, entry_tier, identity_withheld, reviewed_by, reviewed_at, review_reason, created_at"
     )
     .eq("incident_barangay_id", barangayId)
-    .in("status", ["validated", "rejected"])
+    // A validated report doesn't stop being validated when it's routed or
+    // resolved — it moves on. Filtering on status = 'validated' alone made
+    // routing a report delete it from this page. routed/resolved rows are
+    // held to a real review stamp, so anything that ever reaches them
+    // without passing a barangay review (auto_route(), if it's ever wired)
+    // isn't passed off as a validation. Pre-cutover validated/rejected rows
+    // have no stamp and stay in, by status, as before.
+    .or(
+      "status.in.(validated,rejected),and(status.in.(routed,resolved),reviewed_at.not.is.null)"
+    )
     // nullsFirst: false matters — Postgres sorts NULLs FIRST on DESC by
     // default, which would float any pre-cutover row (reviewed_at IS NULL,
     // reviewed before review_report() existed) to the top of a
@@ -91,7 +101,9 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
 
   const summary: ValidationSummary = {
     total: rows.length,
-    confirmed: rows.filter((r) => r.status === "validated").length,
+    // Everything that isn't rejected: validated, routed, and resolved are all
+    // reports this barangay confirmed.
+    confirmed: rows.filter((r) => r.status !== "rejected").length,
     // "confirmedFalse" mapped to rejected count — the schema doesn't
     // distinguish WHY a report was rejected (duplicate vs. inaccurate vs.
     // malicious) the way the original mockup's naming implied; rejected is
@@ -116,7 +128,7 @@ function toValidationRecord(
     // priority_name 'Low' rendered as a High badge.
     priority: (r.priority_name ?? "Low") as ValidationRecord["priority"],
     entryTier: r.entry_tier,
-    verdict: r.status === "validated" ? "Confirmed" : "Rejected",
+    verdict: r.status === "rejected" ? "Rejected" : "Confirmed",
     // Pre-cutover rows can have a NULL reviewed_by (nobody stamped them),
     // and a reviewer whose profiles row isn't readable falls through the
     // same way — both surface as "Unknown official" rather than a blank cell.

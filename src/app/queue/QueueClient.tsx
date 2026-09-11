@@ -12,7 +12,7 @@ import { ClusterCard } from "@/components/queue/ClusterCard";
 import { QueueTabs, queuePanelDomId, queueTabDomId } from "@/components/queue/QueueTabs";
 import { ReportRow } from "@/components/queue/ReportRow";
 import { ReportDetailPanel } from "@/components/queue/ReportDetailPanel";
-import type { Verdict } from "@/components/queue/useReportReview";
+import { isReviewable, type Verdict } from "@/components/queue/useReportReview";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import type { QueueReport, QueueTabId } from "@/types";
@@ -68,6 +68,21 @@ export function QueueClient({
   // row or from the detail drawer, and both surfaces have to agree.
   const [resolved, setResolved] = useState<Record<string, Verdict>>({});
   const [selected, setSelected] = useState<QueueReport | null>(null);
+
+  // The drawer shows the freshest copy of the selected report, not the
+  // snapshot taken when it was clicked. Routing keeps the drawer open and
+  // the report comes back from the server with its new status and agency
+  // rows; handing the drawer the stale snapshot would leave it offering
+  // [Route to agency] on a report that has just been routed. Falls back to
+  // the snapshot when the report has left every tab (e.g. rejected).
+  const selectedReport = useMemo(() => {
+    if (!selected) return null;
+    for (const list of Object.values(queueData.queueByTab)) {
+      const fresh = list.find((r) => r.id === selected.id);
+      if (fresh) return fresh;
+    }
+    return selected;
+  }, [selected, queueData.queueByTab]);
 
   const router = useRouter();
   const { prefs } = usePreferences(official.role);
@@ -216,6 +231,23 @@ export function QueueClient({
     target.focus();
   }
 
+  // The local [resolved] mark bridges the moment between a decision and the
+  // refreshed data arriving. Once the server says a report is past review,
+  // its real state wins — otherwise a report validated from the Emergency
+  // tab reappears in Recent validated still wearing its collapsed
+  // [Validated] mark, hiding the Route button it now needs.
+  function renderRow(report: QueueReport) {
+    return (
+      <ReportRow
+        key={report.id}
+        report={report}
+        resolvedAs={isReviewable(report.details.status) ? resolved[report.id] : undefined}
+        onResolved={(verdict) => setResolved((prev) => ({ ...prev, [report.id]: verdict }))}
+        onOpenDetails={() => setSelected(report)}
+      />
+    );
+  }
+
   return (
     <AppShell
       breadcrumb={[official.barangayName, "Queue"]}
@@ -260,18 +292,24 @@ export function QueueClient({
               ? `No reports in this tab match “${query.trim()}”.`
               : "No reports in this queue right now."}
           </p>
-        ) : (
-          rows.map((report) => (
-            <ReportRow
-              key={report.id}
-              report={report}
-              resolvedAs={resolved[report.id]}
-              onResolved={(verdict) =>
-                setResolved((prev) => ({ ...prev, [report.id]: verdict }))
-              }
-              onOpenDetails={() => setSelected(report)}
+        ) : activeTab === "validated" ? (
+          // Two groups, because they ask different things of the official:
+          // the first still needs routing — nothing sends a validated report
+          // anywhere on its own — and the second is there to watch.
+          <>
+            <RowGroup
+              title="Awaiting routing"
+              rows={rows.filter((r) => r.details.status === "validated")}
+              renderRow={renderRow}
             />
-          ))
+            <RowGroup
+              title="Routed to agencies"
+              rows={rows.filter((r) => r.details.status !== "validated")}
+              renderRow={renderRow}
+            />
+          </>
+        ) : (
+          rows.map(renderRow)
         )}
       </div>
 
@@ -286,9 +324,9 @@ export function QueueClient({
         {receivedAt && ` · Data as of ${formatClock(receivedAt)}`}
       </p>
 
-      {selected && (
+      {selected && selectedReport && (
         <ReportDetailPanel
-          report={selected}
+          report={selectedReport}
           onClose={() => setSelected(null)}
           onResolved={(verdict) =>
             setResolved((prev) => ({ ...prev, [selected.id]: verdict }))
@@ -296,6 +334,26 @@ export function QueueClient({
         />
       )}
     </AppShell>
+  );
+}
+
+function RowGroup({
+  title,
+  rows,
+  renderRow,
+}: {
+  title: string;
+  rows: QueueReport[];
+  renderRow: (report: QueueReport) => React.ReactNode;
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <section>
+      <h3 className="border-b border-ink-100 bg-ink-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+        {title} &middot; {rows.length}
+      </h3>
+      {rows.map(renderRow)}
+    </section>
   );
 }
 

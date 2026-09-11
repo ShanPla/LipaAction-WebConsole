@@ -3,8 +3,11 @@
 import { PriorityBadge } from "@/components/ui/Badge";
 import { ReporterChip } from "@/components/ui/ReporterChip";
 import { Button } from "@/components/ui/Button";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ReasonPromptModal } from "@/components/ui/ReasonPromptModal";
 import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
+import { useReportRouting } from "./useReportRouting";
+import { routeConfirmCopy, routingState } from "./routing";
 import type { QueueReport } from "@/types";
 
 export function ReportRow({
@@ -24,16 +27,73 @@ export function ReportRow({
     report.id,
     onResolved
   );
+  const routing = useReportRouting(report.id);
+  const state = routingState(report);
 
   if (resolvedAs) {
     return (
       <div className="flex items-center justify-between gap-4 border-b border-ink-100 bg-ink-50/60 px-4 py-3 text-sm text-ink-500 last:border-0">
         <span className="font-mono text-xs">{report.id}</span>
         <span>
-          {resolvedAs === "validated" ? "Validated — moved to Recent validated" : "Rejected"}
+          {resolvedAs === "validated" ? "Validated — route it from Recent validated" : "Rejected"}
         </span>
       </div>
     );
+  }
+
+  // Past review, the row's action is routing. A report that has been
+  // validated but not routed has reached no agency at all — nothing routes
+  // on its own — so the button sits exactly where Validate was.
+  function renderPastReview() {
+    switch (state.kind) {
+      case "ready":
+        return (
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={routing.isPending}
+            onClick={routing.openConfirm}
+          >
+            Route to agency
+          </Button>
+        );
+      case "incomplete":
+        return (
+          <>
+            <span className="text-xs font-medium text-priority-medium">Routing incomplete</span>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={routing.isPending}
+              onClick={routing.openConfirm}
+            >
+              Finish routing
+            </Button>
+          </>
+        );
+      case "no-mapping":
+        return (
+          <span className="max-w-[14rem] text-right text-xs font-medium text-priority-medium">
+            No agency mapped — needs barangay review
+          </span>
+        );
+      case "unavailable":
+        return (
+          <span className="max-w-[14rem] text-right text-xs text-ink-500">
+            Couldn&apos;t load routing options — refresh
+          </span>
+        );
+      case "downstream":
+        return (
+          <span className="max-w-[16rem] text-right text-xs text-ink-700">{state.summary}</span>
+        );
+      case "none":
+        return (
+          <span className="text-xs font-medium text-ink-500">
+            {statusLabel(report.details.status)}
+          </span>
+        );
+    }
   }
 
   return (
@@ -68,9 +128,10 @@ export function ReportRow({
         </button>
         <div className="flex shrink-0 items-center gap-2">
           {/* The Recent validated tab renders this same row. A report already
-              past review shows its outcome instead of buttons that would only
-              fail — and leaving no [data-validate-button] behind is also what
-              keeps [Validate next] from landing on a decided report. */}
+              past review shows its routing state instead of review buttons
+              that would only fail — and leaving no [data-validate-button]
+              behind is also what keeps [Validate next] from landing on a
+              decided report. */}
           {isReviewable(report.details.status) ? (
             <>
               <Button variant="secondary" size="sm" disabled={isPending} onClick={openReject}>
@@ -89,9 +150,7 @@ export function ReportRow({
               </Button>
             </>
           ) : (
-            <span className="text-xs font-medium text-ink-500">
-              {statusLabel(report.details.status)}
-            </span>
+            renderPastReview()
           )}
         </div>
       </div>
@@ -103,6 +162,15 @@ export function ReportRow({
           confirmLabel="Reject report"
           onCancel={cancelReject}
           onConfirm={reject}
+        />
+      )}
+
+      {routing.isConfirming && (state.kind === "ready" || state.kind === "incomplete") && (
+        <ConfirmModal
+          {...routeConfirmCopy(report, state.plan, state.kind === "incomplete")}
+          busy={routing.isPending}
+          onCancel={routing.cancelConfirm}
+          onConfirm={routing.route}
         />
       )}
     </>

@@ -69,7 +69,7 @@ official's browser is set.
 
 | Page | Status |
 |------|--------|
-| **Queue** | Live. Shows the barangay's pending reports in four tabs — Emergency Fast-triage, Standard intake, Flagged duplicates, Recent validated — with a search box and a detail drawer showing everything the barangay holds on a report. Validate and Reject write to the database; rejection requires a reason. Opening a report's details is reported to the audit trail. A duplicate cluster can be validated as one action. The page updates live as reports change (a Supabase Realtime subscription, filtered to the barangay and enforced by Row-Level Security), falling back to a 30-second refresh if the live channel cannot connect. It can chime when a new emergency arrives, and can raise a browser notification when an emergency has waited more than five minutes. If the data cannot be loaded it says so, rather than showing an empty queue. |
+| **Queue** | Live. Shows the barangay's pending reports in four tabs — Emergency Fast-triage, Standard intake, Flagged duplicates, Recent validated — with a search box and a detail drawer showing everything the barangay holds on a report. Validate and Reject write to the database; rejection requires a reason. A validated report is then routed to the agencies its category maps to, by hand, after a confirmation step; the Recent validated tab separates reports awaiting routing from those already with agencies, and shows each agency's progress (acknowledged, resolved, or closed with an outcome) as the agencies record it. Opening a report's details is reported to the audit trail. A duplicate cluster can be validated as one action. The page updates live as reports change (a Supabase Realtime subscription, filtered to the barangay and enforced by Row-Level Security), falling back to a 30-second refresh if the live channel cannot connect. It can chime when a new emergency arrives, and can raise a browser notification when an emergency has waited more than five minutes. If the data cannot be loaded it says so, rather than showing an empty queue. |
 | **Cluster Explorer** | Live query, currently empty. Groups pending reports that share a `cluster_id`. The duplicate-detection service computes clusters but does not yet write them back to reports, so no report carries a `cluster_id` and the page has nothing to show. |
 | **Validation History** | Live. Reviewed reports (validated or rejected) with the reviewing official, timestamp, rejection reason, and outcome filters. Exports the visible rows to CSV. |
 | **Settings** | Profile is live (name, role, barangay, email, phone); the display name is editable. Language and alert preferences are saved in the browser on the current device; the alert preferences drive the Queue page's chime and browser notification. Senior barangay administrators default to Tagalog, as the thesis specifies. |
@@ -145,6 +145,12 @@ In each case the console shows nothing rather than an approximation.
   duplicates tab are empty against live data. There is also no dedicated clusters
   table, so no centroid, radius, or per-report proximity signals exist to show; the
   spatial panel says so rather than displaying invented figures.
+- **Routing is manual and one-way.** Nothing routes a validated report automatically;
+  an official routes it, and the agencies are chosen by the category-to-agency mapping,
+  not by the official. A category with no mapping is reported as needing barangay
+  review rather than sent anywhere. Routing cannot be undone or redirected from the
+  console, and the thesis's recall window for automatic routes is not implemented,
+  because automatic routing itself is not.
 - **Manual report intake** is not offered. Reports are attributable to a resident
   account by design, so intake on a walk-in resident's behalf requires a decision on
   attribution before it can be built.

@@ -1,15 +1,35 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { startOfManilaDay } from "@/lib/utils";
-import type { KpiSummary, QueueReport, QueueTabId, SituationCluster } from "@/types";
+import type {
+  AgencyRouting,
+  KpiSummary,
+  QueueReport,
+  QueueTabId,
+  RoutingPlanEntry,
+  SituationCluster,
+} from "@/types";
 
 // Statuses that still belong in an active working queue. Anything past this
 // (validated/routed/resolved/rejected) has already been acted on.
 const PENDING_STATUSES = ["pending_priority", "prioritized"];
 
-// The Recent validated tab is a glance at what just happened, not a history;
-// Validation History is the full record.
-const VALIDATED_LIMIT = 20;
+// Past validation, handed to agencies. Nothing moves a report here on its
+// own — routing is a manual barangay action (see routeReport).
+const DOWNSTREAM_STATUSES = ["routed", "resolved"];
+
+// Every status a positively reviewed report can be in. A report validated
+// this morning and routed this afternoon still counts toward [Validated
+// today]; counting only status = 'validated' would make routing a report
+// subtract it from the tile.
+const VALIDATED_OR_LATER = ["validated", ...DOWNSTREAM_STATUSES];
+
+// The routed half of the Recent validated tab is a glance at what just
+// happened, not a history; Validation History is the full record. The
+// awaiting-routing half is NOT capped — it is a to-do list, and a validated
+// report that fell off the end of a capped list would be a dead end nobody
+// could see.
+const RECENT_ROUTED_LIMIT = 20;
 
 const REPORT_COLUMNS =
   "id, category, description, priority_name, status, entry_tier, identity_withheld, created_at, cluster_id, reviewed_at, severity_self_rating, safety_net_confirmation, anyone_hurt, is_ongoing, has_photo, has_video, discreet_reporting, priority_class, priority_score, confidence_band";
@@ -40,6 +60,32 @@ interface RawReport {
   confidence_band: string | null;
 }
 
+interface RawRouting {
+  incident_report_id: string;
+  agency_id: string;
+  is_primary: boolean;
+  routed_at: string | null;
+  acknowledged_at: string | null;
+  resolved_at: string | null;
+  resolution_outcome: AgencyRouting["resolutionOutcome"];
+}
+
+interface RawMapping {
+  category_key: string;
+  agency_id: string;
+  is_primary: boolean;
+  sort_order: number | null;
+}
+
+// What toQueueReport needs beyond the report row itself. Pending reports get
+// the empty default: routing doesn't apply to them yet.
+interface RoutingExtras {
+  routing: AgencyRouting[];
+  routingPlan: RoutingPlanEntry[] | null;
+}
+
+const NO_ROUTING: RoutingExtras = { routing: [], routingPlan: null };
+
 export interface QueueData {
   kpiSummary: KpiSummary;
   activeCluster: SituationCluster | null;
@@ -67,14 +113,14 @@ export async function getBarangayQueue(
 ): Promise<QueueData> {
   const supabase = createClient();
 
-  // Three narrow queries rather than one wide one. This used to select every
+  // Narrow queries rather than one wide one. This used to select every
   // report the barangay had ever filed and partition by status in JS — fine
   // at one report, thousands of rows per page load after a year in service.
-  // Pending is the working set and stays uncapped (its size is the backlog
-  // itself); validated is capped in SQL; today's count is a HEAD request
-  // that returns no rows at all.
+  // Pending and awaiting-routing are to-do lists and stay uncapped (their
+  // size is the backlog itself); recently routed is capped in SQL; today's
+  // count is a HEAD request that returns no rows at all.
   const dayStart = startOfManilaDay().toISOString();
-  const [pendingRes, validatedRes, todayRes] = await Promise.all([
+  const [pendingRes, awaitingRes, routedRes, todayRes] = await Promise.all([
     supabase
       .from("incident_reports")
       .select(REPORT_COLUMNS)
@@ -88,8 +134,14 @@ export async function getBarangayQueue(
       .eq("status", "validated")
       // nullsFirst: false — pre-cutover rows have no reviewed_at and would
       // otherwise float to the top of a newest-first list.
+      .order("reviewed_at", { ascending: false, nullsFirst: false }),
+    supabase
+      .from("incident_reports")
+      .select(REPORT_COLUMNS)
+      .eq("incident_barangay_id", barangayId)
+      .in("status", DOWNSTREAM_STATUSES)
       .order("reviewed_at", { ascending: false, nullsFirst: false })
-      .limit(VALIDATED_LIMIT),
+      .limit(RECENT_ROUTED_LIMIT),
     // Pre-cutover rows (reviewed_at IS NULL) fall out of a >= comparison on
     // their own, which is the intended exclusion: there's no knowing what
     // day they were handled.
@@ -97,12 +149,12 @@ export async function getBarangayQueue(
       .from("incident_reports")
       .select("id", { count: "exact", head: true })
       .eq("incident_barangay_id", barangayId)
-      .eq("status", "validated")
+      .in("status", VALIDATED_OR_LATER)
       .gte("reviewed_at", dayStart),
   ]);
 
-  const failure = pendingRes.error ?? validatedRes.error ?? todayRes.error;
-  if (failure || !pendingRes.data || !validatedRes.data) {
+  const failure = pendingRes.error ?? awaitingRes.error ?? routedRes.error ?? todayRes.error;
+  if (failure || !pendingRes.data || !awaitingRes.data || !routedRes.data) {
     // Fail closed to an empty queue rather than crashing the whole page on a
     // transient query error — but say so in the returned data, and put the
     // real reason in the server log, where table and column names belong.
@@ -111,10 +163,22 @@ export async function getBarangayQueue(
   }
 
   const pending = pendingRes.data as RawReport[];
+  const awaiting = awaitingRes.data as RawReport[];
+  const routed = routedRes.data as RawReport[];
 
-  const emergency = pending.filter((r) => r.entry_tier === "emergency").map(toQueueReport);
-  const standard = pending.filter((r) => r.entry_tier === "other_reports").map(toQueueReport);
-  const validated = (validatedRes.data as RawReport[]).map(toQueueReport);
+  const routingExtras = await loadRouting(supabase, awaiting, routed);
+
+  const emergency = pending
+    .filter((r) => r.entry_tier === "emergency")
+    .map((r) => toQueueReport(r));
+  const standard = pending
+    .filter((r) => r.entry_tier === "other_reports")
+    .map((r) => toQueueReport(r));
+  // Awaiting routing first: those still need someone to act. Routed ones
+  // are there to show what the agencies have done since.
+  const validated = [...awaiting, ...routed].map((r) =>
+    toQueueReport(r, routingExtras.get(r.id))
+  );
 
   // Duplicates: pending reports that share a cluster_id with at least one
   // other pending report (the duplicate-flagging algorithm's output).
@@ -126,7 +190,7 @@ export async function getBarangayQueue(
     clusterGroups.set(r.cluster_id, group);
   }
   const duplicateGroups = [...clusterGroups.values()].filter((g) => g.length >= 2);
-  const duplicates = duplicateGroups.flat().map(toQueueReport);
+  const duplicates = duplicateGroups.flat().map((r) => toQueueReport(r));
 
   // Active-cluster banner (the "ACTIVE FLOODING"-style card): the single
   // largest duplicate group, if any exist.
@@ -142,7 +206,7 @@ export async function getBarangayQueue(
         // one barangay's members from here.
         barangaysAffected: [barangayName],
         identityWithheldMembers: largestGroup.filter((r) => r.identity_withheld).length,
-        members: largestGroup.map(toQueueReport),
+        members: largestGroup.map((r) => toQueueReport(r)),
       }
     : null;
 
@@ -156,9 +220,10 @@ export async function getBarangayQueue(
     // metric.
     medianMinutes: medianAgeMinutes(pending),
     // Today in Manila — see startOfManilaDay. Counted in SQL rather than from
-    // the validated tab's rows, which are capped at VALIDATED_LIMIT and would
-    // undercount a busy day. This previously counted every validated report
-    // ever while the tile was labelled [Validated today].
+    // the tab's rows, whose routed half is capped and would undercount a busy
+    // day. Includes routed and resolved, so routing a report doesn't take it
+    // back off the tile. This previously counted every validated report ever
+    // while the tile was labelled [Validated today].
     validatedCount: todayRes.count ?? 0,
   };
 
@@ -179,7 +244,119 @@ export async function getBarangayQueue(
   return { kpiSummary, activeCluster, queueByTab, queueTabMeta, loadFailed: false };
 }
 
-function toQueueReport(r: RawReport): QueueReport {
+/**
+ * Everything the Recent validated tab says about routing, loaded after the
+ * reports themselves because it needs their ids and categories.
+ *
+ * None of this is allowed to take the queue down. These three tables are
+ * secondary to the pending list — an RLS change on agency_routing must not
+ * put an outage banner over live emergencies — so each failure is logged and
+ * degrades only its own part:
+ *  - routing rows fail → routed reports show their status without agency
+ *    progress; a half-finished routing can't be detected, which is safe
+ *    because routeReport is idempotent.
+ *  - the category mapping fails → routingPlan stays null on validated
+ *    reports, which the UI shows as [couldn't load routing options] rather
+ *    than as [no agency mapped], a claim it couldn't back up.
+ *  - agency names fail → [Unnamed agency].
+ */
+async function loadRouting(
+  supabase: ReturnType<typeof createClient>,
+  awaiting: RawReport[],
+  routed: RawReport[]
+): Promise<Map<string, RoutingExtras>> {
+  const extras = new Map<string, RoutingExtras>();
+  const reportIds = [...awaiting, ...routed].map((r) => r.id);
+  if (reportIds.length === 0) return extras;
+
+  const categories = [...new Set(awaiting.map((r) => r.category))];
+
+  const [routingRes, mappingRes, agenciesRes] = await Promise.all([
+    supabase
+      .from("agency_routing")
+      .select(
+        "incident_report_id, agency_id, is_primary, routed_at, acknowledged_at, resolved_at, resolution_outcome"
+      )
+      .in("incident_report_id", reportIds),
+    categories.length > 0
+      ? supabase
+          .from("category_agency_routing")
+          .select("category_key, agency_id, is_primary, sort_order")
+          .in("category_key", categories)
+          .order("sort_order", { ascending: true })
+      : Promise.resolve({ data: [] as RawMapping[], error: null }),
+    // A small reference table (the city's responder agencies), readable by
+    // every authenticated user — fetched whole rather than by id so it can
+    // run in parallel with the two lookups that would supply the ids.
+    supabase.from("agencies").select("id, name").limit(500),
+  ]);
+
+  if (routingRes.error) {
+    console.error("[queue] agency_routing load failed", routingRes.error.code, routingRes.error.message);
+  }
+  if (mappingRes.error) {
+    console.error(
+      "[queue] category_agency_routing load failed",
+      mappingRes.error.code,
+      mappingRes.error.message
+    );
+  }
+  if (agenciesRes.error) {
+    console.error("[queue] agencies load failed", agenciesRes.error.code, agenciesRes.error.message);
+  }
+
+  const agencyNames = new Map<string, string>(
+    ((agenciesRes.data ?? []) as { id: string; name: string | null }[]).map((a) => [
+      a.id,
+      a.name?.trim() || "Unnamed agency",
+    ])
+  );
+  const nameOf = (agencyId: string) => agencyNames.get(agencyId) ?? "Unnamed agency";
+
+  const routingByReport = new Map<string, AgencyRouting[]>();
+  for (const row of (routingRes.data ?? []) as RawRouting[]) {
+    const list = routingByReport.get(row.incident_report_id) ?? [];
+    list.push({
+      agencyName: nameOf(row.agency_id),
+      isPrimary: row.is_primary,
+      routedAt: row.routed_at,
+      acknowledgedAt: row.acknowledged_at,
+      resolvedAt: row.resolved_at,
+      resolutionOutcome: row.resolution_outcome,
+    });
+    routingByReport.set(row.incident_report_id, list);
+  }
+  // Primary agency first, so every surface can read the head of the list as
+  // the lead responder.
+  for (const list of routingByReport.values()) {
+    list.sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
+  }
+
+  const planByCategory = new Map<string, RoutingPlanEntry[]>();
+  if (!mappingRes.error) {
+    for (const row of (mappingRes.data ?? []) as RawMapping[]) {
+      const plan = planByCategory.get(row.category_key) ?? [];
+      plan.push({ agencyName: nameOf(row.agency_id), isPrimary: row.is_primary });
+      planByCategory.set(row.category_key, plan);
+    }
+  }
+
+  for (const r of awaiting) {
+    extras.set(r.id, {
+      routing: routingByReport.get(r.id) ?? [],
+      // A category absent from a successful lookup has no mapping: []. A
+      // failed lookup proves nothing either way: null.
+      routingPlan: mappingRes.error ? null : planByCategory.get(r.category) ?? [],
+    });
+  }
+  for (const r of routed) {
+    extras.set(r.id, { routing: routingByReport.get(r.id) ?? [], routingPlan: null });
+  }
+
+  return extras;
+}
+
+function toQueueReport(r: RawReport, extras: RoutingExtras = NO_ROUTING): QueueReport {
   return {
     id: r.id,
     category: r.category,
@@ -211,6 +388,8 @@ function toQueueReport(r: RawReport): QueueReport {
       confidenceBand: r.confidence_band,
       clusterId: r.cluster_id,
       submittedAt: r.created_at,
+      routing: extras.routing,
+      routingPlan: extras.routingPlan,
     },
   };
 }

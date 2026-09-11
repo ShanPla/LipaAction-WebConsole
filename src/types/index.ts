@@ -27,6 +27,26 @@ export interface ReporterInfo {
  * is set by the mobile app, not by this console, so relabelling them here
  * would be guessing.
  */
+/**
+ * One agency_routing row as the barangay desk can see it (ar_select_barangay).
+ * There is no status column on agency_routing: progress is read from which
+ * timestamps are set. The desk cannot change any of these — agency roles do.
+ */
+export interface AgencyRouting {
+  agencyName: string;
+  isPrimary: boolean;
+  routedAt: string | null;
+  acknowledgedAt: string | null;
+  resolvedAt: string | null;
+  resolutionOutcome: "resolved" | "confirmed-false" | "duplicate" | "out-of-scope" | null;
+}
+
+/** An agency that routing this report would send it to (category_agency_routing). */
+export interface RoutingPlanEntry {
+  agencyName: string;
+  isPrimary: boolean;
+}
+
 export interface ReportDetails {
   entryTier: "emergency" | "other_reports";
   status: string;
@@ -43,6 +63,14 @@ export interface ReportDetails {
   confidenceBand: string | null;
   clusterId: string | null;
   submittedAt: string; // exact ISO timestamp, not the relative display string
+  // Agencies this report has been sent to. Empty until it is routed — and
+  // non-empty on a validated report only when a routing attempt stopped
+  // part-way, which the UI offers to finish.
+  routing: AgencyRouting[];
+  // Where routing would send it, from category_agency_routing. null when
+  // routing doesn't apply (not validated); [] when the category has no
+  // mapping — shown as [needs barangay review], never filled with a guess.
+  routingPlan: RoutingPlanEntry[] | null;
 }
 
 export interface QueueReport {
