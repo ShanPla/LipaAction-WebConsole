@@ -69,7 +69,7 @@ official's browser is set.
 
 | Page | Status |
 |------|--------|
-| **Queue** | Live. Shows the barangay's pending reports in four tabs — Emergency Fast-triage, Standard intake, Flagged duplicates, Recent validated — with a search box and a detail drawer showing everything the barangay holds on a report. Validate and Reject write to the database; rejection requires a reason. Opening a report's details is reported to the audit trail. A duplicate cluster can be validated as one action. The page re-fetches every 30 seconds while open, can chime when a new emergency arrives, and can raise a browser notification when an emergency has waited more than five minutes. If the data cannot be loaded it says so, rather than showing an empty queue. |
+| **Queue** | Live. Shows the barangay's pending reports in four tabs — Emergency Fast-triage, Standard intake, Flagged duplicates, Recent validated — with a search box and a detail drawer showing everything the barangay holds on a report. Validate and Reject write to the database; rejection requires a reason. Opening a report's details is reported to the audit trail. A duplicate cluster can be validated as one action. The page updates live as reports change (a Supabase Realtime subscription, filtered to the barangay and enforced by Row-Level Security), falling back to a 30-second refresh if the live channel cannot connect. It can chime when a new emergency arrives, and can raise a browser notification when an emergency has waited more than five minutes. If the data cannot be loaded it says so, rather than showing an empty queue. |
 | **Cluster Explorer** | Live query, currently empty. Groups pending reports that share a `cluster_id`. The duplicate-detection service computes clusters but does not yet write them back to reports, so no report carries a `cluster_id` and the page has nothing to show. |
 | **Validation History** | Live. Reviewed reports (validated or rejected) with the reviewing official, timestamp, rejection reason, and outcome filters. Exports the visible rows to CSV. |
 | **Settings** | Profile is live (name, role, barangay, email, phone); the display name is editable. Language and alert preferences are saved in the browser on the current device; the alert preferences drive the Queue page's chime and browser notification. Senior barangay administrators default to Tagalog, as the thesis specifies. |
@@ -160,8 +160,8 @@ In each case the console shows nothing rather than an approximation.
   open; there is no push to a closed console.
 - **No full Tagalog interface.** The language preference is recorded but the screens
   remain English with Tagalog labels alongside key terms.
-- **Refresh is polling, not a live subscription.** The queue re-fetches every 30
-  seconds; a report can be up to 30 seconds old when it appears.
+- **Live updates need a websocket.** On a network that blocks them, the queue says so
+  in its footer and falls back to a 30-second refresh.
 
 ## Notes on fidelity to the thesis mockups
 

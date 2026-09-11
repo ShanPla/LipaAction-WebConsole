@@ -40,11 +40,14 @@ export async function logReportView(reportId: string): Promise<void> {
 
   // PGRST202: the function isn't in PostgREST's schema cache — it hasn't been
   // pushed to this project yet. Expected until the migration lands, so it is
-  // not worth a log line on every drawer open. Everything else is: 42501 here
-  // means the report was not found OR is outside this official's scope (the
+  // not worth a log line on every drawer open.
+  //
+  // 42501: the report was not found OR is outside this official's scope. The
   // backend returns one code for both on purpose, so the error can't be used
-  // to probe another barangay's report ids).
-  if (error.code === "PGRST202") return;
+  // to probe another barangay's report ids — and per the backend owner
+  // (2026-09-11) it is [not ours], not a bug: key on the code, never on the
+  // message text, and don't log it.
+  if (error.code === "PGRST202" || error.code === "42501") return;
 
   console.error(`log_report_view failed for ${reportId}: ${error.code} ${error.message}`);
 }

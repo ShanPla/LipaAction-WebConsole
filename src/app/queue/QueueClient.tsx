@@ -6,6 +6,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { DataUnavailableBanner } from "@/components/layout/DataUnavailableBanner";
 import { playChime } from "@/lib/chime";
 import { usePreferences } from "@/lib/preferences";
+import { createClient } from "@/lib/supabase/client";
 import { KpiHeader } from "@/components/queue/KpiHeader";
 import { ClusterCard } from "@/components/queue/ClusterCard";
 import { QueueTabs, queuePanelDomId, queueTabDomId } from "@/components/queue/QueueTabs";
@@ -18,12 +19,16 @@ import type { QueueReport, QueueTabId } from "@/types";
 import type { OfficialProfile } from "@/lib/auth";
 import type { QueueData } from "@/lib/data/queue";
 
-// How often the queue re-fetches while open. The thesis calls the queue
-// real-time (§3.11 tests it; report #6 is marked real-time) and gives Tier 0
-// a 5-minute SLA; 30 s keeps the worst-case staleness well inside that
-// without Supabase Realtime, which needs a publication grant the backend
-// hasn't confirmed. Cheap: one RSC fetch, three narrow queries.
+// Fallback cadence when the Realtime channel can't be established (network
+// that blocks websockets, or the subscription errors). The thesis gives
+// Tier 0 a 5-minute SLA; 30 s keeps worst-case staleness well inside that.
 const REFRESH_INTERVAL_MS = 30_000;
+
+// Realtime events are coalesced for this long before one refresh: a cluster
+// validate is many UPDATEs in a row, and each refresh is a full RSC fetch.
+const REALTIME_DEBOUNCE_MS = 500;
+
+type Freshness = "connecting" | "live" | "polling";
 
 // Fast-triage SLA from the thesis (p.102): a Tier 0 report should have a
 // decision within 5 minutes of submission.
@@ -67,21 +72,83 @@ export function QueueClient({
   const router = useRouter();
   const { prefs } = usePreferences(official.role);
 
-  // Periodic refresh. router.refresh() re-runs the server component and
-  // streams new props in; React state here (active tab, search, resolved
-  // marks) survives it. Skipped while the tab is hidden — nobody is looking —
-  // and while any dialog is open, so a drawer or reject prompt never has its
-  // report swapped out from under a decision. The dialog check reads the DOM
-  // rather than tracking each modal's state, because the modals live in
-  // ReportRow and ClusterCard and this component doesn't see them open.
+  // Live updates. incident_reports is in the supabase_realtime publication
+  // and postgres_changes delivery is RLS-filtered per authenticated user
+  // (backend owner, 2026-09-11; verified on prod 2026-06-01). The barangay
+  // filter is defence in depth on top of that, not the boundary.
+  //
+  // An event doesn't carry enough to update the screen by itself — priority
+  // shaping, tab partitioning, and the KPI count all live server-side — so
+  // each event just asks the server component to re-run: router.refresh()
+  // streams new props in, and React state here (active tab, search, resolved
+  // marks) survives it. Refreshes are held while any dialog is open, so a
+  // drawer or reject prompt never has its report swapped out from under a
+  // decision; the held refresh runs as soon as the dialog closes. The dialog
+  // check reads the DOM because the modals live in ReportRow and ClusterCard
+  // and this component doesn't see them open.
+  const [freshness, setFreshness] = useState<Freshness>("connecting");
   useEffect(() => {
+    const supabase = createClient();
+    let debounce: number | undefined;
+    let heldUntilDialogCloses: number | undefined;
+
+    function refreshWhenClear() {
+      if (document.querySelector('[role="dialog"]')) {
+        window.clearInterval(heldUntilDialogCloses);
+        heldUntilDialogCloses = window.setInterval(() => {
+          if (document.querySelector('[role="dialog"]')) return;
+          window.clearInterval(heldUntilDialogCloses);
+          router.refresh();
+        }, 1000);
+        return;
+      }
+      router.refresh();
+    }
+
+    function onChange() {
+      window.clearTimeout(debounce);
+      debounce = window.setTimeout(refreshWhenClear, REALTIME_DEBOUNCE_MS);
+    }
+
+    const channel = supabase
+      .channel(`queue:${official.barangayId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "incident_reports",
+          filter: `incident_barangay_id=eq.${official.barangayId}`,
+        },
+        onChange
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") setFreshness("live");
+        // Any failure state falls back to polling below rather than going
+        // silent — the page must never look live when it isn't.
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          setFreshness("polling");
+        }
+      });
+
+    return () => {
+      window.clearTimeout(debounce);
+      window.clearInterval(heldUntilDialogCloses);
+      void supabase.removeChannel(channel);
+    };
+  }, [router, official.barangayId]);
+
+  // Polling, only while the channel isn't delivering. Same dialog and
+  // visibility rules.
+  useEffect(() => {
+    if (freshness === "live") return;
     const id = window.setInterval(() => {
       if (document.visibilityState !== "visible") return;
       if (document.querySelector('[role="dialog"]')) return;
       router.refresh();
     }, REFRESH_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, [router]);
+  }, [router, freshness]);
 
   // When the data on screen was last received — the honest version of a
   // [Live] badge. Set on every new queueData, including the first.
@@ -213,7 +280,9 @@ export function QueueClient({
           ? `Showing ${rows.length} of ${unfilteredCount} report${unfilteredCount === 1 ? "" : "s"} in this tab`
           : `Showing ${rows.length} report${rows.length === 1 ? "" : "s"}`}
         {" · "}
-        Refreshes every {REFRESH_INTERVAL_MS / 1000} s
+        {freshness === "live" && "Live — updates as reports change"}
+        {freshness === "polling" && `Live updates unavailable — refreshes every ${REFRESH_INTERVAL_MS / 1000} s`}
+        {freshness === "connecting" && "Connecting to live updates…"}
         {receivedAt && ` · Data as of ${formatClock(receivedAt)}`}
       </p>
 
