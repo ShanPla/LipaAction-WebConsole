@@ -126,7 +126,7 @@ function toValidationRecord(
     // "tier" collapsed priority and intake tier into one value, and the table
     // then read that value back as a priority — so an emergency report with
     // priority_name 'Low' rendered as a High badge.
-    priority: (r.priority_name ?? "Low") as ValidationRecord["priority"],
+    priority: r.priority_name,
     entryTier: r.entry_tier,
     verdict: r.status === "rejected" ? "Rejected" : "Confirmed",
     // Pre-cutover rows can have a NULL reviewed_by (nobody stamped them),

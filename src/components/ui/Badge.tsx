@@ -1,5 +1,5 @@
 import { cx } from "@/lib/utils";
-import type { PriorityTier } from "@/types";
+import type { PriorityTier, ReportPriority } from "@/types";
 
 const priorityStyles: Record<PriorityTier, string> = {
   Critical: "bg-priority-criticalBg text-priority-critical",
@@ -8,7 +8,23 @@ const priorityStyles: Record<PriorityTier, string> = {
   Low: "bg-priority-lowBg text-priority-low",
 };
 
-export function PriorityBadge({ priority }: { priority: PriorityTier }) {
+export const UNSCORED_LABEL = "Not scored";
+
+/**
+ * An unscored report gets a neutral outline badge with no dot: visibly a
+ * different kind of thing from the four tiers, so it can't be read as the
+ * lowest of them. Every loader used to default a missing priority_name to
+ * Low, which put a Low badge on emergencies the inference service simply
+ * hadn't reached yet.
+ */
+export function PriorityBadge({ priority }: { priority: ReportPriority }) {
+  if (priority === null) {
+    return (
+      <span className="inline-flex items-center rounded-full border border-ink-300 px-2.5 py-0.5 text-xs font-medium text-ink-500">
+        {UNSCORED_LABEL}
+      </span>
+    );
+  }
   return (
     <span
       className={cx(

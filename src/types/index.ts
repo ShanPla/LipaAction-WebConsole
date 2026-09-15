@@ -3,6 +3,11 @@
 
 export type PriorityTier = "Critical" | "High" | "Medium" | "Low";
 
+// null = not scored yet. priority_name is written by the inference service,
+// and until it runs a report has none. That is not the same as Low, and an
+// emergency must never be shown as Low because nothing has ranked it.
+export type ReportPriority = PriorityTier | null;
+
 export type QueueTabId = "emergency" | "standard" | "duplicates" | "validated";
 
 export interface KpiSummary {
@@ -18,15 +23,6 @@ export interface ReporterInfo {
   trustScore?: number;
 }
 
-/**
- * The fuller picture of a report, shown in the detail drawer.
- *
- * Every field here is a real incident_reports column. The free-text ones
- * (severitySelfRating, anyoneHurt, safetyNetConfirmation) are rendered
- * verbatim rather than mapped to friendlier labels — their value vocabulary
- * is set by the mobile app, not by this console, so relabelling them here
- * would be guessing.
- */
 /**
  * One agency_routing row as the barangay desk can see it (ar_select_barangay).
  * There is no status column on agency_routing: progress is read from which
@@ -47,6 +43,16 @@ export interface RoutingPlanEntry {
   isPrimary: boolean;
 }
 
+/**
+ * The fuller picture of a report, shown in the detail drawer.
+ *
+ * Every field here is a real incident_reports column, except the two routing
+ * fields, which come from agency_routing and category_agency_routing. The
+ * free-text ones (severitySelfRating, anyoneHurt, safetyNetConfirmation) are
+ * rendered verbatim rather than mapped to friendlier labels — their value
+ * vocabulary is set by the mobile app, not by this console, so relabelling
+ * them here would be guessing.
+ */
 export interface ReportDetails {
   entryTier: "emergency" | "other_reports";
   status: string;
@@ -76,7 +82,7 @@ export interface ReportDetails {
 export interface QueueReport {
   id: string; // e.g. "24-2024-2312"
   category: string; // e.g. "Vehicular accident"
-  priority: PriorityTier;
+  priority: ReportPriority;
   summary: string;
   location?: string; // no address text in real data — only present for mock/demo data
   timestamp: string; // display string, e.g. "2m ago"
@@ -98,7 +104,7 @@ export interface SituationCluster {
 export interface ClusterMemberDetail {
   reportId: string;
   category: string;
-  priority: PriorityTier;
+  priority: ReportPriority;
   relationship: "Primary" | "Related";
   timestamp: string;
   reporter: ReporterInfo;
@@ -124,7 +130,7 @@ export interface ValidationRecord {
   // (Critical/Standard/Log) that the table then re-mapped onto a priority
   // badge — which displayed a Low report as "High". Priority and intake tier
   // are separate axes and are now carried, and rendered, separately.
-  priority: PriorityTier;
+  priority: ReportPriority;
   entryTier: "emergency" | "other_reports";
   verdict: "Confirmed" | "Rejected";
   validatingOfficial: string;

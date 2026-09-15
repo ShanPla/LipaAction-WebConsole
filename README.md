@@ -145,6 +145,9 @@ In each case the console shows nothing rather than an approximation.
   duplicates tab are empty against live data. There is also no dedicated clusters
   table, so no centroid, radius, or per-report proximity signals exist to show; the
   spatial panel says so rather than displaying invented figures.
+- **Priority comes from the inference service.** A report it has not scored is labelled
+  Not scored rather than given a tier, and pending reports are listed highest score
+  first, then longest-waiting first, with unscored reports after scored ones.
 - **Routing is manual and one-way.** Nothing routes a validated report automatically;
   an official routes it, and the agencies are chosen by the category-to-agency mapping,
   not by the official. A category with no mapping is reported as needing barangay

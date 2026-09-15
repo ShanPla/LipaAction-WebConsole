@@ -144,9 +144,11 @@ export function ReportDetailPanel({
             <Row
               label="Priority"
               value={
-                d.priorityScore === null
-                  ? report.priority
-                  : `${report.priority} · score ${d.priorityScore}`
+                report.priority === null
+                  ? <span className="text-ink-500">Not scored yet</span>
+                  : d.priorityScore === null
+                    ? report.priority
+                    : `${report.priority} · score ${d.priorityScore}`
               }
             />
             <Row label="Confidence" value={d.confidenceBand ?? notProvided} />

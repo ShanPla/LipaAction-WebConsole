@@ -126,7 +126,13 @@ export async function getBarangayQueue(
       .select(REPORT_COLUMNS)
       .eq("incident_barangay_id", barangayId)
       .in("status", PENDING_STATUSES)
-      .order("created_at", { ascending: false }),
+      // The backend owner's ranking (2026-09-11): highest score first, then
+      // longest-waiting first, unscored reports last. Oldest-first within a
+      // score is what a 5-minute SLA wants — the report closest to breaching
+      // leads — and it is what [Validate next] lands on. This used to be
+      // newest-first, which buried the report that had waited longest.
+      .order("priority_score", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: true }),
     supabase
       .from("incident_reports")
       .select(REPORT_COLUMNS)
@@ -360,7 +366,9 @@ function toQueueReport(r: RawReport, extras: RoutingExtras = NO_ROUTING): QueueR
   return {
     id: r.id,
     category: r.category,
-    priority: (r.priority_name ?? "Low") as QueueReport["priority"],
+    // Passed through, null included. Defaulting to Low showed unscored
+    // emergencies as the lowest tier.
+    priority: r.priority_name,
     summary: r.description ?? "(No description provided)",
     // No address text field exists on incident_reports (only geom) — location
     // is intentionally omitted here, not hidden. ReportRow only renders it

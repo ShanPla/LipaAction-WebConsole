@@ -139,7 +139,8 @@ function downloadCsv(records: ValidationRecord[]) {
   const rows = records.map((r) => [
     r.reportId,
     r.category,
-    r.priority,
+    // A blank cell would read as missing data; the words say what it is.
+    r.priority ?? "Not scored",
     r.entryTier,
     r.verdict,
     r.reason ?? "",

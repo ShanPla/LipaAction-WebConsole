@@ -72,6 +72,8 @@ export async function getBarangayClusters(
   for (const [clusterId, group] of groups) {
     if (group.length < 2) continue; // not actually a duplicate group
 
+    // Ordering only: an unscored member ranks below every tier when picking
+    // the cluster's headline status. Its own badge still says Not scored.
     const highestPriority = group.reduce((worst, r) => {
       const p = r.priority_name ?? "Low";
       return (PRIORITY_ORDER[p] ?? 0) > (PRIORITY_ORDER[worst] ?? 0) ? p : worst;
@@ -80,7 +82,7 @@ export async function getBarangayClusters(
     const members: ClusterMemberDetail[] = group.map((r, idx) => ({
       reportId: r.id,
       category: r.category,
-      priority: (r.priority_name ?? "Low") as ClusterMemberDetail["priority"],
+      priority: r.priority_name,
       relationship: idx === 0 ? "Primary" : "Related",
       timestamp: timeAgo(r.created_at),
       reporter: {
