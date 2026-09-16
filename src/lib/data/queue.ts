@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { startOfManilaDay } from "@/lib/utils";
+import { categoryLabel, startOfManilaDay } from "@/lib/utils";
 import type {
   AgencyRouting,
   KpiSummary,
@@ -204,8 +204,8 @@ export async function getBarangayQueue(
   const activeCluster: SituationCluster | null = largestGroup
     ? {
         id: largestGroup[0].cluster_id as string,
-        label: largestGroup[0].category.toUpperCase(),
-        category: largestGroup[0].category,
+        label: categoryLabel(largestGroup[0].category).toUpperCase(),
+        category: categoryLabel(largestGroup[0].category),
         memberCount: largestGroup.length,
         // RLS only lets this official see their own barangay's reports, so a
         // cross-barangay cluster (if one exists) would only ever show this
@@ -365,7 +365,9 @@ async function loadRouting(
 function toQueueReport(r: RawReport, extras: RoutingExtras = NO_ROUTING): QueueReport {
   return {
     id: r.id,
-    category: r.category,
+    // Display form. The raw key stays in the database; routeReport re-reads
+    // it there rather than trusting anything shaped here.
+    category: categoryLabel(r.category),
     // Passed through, null included. Defaulting to Low showed unscored
     // emergencies as the lowest tier.
     priority: r.priority_name,

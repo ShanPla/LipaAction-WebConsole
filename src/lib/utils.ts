@@ -78,3 +78,23 @@ export function startOfManilaDay(now: number = Date.now()): Date {
   const shifted = now + MANILA_OFFSET_MS;
   return new Date(Math.floor(shifted / DAY_MS) * DAY_MS - MANILA_OFFSET_MS);
 }
+
+/**
+ * Turns a category key into something readable: `medical_emergency` becomes
+ * `Medical emergency`.
+ *
+ * incident_reports.category holds the canonical snake_case key — the same
+ * value category_agency_routing is keyed on — so it reached every screen as
+ * `crime_in_progress`. This is display only, and applied in the data modules
+ * so that what an official searches, exports, and reads all agree. The raw
+ * key is never lost: routeReport re-reads it from the database server-side,
+ * so the agency lookup is unaffected by anything done here.
+ *
+ * Values that are already prose pass through with only their first letter
+ * capitalised.
+ */
+export function categoryLabel(category: string): string {
+  const words = category.trim().replace(/[_-]+/g, " ");
+  if (words.length === 0) return "Uncategorised";
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}

@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { displayName } from "@/lib/utils";
+import { categoryLabel, displayName } from "@/lib/utils";
 import type { ValidationRecord, ValidationSummary } from "@/types";
 
 interface RawReviewedReport {
@@ -121,7 +121,7 @@ function toValidationRecord(
 ): ValidationRecord {
   return {
     reportId: r.id,
-    category: r.category,
+    category: categoryLabel(r.category),
     // Both are real columns, passed through as-is. No derivation: the earlier
     // "tier" collapsed priority and intake tier into one value, and the table
     // then read that value back as a priority — so an emergency report with
