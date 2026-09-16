@@ -30,6 +30,13 @@ const REALTIME_DEBOUNCE_MS = 500;
 
 type Freshness = "connecting" | "live" | "polling";
 
+// How long a newly arrived row stays marked. Long enough to be seen by
+// someone who looked away mid-sentence; short enough that the queue isn't
+// permanently decorated. Matches the `arrival` keyframe's duration.
+const ARRIVAL_HIGHLIGHT_MS = 4000;
+
+const NO_ARRIVALS: ReadonlySet<string> = new Set();
+
 // Fast-triage SLA from the thesis (p.102): a Tier 0 report should have a
 // decision within 5 minutes of submission.
 const TIER0_SLA_MS = 5 * 60_000;
@@ -172,24 +179,36 @@ export function QueueClient({
     setReceivedAt(new Date());
   }, [queueData]);
 
-  // Audible alert: chime when a Tier 0 report appears that wasn't in the
-  // previous fetch. The first fetch seeds the set without chiming — the
-  // official just opened the page and can see everything on it. Ids are
-  // compared, not counts: a count stays flat when one report is validated
-  // and another arrives in the same interval.
-  const knownEmergencyIds = useRef<Set<string> | null>(null);
+  // What arrived on its own. The queue updates without being asked, so a
+  // report can appear while the official is reading something else — these
+  // two signals, the chime and the row tint, are how they find out.
+  //
+  // The first fetch seeds the set silently: the official just opened the
+  // page and can see everything on it. Ids are compared, not counts, because
+  // a count stays flat when one report is validated and another arrives in
+  // the same refresh.
+  const seenReportIds = useRef<Set<string> | null>(null);
+  const [arrivedIds, setArrivedIds] = useState<ReadonlySet<string>>(NO_ARRIVALS);
   useEffect(() => {
     const emergencies = queueData.queueByTab.emergency;
-    const ids = new Set(emergencies.map((r) => r.id));
-    if (knownEmergencyIds.current === null) {
-      knownEmergencyIds.current = ids;
-      return;
+    // Deduplicated across tabs — the duplicates tab repeats pending rows.
+    const ids = new Set(Object.values(queueData.queueByTab).flat().map((r) => r.id));
+    const previous = seenReportIds.current;
+    seenReportIds.current = ids;
+    if (previous === null) return;
+
+    const arrived = [...ids].filter((id) => !previous.has(id));
+    if (arrived.length === 0) return;
+
+    // A later arrival replaces an earlier highlight rather than extending
+    // it, so the tint can never outlive its own timer.
+    setArrivedIds(new Set(arrived));
+    if (prefs.audibleAlertNewEmergency && emergencies.some((r) => arrived.includes(r.id))) {
+      playChime();
     }
-    const previous = knownEmergencyIds.current;
-    knownEmergencyIds.current = ids;
-    const arrived = emergencies.some((r) => !previous.has(r.id));
-    if (arrived && prefs.audibleAlertNewEmergency) playChime();
-  }, [queueData.queueByTab.emergency, prefs.audibleAlertNewEmergency]);
+    const timer = window.setTimeout(() => setArrivedIds(NO_ARRIVALS), ARRIVAL_HIGHLIGHT_MS);
+    return () => window.clearTimeout(timer);
+  }, [queueData.queueByTab, prefs.audibleAlertNewEmergency]);
 
   // SLA breach: one browser notification per Tier 0 report the first time it
   // is seen past the 5-minute window, and only with permission already
@@ -242,6 +261,7 @@ export function QueueClient({
         key={report.id}
         report={report}
         resolvedAs={isReviewable(report.details.status) ? resolved[report.id] : undefined}
+        justArrived={arrivedIds.has(report.id)}
         onResolved={(verdict) => setResolved((prev) => ({ ...prev, [report.id]: verdict }))}
         onOpenDetails={() => setSelected(report)}
       />

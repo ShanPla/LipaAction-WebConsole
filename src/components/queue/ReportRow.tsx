@@ -5,6 +5,7 @@ import { ReporterChip } from "@/components/ui/ReporterChip";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ReasonPromptModal } from "@/components/ui/ReasonPromptModal";
+import { cx } from "@/lib/utils";
 import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
 import { useReportRouting } from "./useReportRouting";
 import { routeConfirmCopy, routingState } from "./routing";
@@ -15,11 +16,16 @@ export function ReportRow({
   // Owned by QueueClient, not by this row: the same report can also be
   // resolved from the detail drawer, and the row has to reflect that.
   resolvedAs,
+  // True for a few seconds after this report turned up on its own. Owned by
+  // QueueClient, which is the only place that can tell a new report from one
+  // that was already on screen.
+  justArrived = false,
   onResolved,
   onOpenDetails,
 }: {
   report: QueueReport;
   resolvedAs?: Verdict;
+  justArrived?: boolean;
   onResolved: (verdict: Verdict) => void;
   onOpenDetails: () => void;
 }) {
@@ -98,7 +104,16 @@ export function ReportRow({
 
   return (
     <>
-      <div className="flex items-start justify-between gap-4 border-b border-ink-100 px-4 py-3 last:border-0 hover:bg-ink-50/60">
+      <div
+        className={cx(
+          "flex items-start justify-between gap-4 border-b border-ink-100 px-4 py-3 last:border-0 hover:bg-ink-50/60",
+          // The tint fades out on its own; with reduced motion it simply
+          // holds until QueueClient drops the flag. Either way the New chip
+          // below carries the same fact in words, so nothing is said by
+          // colour alone.
+          justArrived && "motion-safe:animate-arrival motion-reduce:bg-brand-100"
+        )}
+      >
         {/* The whole summary block opens the detail drawer. A report is
             reviewed on the strength of what it says, and the row only shows a
             truncated line of it. */}
@@ -110,6 +125,11 @@ export function ReportRow({
         >
           <div className="mb-1 flex flex-wrap items-center gap-2">
             <span className="font-mono text-xs text-ink-500">{report.id}</span>
+            {justArrived && (
+              <span className="rounded-full bg-brand-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+                New
+              </span>
+            )}
             <PriorityBadge priority={report.priority} />
             <span className="text-xs font-medium text-ink-700">{report.category}</span>
           </div>

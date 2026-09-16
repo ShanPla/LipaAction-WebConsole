@@ -70,6 +70,10 @@ function ToastItem({ toast, dismiss }: { toast: Toast; dismiss: (id: number) => 
       onBlur={() => setPaused(false)}
       className={cx(
         "pointer-events-auto flex items-start gap-3 rounded-md px-3.5 py-2.5 text-sm font-medium shadow-lg",
+        // Enter only. Animating the exit would mean holding a dismissed
+        // toast in the tree to play it out, and a toast that lingers after
+        // its close button is worse than one that simply goes.
+        "motion-safe:animate-toastIn",
         toast.tone === "success" && "bg-brand-600 text-white",
         toast.tone === "info" && "bg-ink-900 text-white",
         toast.tone === "danger" && "bg-priority-critical text-white"

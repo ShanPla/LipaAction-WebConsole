@@ -55,6 +55,38 @@ const config: Config = {
       borderRadius: {
         card: "10px",
       },
+      // Three animations, each carrying meaning rather than decoration: a
+      // row that has just arrived on its own, a toast entering, and the
+      // detail drawer coming in from the edge it sits on. All are applied
+      // through Tailwind's `motion-safe:` variant, so a viewer who asks for
+      // reduced motion gets the same information without movement — the
+      // arrived row keeps a static tint and a New chip instead.
+      keyframes: {
+        arrival: {
+          // Holds the tint long enough to be noticed if the official looked
+          // away, then clears itself.
+          "0%, 55%": { backgroundColor: "#dbeee0" },
+          "100%": { backgroundColor: "transparent" },
+        },
+        toastIn: {
+          "0%": { opacity: "0", transform: "translateY(6px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        drawerIn: {
+          "0%": { transform: "translateX(100%)" },
+          "100%": { transform: "translateX(0)" },
+        },
+        scrimIn: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+      },
+      animation: {
+        arrival: "arrival 4s ease-out forwards",
+        toastIn: "toastIn 150ms ease-out",
+        drawerIn: "drawerIn 200ms ease-out",
+        scrimIn: "scrimIn 200ms ease-out",
+      },
     },
   },
   plugins: [],

@@ -105,7 +105,11 @@ export function ReportDetailPanel({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <button aria-label="Close report details" className="absolute inset-0 bg-ink-900/40" onClick={onClose} />
+      <button
+        aria-label="Close report details"
+        className="absolute inset-0 bg-ink-900/40 motion-safe:animate-scrimIn"
+        onClick={onClose}
+      />
 
       <aside
         ref={dialogRef}
@@ -113,7 +117,9 @@ export function ReportDetailPanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-detail-title"
-        className="relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-ink-100 bg-white shadow-panel focus:outline-none"
+        // Slides in from the edge it occupies, so it reads as a panel over
+        // the queue rather than a new page.
+        className="relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-ink-100 bg-white shadow-panel focus:outline-none motion-safe:animate-drawerIn"
       >
         <header className="sticky top-0 flex items-start justify-between gap-3 border-b border-ink-100 bg-white px-5 py-4">
           <div className="min-w-0">
