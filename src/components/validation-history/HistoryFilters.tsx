@@ -1,6 +1,6 @@
 "use client";
 
-import { cx } from "@/lib/utils";
+import { cx, manilaTimestamp } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import type { ValidationRecord } from "@/types";
@@ -146,7 +146,10 @@ function downloadCsv(records: ValidationRecord[]) {
     r.reason ?? "",
     r.validatingOfficial,
     r.reporter.name,
-    r.reviewedAt,
+    // Manila, like the table above it. The raw column is UTC, so exporting
+    // it unchanged put every review eight hours earlier than the screen
+    // said. The +08:00 offset is kept so the value stays unambiguous.
+    manilaTimestamp(r.reviewedAt),
   ]);
 
   const csv = [header, ...rows].map((row) => row.map(escapeCsvCell).join(",")).join("\r\n");

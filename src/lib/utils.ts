@@ -98,3 +98,26 @@ export function categoryLabel(category: string): string {
   if (words.length === 0) return "Uncategorised";
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
+
+/**
+ * An exact timestamp in Manila, keeping its offset: `2026-09-16T15:54:43+08:00`.
+ *
+ * For files that leave the console. Everything on screen is Manila (see
+ * startOfManilaDay), but the CSV used to carry the raw column value, which
+ * Supabase returns in UTC — so a row shown as 15:54 was exported as 07:54,
+ * and a DPO reading the export would have put the access eight hours earlier
+ * than the official who made it. Keeping the +08:00 offset means the value
+ * is still unambiguous and still sorts correctly, unlike a bare local time.
+ */
+export function manilaTimestamp(isoString: string): string {
+  const parsed = new Date(isoString);
+  // An unparseable value passes through rather than becoming [Invalid Date].
+  if (Number.isNaN(parsed.getTime())) return isoString;
+
+  const shifted = new Date(parsed.getTime() + MANILA_OFFSET_MS);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}` +
+    `T${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}:${pad(shifted.getUTCSeconds())}+08:00`
+  );
+}
