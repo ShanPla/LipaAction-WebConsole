@@ -137,9 +137,10 @@ In each case the console shows nothing rather than an approximation.
 - **Audit Log** is on placeholder data, and the page says so. Read access for barangay
   roles is waiting on a decision about which audit columns the desk may see; it is a
   data-protection question rather than an engineering one.
-- **Report-view logging** depends on the backend's `log_report_view` function, which
-  is written and awaiting deployment. Until it is deployed, the console's calls to it
-  have no effect; the console needs no change when it arrives.
+- **Report views are logged but cannot be read back here.** Opening a report records
+  the access, and the console reports it on screen if that recording fails. Which
+  audit fields a barangay desk may see is the data-protection decision above, so there
+  is no who-viewed-this panel.
 - **Cluster data.** The duplicate-detection service does not yet write cluster
   assignments back to reports, so the Cluster Explorer and the queue's Flagged
   duplicates tab are empty against live data. There is also no dedicated clusters

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { logReportView } from "@/app/actions/audit";
+import { useToast } from "@/components/ui/Toast";
 import { PriorityBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -61,6 +62,7 @@ export function ReportDetailPanel({
   // report after each refresh, so this re-renders from the server's answer.
   const routing = useReportRouting(report.id);
   const routeState = routingState(report);
+  const { showToast } = useToast();
 
   // Disabled while a prompt is stacked on top — the reject reason or the
   // routing confirmation — so Escape backs out one layer at a time, and
@@ -73,11 +75,31 @@ export function ReportDetailPanel({
   // The access trail is written here, on mount, rather than where the row is
   // clicked: opening this panel is the moment the reporter's own account of
   // the incident reaches an official's screen, and that is the event the DPA
-  // trail exists to record. Fire-and-forget — logReportView never throws and
-  // never blocks the read.
+  // trail exists to record.
+  //
+  // Exactly once per opening. log_report_view() appends a row on every call,
+  // so React StrictMode's deliberate double-run of effects in development
+  // would write the view twice — the ref survives that double-run and stops
+  // the second. Closing and reopening the drawer unmounts the component, so a
+  // genuine second look does get its own row.
+  //
+  // Never blocks the read: an official must not be locked out of a report
+  // because the logger is down. A failure isn't hidden either — an access
+  // trail with a silent gap is worse than one with a visible complaint.
+  const loggedReportId = useRef<string | null>(null);
   useEffect(() => {
-    void logReportView(report.id);
-  }, [report.id]);
+    if (loggedReportId.current === report.id) return;
+    loggedReportId.current = report.id;
+    void logReportView(report.id).then((outcome) => {
+      if (outcome === "logged") return;
+      showToast(
+        outcome === "session-expired"
+          ? "Your session expired. Sign in again."
+          : "Opening this report wasn't recorded in the access log. Tell the pilot support desk.",
+        "danger"
+      );
+    });
+  }, [report.id, showToast]);
 
   const d = report.details;
 
