@@ -26,15 +26,33 @@ export function ClusterExplorerClient({
     <AppShell breadcrumb={[official.barangayName, "Cluster Explorer"]} official={official}>
       {loadFailed && <DataUnavailableBanner what="Cluster Explorer" />}
       {!hasClusters ? (
-        <div className="flex h-[calc(100vh-6.5rem)] items-center justify-center rounded-card border border-ink-100 bg-white shadow-panel">
-          <div className="text-center">
-            <p className="text-sm font-medium text-ink-700">No duplicate clusters right now</p>
-            <p className="mt-1 text-xs text-ink-500">
-              Clusters appear here when two or more pending reports share the same
-              duplicate-flagging cluster.
-            </p>
+        // Not shown under a load failure: the banner already says nothing
+        // here is current, and [not connected yet] would misstate an outage.
+        !loadFailed && (
+          <div className="flex h-[calc(100vh-6.5rem)] items-center justify-center rounded-card border border-ink-100 bg-white px-4 shadow-panel">
+            {/* The previous copy — [No duplicate clusters right now] — read
+                as a finding. It was a wiring gap: the backend's duplicate
+                flagger computes clusters but never writes them back, so
+                this page is empty no matter what is filed. The backend
+                owner asked for that to be stated on screen (2026-09-17).
+                When cluster write-back ships this copy becomes false and
+                must change; nothing here can detect that on its own. */}
+            <div className="max-w-md text-center">
+              <p className="text-sm font-medium text-ink-700">
+                Duplicate detection isn&apos;t connected yet
+              </p>
+              <p className="mt-1 text-xs text-ink-500">
+                Reports aren&apos;t being grouped into clusters yet, so this page stays empty —
+                that doesn&apos;t mean there are no duplicates. Once grouping is switched on,
+                clusters of two or more related reports will appear here. Reports sent without
+                a location, including every identity-withheld report, can&apos;t be grouped.
+              </p>
+              <p className="mt-2 text-xs text-ink-500">
+                Hindi pa nakakonekta ang pagtukoy ng duplicate.
+              </p>
+            </div>
           </div>
-        </div>
+        )
       ) : (
         <div className="flex h-auto flex-col gap-4 lg:h-[calc(100vh-6.5rem)] lg:flex-row">
           <ClusterList clusters={clusters} activeId={activeId} onSelect={setActiveId} />

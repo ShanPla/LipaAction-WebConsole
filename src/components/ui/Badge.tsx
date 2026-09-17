@@ -17,7 +17,20 @@ export const UNSCORED_LABEL = "Not scored";
  * Low, which put a Low badge on emergencies the inference service simply
  * hadn't reached yet.
  */
-export function PriorityBadge({ priority }: { priority: ReportPriority }) {
+/**
+ * `score`, when given, is shown beside the tier. The frozen model scores
+ * nearly every emergency Critical (351 of 378 input combinations), so on a
+ * real queue every badge is the same red and the tier alone ranks nothing —
+ * the order lives in priority_score. Showing it is what lets an official, or
+ * a panel, see why one Critical report sits above another.
+ */
+export function PriorityBadge({
+  priority,
+  score = null,
+}: {
+  priority: ReportPriority;
+  score?: number | null;
+}) {
   if (priority === null) {
     return (
       <span className="inline-flex items-center rounded-full border border-ink-300 px-2.5 py-0.5 text-xs font-medium text-ink-500">
@@ -34,8 +47,26 @@ export function PriorityBadge({ priority }: { priority: ReportPriority }) {
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
       {priority}
+      {score !== null && (
+        <>
+          <span className="sr-only">, priority score</span>
+          <span aria-hidden className="opacity-60">
+            ·
+          </span>
+          <span className="font-mono font-medium tabular-nums">{formatScore(score)}</span>
+        </>
+      )}
     </span>
   );
+}
+
+// One decimal: scores cluster between roughly 83 and 99.9, so whole numbers
+// would tie reports the queue has actually ordered. Truncated, not rounded —
+// rounding would show 99.95 as 100.0, a score the model doesn't produce and
+// one that reads as certainty. The epsilon absorbs float error (99.9 * 10 can
+// land a hair under 999).
+function formatScore(score: number): string {
+  return (Math.floor(score * 10 + 1e-9) / 10).toFixed(1);
 }
 
 export function Badge({

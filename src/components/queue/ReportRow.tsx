@@ -130,7 +130,7 @@ export function ReportRow({
                 New
               </span>
             )}
-            <PriorityBadge priority={report.priority} />
+            <PriorityBadge priority={report.priority} score={report.details.priorityScore} />
             <span className="text-xs font-medium text-ink-700">{report.category}</span>
           </div>
           <p className="mb-1.5 truncate text-sm text-ink-900">{report.summary}</p>

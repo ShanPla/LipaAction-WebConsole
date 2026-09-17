@@ -307,11 +307,15 @@ export function QueueClient({
         className="overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel"
       >
         {rows.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-ink-500">
-            {isFiltered
-              ? `No reports in this tab match “${query.trim()}”.`
-              : "No reports in this queue right now."}
-          </p>
+          activeTab === "duplicates" && !isFiltered && !queueData.loadFailed ? (
+            <DuplicatesNotConnected />
+          ) : (
+            <p className="px-4 py-10 text-center text-sm text-ink-500">
+              {isFiltered
+                ? `No reports in this tab match “${query.trim()}”.`
+                : "No reports in this queue right now."}
+            </p>
+          )
         ) : activeTab === "validated" ? (
           // Two groups, because they ask different things of the official:
           // the first still needs routing — nothing sends a validated report
@@ -337,6 +341,11 @@ export function QueueClient({
         {isFiltered
           ? `Showing ${rows.length} of ${unfilteredCount} report${unfilteredCount === 1 ? "" : "s"} in this tab`
           : `Showing ${rows.length} report${rows.length === 1 ? "" : "s"}`}
+        {/* Says how the pending tabs are ordered. Nearly every emergency
+            scores Critical, so without this the order looks arbitrary among
+            identical red badges. Recent validated is ordered by review time,
+            so it doesn't get the line. */}
+        {activeTab !== "validated" && " · Ranked by priority score, then longest waiting"}
         {" · "}
         {freshness === "live" && "Live — updates as reports change"}
         {freshness === "polling" && `Live updates unavailable — refreshes every ${REFRESH_INTERVAL_MS / 1000} s`}
@@ -354,6 +363,29 @@ export function QueueClient({
         />
       )}
     </AppShell>
+  );
+}
+
+/**
+ * The Flagged duplicates tab's empty state, which must not read as [no
+ * duplicates found]. Nothing groups reports into clusters yet: the backend's
+ * duplicate flagger computes clusters but does not write them back, so this
+ * tab is empty regardless of what has been filed. The backend owner asked for
+ * it to say so on screen (2026-09-17).
+ *
+ * When cluster write-back ships, this copy becomes false and must change —
+ * nothing here can detect that on its own.
+ */
+function DuplicatesNotConnected() {
+  return (
+    <div className="px-4 py-10 text-center">
+      <p className="text-sm font-medium text-ink-700">Duplicate flagging isn&apos;t connected yet</p>
+      <p className="mx-auto mt-1 max-w-md text-xs text-ink-500">
+        Reports aren&apos;t being grouped into duplicates yet, so this tab stays empty — that
+        doesn&apos;t mean none of today&apos;s reports are duplicates. Review each report in the
+        Emergency tab. &middot; Hindi pa nakakonekta ang pag-flag ng duplicate.
+      </p>
+    </div>
   );
 }
 
