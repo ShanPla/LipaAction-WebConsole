@@ -10,6 +10,10 @@ a static mockup. Sign-in is real, report data is real, and validating or rejecti
 report writes to the production database through the same review path the rest of the
 system uses.
 
+**Deployed:** <https://lipa-action-web-console.vercel.app> — Vercel, as specified in
+Chapter 3. Only pre-provisioned barangay officials can sign in; an unknown email
+address does not create an account.
+
 ## Tech stack
 
 Follows the stack specified in Chapter 3, Section 3.8.3 (Technology Stack) for the
@@ -45,6 +49,18 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). It redirects to `/login`, and
 after sign-in to `/queue`.
+
+### Deploying
+
+The same two variables are the whole configuration — set them on the host for both
+production and preview builds. They are read at build time as well as at run time,
+because they are `NEXT_PUBLIC_`.
+
+One step belongs to Supabase rather than the host: add `https://<your-domain>/auth/callback`
+to **Authentication → URL Configuration → Redirect URLs**, including the scheme. The
+emailed sign-in link is refused otherwise, and Supabase falls back to the project's
+Site URL. Don't add a wildcard for a shared hosting domain such as `*.vercel.app`;
+that would make any site on that domain a valid destination for sign-in tokens.
 
 ## Signing in
 
