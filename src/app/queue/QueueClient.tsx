@@ -6,6 +6,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { DataUnavailableBanner } from "@/components/layout/DataUnavailableBanner";
 import { playChime } from "@/lib/chime";
 import { usePreferences } from "@/lib/preferences";
+import { useT } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
 import { KpiHeader } from "@/components/queue/KpiHeader";
 import { ClusterCard } from "@/components/queue/ClusterCard";
@@ -55,6 +56,7 @@ export function QueueClient({
   const [activeTab, setActiveTab] = useState<QueueTabId>("emergency");
   const [query, setQuery] = useState("");
   const { showToast } = useToast();
+  const t = useT();
 
   // Filters the active tab's rows only. Report ID, category, and description
   // are the searchable fields — deliberately not reporter or address, which
@@ -325,15 +327,15 @@ export function QueueClient({
       // discreetly: an OS notification can surface on a lock screen or a
       // shared display, outside the console entirely.
       const body = report.details.discreetReporting
-        ? "Details hidden — discreet report. Open the queue."
+        ? t("queue.sla.discreet")
         : `${report.category} · ${report.id}`;
       try {
-        new Notification("Tier 0 report past its 5-minute window", { body, tag: report.id });
+        new Notification(t("queue.sla.title"), { body, tag: report.id });
       } catch {
         // Some browsers (Chrome on Android) refuse the Notification
         // constructor outright and require a service worker. The alert still
         // has to reach the official, so it falls back to an in-page toast.
-        showToast("A Tier 0 report is past its 5-minute window", "danger");
+        showToast(t("queue.sla.toast"), "danger");
       }
     }
 
@@ -351,7 +353,9 @@ export function QueueClient({
     check();
     const id = window.setInterval(check, SLA_CHECK_MS);
     return () => window.clearInterval(id);
-  }, [prefs.slaBreachBrowserNotification, showToast]);
+    // t changes with the language; the rerun re-checks immediately, and the
+    // notified set above means nothing already announced is announced again.
+  }, [prefs.slaBreachBrowserNotification, showToast, t]);
 
   /**
    * Moves the official to the next report awaiting a decision: scrolls the
@@ -365,7 +369,7 @@ export function QueueClient({
   function handleValidateNext() {
     const target = listRef.current?.querySelector<HTMLButtonElement>("[data-validate-button]");
     if (!target) {
-      showToast("Nothing left in this tab to validate", "info");
+      showToast(t("queue.nothingToValidate"), "info");
       return;
     }
     target.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -392,7 +396,7 @@ export function QueueClient({
 
   return (
     <AppShell
-      breadcrumb={[official.barangayName, "Queue"]}
+      breadcrumb={[official.barangayName, t("nav.queue")]}
       official={official}
       /* [Manual report] was removed here. incident_reports has exactly one
          INSERT policy — ir_insert_resident, auth_role() = 'resident' AND
@@ -402,17 +406,17 @@ export function QueueClient({
          change. */
       actions={
         <Button variant="primary" size="sm" onClick={handleValidateNext}>
-          Validate next
+          {t("queue.validateNext")}
         </Button>
       }
       search={{
         value: query,
         onChange: setQuery,
-        placeholder: "Search report ID, category, description…",
-        label: "Search this tab by report ID, category, or description",
+        placeholder: t("queue.searchPlaceholder"),
+        label: t("queue.searchLabel"),
       }}
     >
-      {queueData.loadFailed && <DataUnavailableBanner what="The queue" />}
+      {queueData.loadFailed && <DataUnavailableBanner what={t("banner.what.queue")} />}
       <KpiHeader summary={queueData.kpiSummary} />
 
       {activeTab === "emergency" && queueData.activeCluster && (
@@ -425,7 +429,7 @@ export function QueueClient({
 
       {activeTab === "validated" && queueData.validatedUnavailable && (
         <p role="status" className="mb-2 text-xs text-priority-medium">
-          Part of this tab couldn’t be loaded, so it may be incomplete. Refresh to try again.
+          {t("queue.partialLoad")}
         </p>
       )}
 
@@ -450,10 +454,10 @@ export function QueueClient({
           ) : (
             <p className="px-4 py-10 text-center text-sm text-ink-500">
               {isFiltered
-                ? `No reports in this tab match “${query.trim()}”.`
+                ? t("queue.noMatch", { query: query.trim() })
                 : queueData.loadFailed
-                  ? "Reports couldn’t be loaded — see the notice above."
-                  : "No reports in this queue right now."}
+                  ? t("queue.loadFailedEmpty")
+                  : t("queue.empty")}
             </p>
           )
         ) : activeTab === "validated" ? (
@@ -462,12 +466,12 @@ export function QueueClient({
           // anywhere on its own — and the second is there to watch.
           <>
             <RowGroup
-              title="Awaiting routing"
+              title={t("queue.group.awaitingRouting")}
               rows={rows.filter((r) => r.details.status === "validated")}
               renderRow={renderRow}
             />
             <RowGroup
-              title="Routed to agencies"
+              title={t("queue.group.routed")}
               rows={rows.filter((r) => r.details.status !== "validated")}
               renderRow={renderRow}
             />
@@ -479,19 +483,24 @@ export function QueueClient({
 
       <p className="mt-3 text-xs text-ink-500">
         {isFiltered
-          ? `Showing ${rows.length} of ${unfilteredCount} report${unfilteredCount === 1 ? "" : "s"} in this tab`
-          : `Showing ${rows.length} report${rows.length === 1 ? "" : "s"}`}
+          ? t(unfilteredCount === 1 ? "queue.footer.filteredOne" : "queue.footer.filtered", {
+              shown: rows.length,
+              total: unfilteredCount,
+            })
+          : rows.length === 1
+            ? t("queue.footer.countOne")
+            : t("queue.footer.count", { count: rows.length })}
         {/* Says how the pending tabs are ordered. Nearly every emergency
             scores Critical, so without this the order looks arbitrary among
             identical red badges. Recent validated is ordered by review time,
             so it doesn't get the line. */}
-        {activeTab !== "validated" && " · Ranked by priority score, then longest waiting"}
+        {activeTab !== "validated" && ` · ${t("queue.footer.ranked")}`}
         {" · "}
-        {freshness === "live" && "Live — updates as reports change"}
-        {freshness === "polling" && `Live updates unavailable — refreshes every ${REFRESH_INTERVAL_MS / 1000} s`}
-        {freshness === "connecting" && "Connecting to live updates…"}
-        {receivedAt && ` · Data as of ${formatClock(receivedAt)}`}
-        {updateWaiting && " · Update waiting — it appears when you’re done here"}
+        {freshness === "live" && t("queue.footer.live")}
+        {freshness === "polling" && t("queue.footer.polling", { seconds: REFRESH_INTERVAL_MS / 1000 })}
+        {freshness === "connecting" && t("queue.footer.connecting")}
+        {receivedAt && ` · ${t("queue.footer.dataAsOf", { time: formatClock(receivedAt) })}`}
+        {updateWaiting && ` · ${t("queue.footer.updateWaiting")}`}
       </p>
 
       {selected && selectedReport && (
@@ -518,14 +527,11 @@ export function QueueClient({
  * nothing here can detect that on its own.
  */
 function DuplicatesNotConnected() {
+  const t = useT();
   return (
     <div className="px-4 py-10 text-center">
-      <p className="text-sm font-medium text-ink-700">Duplicate flagging isn&apos;t connected yet</p>
-      <p className="mx-auto mt-1 max-w-md text-xs text-ink-500">
-        Reports aren&apos;t being grouped into duplicates yet, so this tab stays empty — that
-        doesn&apos;t mean none of today&apos;s reports are duplicates. Review each report in the
-        Emergency tab. &middot; Hindi pa nakakonekta ang pag-flag ng duplicate.
-      </p>
+      <p className="text-sm font-medium text-ink-700">{t("queue.dup.title")}</p>
+      <p className="mx-auto mt-1 max-w-md text-xs text-ink-500">{t("queue.dup.body")}</p>
     </div>
   );
 }

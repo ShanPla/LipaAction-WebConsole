@@ -3,7 +3,9 @@
 import { useState, useTransition } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { routeReport } from "@/app/actions/reports";
-import { callAction, NO_ANSWER } from "@/lib/callAction";
+import { callAction } from "@/lib/callAction";
+import { useT } from "@/lib/i18n";
+import { agencyCount } from "./routing";
 
 /**
  * The route-to-agency flow, shared by the queue row and the detail drawer,
@@ -16,6 +18,7 @@ import { callAction, NO_ANSWER } from "@/lib/callAction";
  */
 export function useReportRouting(reportId: string) {
   const { showToast } = useToast();
+  const t = useT();
   const [isPending, startTransition] = useTransition();
   const [isConfirming, setIsConfirming] = useState(false);
 
@@ -26,17 +29,14 @@ export function useReportRouting(reportId: string) {
       if (result === null) {
         // Routing is irreversible: never guess which way it went. The queue's
         // live update shows whether the agencies have it.
-        showToast(NO_ANSWER, "danger");
+        showToast(t("common.noAnswer"), "danger");
         return;
       }
       if (result.success) {
         const count = result.agencyCount ?? 0;
-        showToast(
-          `${reportId} routed to ${count === 1 ? "1 agency" : `${count} agencies`}`,
-          "success"
-        );
+        showToast(t("routing.routedToast", { id: reportId, agencies: agencyCount(count, t) }), "success");
       } else {
-        showToast(result.message ?? "Couldn't route this report", "danger");
+        showToast(result.message ?? t("routing.failed"), "danger");
       }
     });
   }

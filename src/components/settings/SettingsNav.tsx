@@ -2,14 +2,15 @@
 
 import { cx } from "@/lib/utils";
 import { signOut } from "@/app/actions/auth";
+import { useT, type MessageKey } from "@/lib/i18n";
 import type { SettingsSectionId } from "@/types";
 
-const sections: { id: SettingsSectionId; label: string }[] = [
-  { id: "profile", label: "Profile" },
-  { id: "language", label: "Language" },
-  { id: "notifications", label: "Notifications" },
-  { id: "privacy", label: "Privacy & data rights" },
-  { id: "about", label: "About / Support" },
+const sections: { id: SettingsSectionId; label: MessageKey }[] = [
+  { id: "profile", label: "settings.nav.profile" },
+  { id: "language", label: "settings.nav.language" },
+  { id: "notifications", label: "settings.nav.notifications" },
+  { id: "privacy", label: "settings.nav.privacy" },
+  { id: "about", label: "settings.nav.about" },
 ];
 
 export function SettingsNav({
@@ -19,6 +20,7 @@ export function SettingsNav({
   active: SettingsSectionId;
   onChange: (id: SettingsSectionId) => void;
 }) {
+  const t = useT();
   return (
     <div className="w-56 shrink-0 overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
       <nav className="flex flex-col p-1.5">
@@ -33,7 +35,7 @@ export function SettingsNav({
                 : "text-ink-700 hover:bg-ink-100"
             )}
           >
-            {section.label}
+            {t(section.label)}
           </button>
         ))}
         <div className="my-1 border-t border-ink-100" />
@@ -42,7 +44,7 @@ export function SettingsNav({
             type="submit"
             className="w-full rounded-md px-3 py-2 text-left text-sm font-medium text-priority-critical hover:bg-priority-criticalBg"
           >
-            Sign out
+            {t("shell.signOut")}
           </button>
         </form>
       </nav>

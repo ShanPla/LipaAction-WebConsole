@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { updateReportStatus } from "@/app/actions/reports";
-import { callAction, NO_ANSWER } from "@/lib/callAction";
+import { callAction } from "@/lib/callAction";
+import { useT, type Translate } from "@/lib/i18n";
 
 export type Verdict = "validated" | "rejected";
 
@@ -26,18 +27,16 @@ export function isReviewable(status: string): boolean {
 // incident_reports.status is free text from the backend; these are the values
 // seen so far. Anything unrecognised falls through as-is rather than being
 // hidden or guessed at. Shared so the row and the drawer can't show the same
-// report as [Validated] in one place and [validated] in the other.
-const STATUS_LABELS: Record<string, string> = {
-  pending_priority: "Pending",
-  prioritized: "Prioritized",
-  validated: "Validated",
-  rejected: "Rejected",
-  routed: "Routed to agency",
-  resolved: "Resolved",
-};
+// report as [Validated] in one place and [validated] in the other. Each known
+// value has a message key, status.<value>.
+const KNOWN_STATUSES = ["pending_priority", "prioritized", "validated", "rejected", "routed", "resolved"] as const;
 
-export function statusLabel(status: string): string {
-  return STATUS_LABELS[status] ?? status;
+function isKnownStatus(status: string): status is (typeof KNOWN_STATUSES)[number] {
+  return (KNOWN_STATUSES as readonly string[]).includes(status);
+}
+
+export function statusLabel(status: string, t: Translate): string {
+  return isKnownStatus(status) ? t(`status.${status}`) : status;
 }
 
 /**
@@ -52,6 +51,7 @@ export function statusLabel(status: string): string {
  */
 export function useReportReview(reportId: string, onResolved: (verdict: Verdict) => void) {
   const { showToast } = useToast();
+  const t = useT();
   const [isPending, startTransition] = useTransition();
   const [isRejecting, setIsRejecting] = useState(false);
 
@@ -59,14 +59,14 @@ export function useReportReview(reportId: string, onResolved: (verdict: Verdict)
     startTransition(async () => {
       const result = await callAction(() => updateReportStatus(reportId, "validated"));
       if (result === null) {
-        showToast(NO_ANSWER, "danger");
+        showToast(t("common.noAnswer"), "danger");
         return;
       }
       if (result.success) {
         onResolved("validated");
-        showToast(`${reportId} validated`, "success");
+        showToast(t("review.validatedToast", { id: reportId }), "success");
       } else {
-        showToast(result.message ?? "Failed to update report", "danger");
+        showToast(result.message ?? t("review.failed"), "danger");
       }
     });
   }
@@ -76,16 +76,16 @@ export function useReportReview(reportId: string, onResolved: (verdict: Verdict)
     startTransition(async () => {
       const result = await callAction(() => updateReportStatus(reportId, "rejected", reason));
       if (result === null) {
-        showToast(NO_ANSWER, "danger");
+        showToast(t("common.noAnswer"), "danger");
         return;
       }
       if (result.success) {
         onResolved("rejected");
         // Rejected reports leave the queue entirely — no tab shows them, by
         // design — so say where they went, or the official goes looking.
-        showToast(`${reportId} rejected — moved to Validation History`, "danger");
+        showToast(t("review.rejectedToast", { id: reportId }), "danger");
       } else {
-        showToast(result.message ?? "Failed to update report", "danger");
+        showToast(result.message ?? t("review.failed"), "danger");
       }
     });
   }

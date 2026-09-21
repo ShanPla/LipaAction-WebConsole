@@ -6,6 +6,7 @@ import { ClusterList } from "@/components/cluster-explorer/ClusterList";
 import { MemberPanel } from "@/components/cluster-explorer/MemberPanel";
 import { MapPanel } from "@/components/cluster-explorer/MapPanel";
 import { DataUnavailableBanner } from "@/components/layout/DataUnavailableBanner";
+import { useLang, useT } from "@/lib/i18n";
 import type { OfficialProfile } from "@/lib/auth";
 // Type-only import from a server-only module — erased at compile time.
 import type { ClusterData } from "@/lib/data/clusters";
@@ -21,10 +22,12 @@ export function ClusterExplorerClient({
   const hasClusters = clusters.length > 0;
   const [activeId, setActiveId] = useState(hasClusters ? clusters[0].id : "");
   const activeCluster = clusters.find((c) => c.id === activeId);
+  const t = useT();
+  const lang = useLang();
 
   return (
-    <AppShell breadcrumb={[official.barangayName, "Cluster Explorer"]} official={official}>
-      {loadFailed && <DataUnavailableBanner what="Cluster Explorer" />}
+    <AppShell breadcrumb={[official.barangayName, t("nav.clusterExplorer")]} official={official}>
+      {loadFailed && <DataUnavailableBanner what={t("banner.what.clusters")} />}
       {!hasClusters ? (
         // Not shown under a load failure: the banner already says nothing
         // here is current, and [not connected yet] would misstate an outage.
@@ -38,23 +41,22 @@ export function ClusterExplorerClient({
                 When cluster write-back ships this copy becomes false and
                 must change; nothing here can detect that on its own. */}
             <div className="max-w-md text-center">
-              <p className="text-sm font-medium text-ink-700">
-                Duplicate detection isn&apos;t connected yet
-              </p>
-              <p className="mt-1 text-xs text-ink-500">
-                Reports aren&apos;t being grouped into clusters yet, so this page stays empty —
-                that doesn&apos;t mean there are no duplicates. Once grouping is switched on,
-                clusters of two or more related reports will appear here. Reports sent without
-                a location, including every identity-withheld report, can&apos;t be grouped.
-              </p>
-              <p className="mt-2 text-xs text-ink-500">
-                Hindi pa nakakonekta ang pagtukoy ng duplicate.
-              </p>
+              <p className="text-sm font-medium text-ink-700">{t("clusters.emptyTitle")}</p>
+              <p className="mt-1 text-xs text-ink-500">{t("clusters.emptyBody")}</p>
+              {/* The English screen keeps the mockup Tagalog line under it. */}
+              {lang === "en" && (
+                <p className="mt-2 text-xs text-ink-500">
+                  Hindi pa nakakonekta ang pagtukoy ng duplicate.
+                </p>
+              )}
             </div>
           </div>
         )
       ) : (
         <div className="flex h-auto flex-col gap-4 lg:h-[calc(100vh-6.5rem)] lg:flex-row">
+          {/* The populated view below is still English only. It is
+              unreachable until cluster write-back ships, and its labels mix
+              in values the server formats; translate it when that lands. */}
           <ClusterList clusters={clusters} activeId={activeId} onSelect={setActiveId} />
           {activeCluster && <MemberPanel cluster={activeCluster} />}
           {activeCluster && <MapPanel cluster={activeCluster} />}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { BarangayRole } from "@/lib/auth";
 
 export type InterfaceLanguage = "en" | "tl";
@@ -77,7 +77,7 @@ function validStored(parsed: unknown): Partial<ConsolePreferences> | null {
   return out;
 }
 
-function writeStored(prefs: ConsolePreferences): void {
+function writeStored(prefs: Partial<ConsolePreferences>): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
   } catch {
@@ -86,28 +86,64 @@ function writeStored(prefs: ConsolePreferences): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// One shared store for every component that reads preferences.
+//
+// Each usePreferences() call used to keep its own copy in useState, so two
+// components never saw each other's changes until a remount. That was
+// harmless while only the Settings page wrote preferences; with a language
+// toggle in the top bar, the whole console has to follow one value. The
+// store holds only what the official has actually chosen — role defaults are
+// merged on read, so an unset field keeps following the role. Another tab's
+// change arrives through the storage event.
+let stored: Partial<ConsolePreferences> | null | undefined; // undefined = not read yet
+const listeners = new Set<() => void>();
+
+function getStored(): Partial<ConsolePreferences> | null {
+  if (stored === undefined) stored = readStored();
+  return stored;
+}
+
+// One storage listener for the whole store, attached while anything is
+// subscribed — not one per component, which re-read storage once per
+// subscriber on every change from another tab.
+function onStorage(event: StorageEvent) {
+  if (event.key !== STORAGE_KEY) return;
+  stored = readStored();
+  listeners.forEach((l) => l());
+}
+
+function subscribe(listener: () => void): () => void {
+  if (listeners.size === 0) window.addEventListener("storage", onStorage);
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) window.removeEventListener("storage", onStorage);
+  };
+}
+
+// The server has no localStorage: it renders with role defaults, and so does
+// the hydrating client, so the two agree. The stored choice applies right
+// after hydration.
+const getServerStored = () => null;
+const clientReady = () => true;
+const serverReady = () => false;
+
 /**
- * Preferences for the signed-in official, defaulted by role and hydrated from
- * localStorage after mount. `hydrated` is false during the server render and
- * the first client paint — controls should disable themselves until then so
- * a click can't land on a value that's about to be replaced.
+ * Preferences for the signed-in official: role defaults, overlaid with what
+ * this browser has stored. `hydrated` is false during the server render and
+ * the hydrating paint — controls should disable themselves until then so a
+ * click can't land on a value that's about to be replaced.
  */
 export function usePreferences(role: BarangayRole) {
-  const [prefs, setPrefs] = useState<ConsolePreferences>(() => defaultPreferences(role));
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    const stored = readStored();
-    if (stored) setPrefs({ ...defaultPreferences(role), ...stored });
-    setHydrated(true);
-  }, [role]);
+  const current = useSyncExternalStore(subscribe, getStored, getServerStored);
+  const hydrated = useSyncExternalStore(subscribe, clientReady, serverReady);
+  const prefs = useMemo<ConsolePreferences>(() => ({ ...defaultPreferences(role), ...(current ?? {}) }), [role, current]);
 
   const update = useCallback((patch: Partial<ConsolePreferences>) => {
-    setPrefs((prev) => {
-      const next = { ...prev, ...patch };
-      writeStored(next);
-      return next;
-    });
+    stored = { ...(getStored() ?? {}), ...patch };
+    writeStored(stored);
+    listeners.forEach((l) => l());
   }, []);
 
   return { prefs, update, hydrated };

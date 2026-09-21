@@ -3,6 +3,7 @@
 import { Button } from "./Button";
 import { useDismissOnEscape } from "./useDismissOnEscape";
 import { useFocusTrap } from "./useFocusTrap";
+import { useT } from "@/lib/i18n";
 
 /**
  * Plain yes/no confirmation. ReasonPromptModal covers the case where a reason
@@ -28,6 +29,7 @@ export function ConfirmModal({
   onConfirm: () => void;
 }) {
   // Not while the cluster write is running.
+  const t = useT();
   useDismissOnEscape(onCancel, !busy);
   // No autoFocus inside: focus lands on the dialog itself so the title is
   // announced first, and the first Tab reaches Cancel before the commit
@@ -37,7 +39,7 @@ export function ConfirmModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <button
-        aria-label="Cancel"
+        aria-label={t("common.cancel")}
         className="absolute inset-0 bg-ink-900/40"
         onClick={onCancel}
         disabled={busy}
@@ -57,10 +59,10 @@ export function ConfirmModal({
 
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" disabled={busy} onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button variant={variant} size="sm" disabled={busy} onClick={onConfirm}>
-            {busy ? "Working…" : confirmLabel}
+            {busy ? t("common.working") : confirmLabel}
           </Button>
         </div>
       </div>

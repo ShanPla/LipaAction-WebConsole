@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { TopBar, type TopBarSearch } from "./TopBar";
+import { useT } from "@/lib/i18n";
 import type { OfficialProfile } from "@/lib/auth";
 
 export function AppShell({
@@ -19,6 +20,7 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const t = useT();
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-ink-50">
@@ -31,7 +33,7 @@ export function AppShell({
       {mobileNavOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button
-            aria-label="Close navigation"
+            aria-label={t("shell.closeMenu")}
             className="absolute inset-0 bg-ink-900/40"
             onClick={() => setMobileNavOpen(false)}
           />

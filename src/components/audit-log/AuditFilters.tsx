@@ -2,8 +2,15 @@
 
 import { useState } from "react";
 import { cx } from "@/lib/utils";
+import { useT, type MessageKey } from "@/lib/i18n";
 
-const filterOptions = ["Today", "Last 7d", "State changes only", "PII access", "All actors"];
+const filterOptions: MessageKey[] = [
+  "history.range.today",
+  "history.range.7d",
+  "audit.filter.stateChanges",
+  "audit.filter.pii",
+  "audit.filter.allActors",
+];
 
 /**
  * Filter chips only. The [Export CSV] button that sat beside them fired a
@@ -17,7 +24,8 @@ const filterOptions = ["Today", "Last 7d", "State changes only", "PII access", "
  * the mockups; they filter nothing, and the notice above the table says so.
  */
 export function AuditFilters() {
-  const [active, setActive] = useState("Last 7d");
+  const [active, setActive] = useState<MessageKey>("history.range.7d");
+  const t = useT();
 
   return (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -35,7 +43,7 @@ export function AuditFilters() {
                 : "bg-white text-ink-700 border border-ink-100 hover:bg-ink-50"
             )}
           >
-            {opt}
+            {t(opt)}
           </button>
         ))}
       </div>

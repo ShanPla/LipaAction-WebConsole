@@ -1,4 +1,5 @@
 import { requireBarangayOfficial } from "@/lib/auth";
+import { LanguageProvider } from "@/lib/i18n";
 import { getBarangayQueue } from "@/lib/data/queue";
 import { QueueClient } from "./QueueClient";
 
@@ -9,5 +10,11 @@ export const dynamic = "force-dynamic";
 export default async function QueuePage() {
   const official = await requireBarangayOfficial();
   const queueData = await getBarangayQueue(official.barangayId, official.barangayName);
-  return <QueueClient official={official} queueData={queueData} />;
+  // The language provider wraps the page component itself, so the strings
+  // it builds (breadcrumb, footers, empty states) follow the chosen language.
+  return (
+    <LanguageProvider role={official.role}>
+      <QueueClient official={official} queueData={queueData} />
+    </LanguageProvider>
+  );
 }

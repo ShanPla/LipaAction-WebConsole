@@ -2,6 +2,7 @@
 
 import { useToast } from "@/components/ui/Toast";
 import { usePreferences } from "@/lib/preferences";
+import { useT } from "@/lib/i18n";
 import type { BarangayRole } from "@/lib/auth";
 
 function Toggle({
@@ -53,6 +54,7 @@ function Toggle({
 export function NotificationsSection({ role }: { role: BarangayRole }) {
   const { prefs, update, hydrated } = usePreferences(role);
   const { showToast } = useToast();
+  const t = useT();
 
   // Turning the browser notification on is what asks for permission. Doing
   // it here, on the click, is the only place a browser will honour the
@@ -65,13 +67,13 @@ export function NotificationsSection({ role }: { role: BarangayRole }) {
       return;
     }
     if (typeof Notification === "undefined") {
-      showToast("This browser doesn't support notifications", "danger");
+      showToast(t("notifications.unsupported"), "danger");
       return;
     }
     const permission =
       Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
     if (permission !== "granted") {
-      showToast("Notifications are blocked for this site in your browser settings", "danger");
+      showToast(t("notifications.blocked"), "danger");
       return;
     }
     update({ slaBreachBrowserNotification: true });
@@ -79,21 +81,16 @@ export function NotificationsSection({ role }: { role: BarangayRole }) {
 
   return (
     <div className="rounded-card border border-ink-100 bg-white p-5 shadow-panel">
-      <p className="mb-1 text-sm font-semibold text-ink-900">Notifications</p>
-      <p className="mb-4 text-xs text-ink-500">
-        Saved in this browser only &middot; Naka-save sa device na ito. Alerts fire while the
-        Queue page is open in this browser; nothing is sent when the console is closed.
-      </p>
+      <p className="mb-1 text-sm font-semibold text-ink-900">{t("settings.nav.notifications")}</p>
+      <p className="mb-4 text-xs text-ink-500">{t("notifications.body")}</p>
 
       <div className="flex items-center justify-between gap-4 border-b border-ink-100 py-3">
         <div>
-          <p className="text-sm text-ink-900">Audible alert for new Tier 0 emergencies</p>
-          <p className="text-xs text-ink-500">
-            Plays a short chime when a new fast-triage report arrives while the Queue is open.
-          </p>
+          <p className="text-sm text-ink-900">{t("notifications.audible")}</p>
+          <p className="text-xs text-ink-500">{t("notifications.audibleBody")}</p>
         </div>
         <Toggle
-          label="Audible alert for new Tier 0 emergencies"
+          label={t("notifications.audible")}
           checked={prefs.audibleAlertNewEmergency}
           disabled={!hydrated}
           onChange={(audibleAlertNewEmergency) => update({ audibleAlertNewEmergency })}
@@ -102,14 +99,11 @@ export function NotificationsSection({ role }: { role: BarangayRole }) {
 
       <div className="flex items-center justify-between gap-4 py-3">
         <div>
-          <p className="text-sm text-ink-900">SLA breach browser notification</p>
-          <p className="text-xs text-ink-500">
-            Shows a browser notification when a Tier 0 report has waited more than 5 minutes
-            without a decision. Your browser will ask for permission the first time.
-          </p>
+          <p className="text-sm text-ink-900">{t("notifications.sla")}</p>
+          <p className="text-xs text-ink-500">{t("notifications.slaBody")}</p>
         </div>
         <Toggle
-          label="SLA breach browser notification"
+          label={t("notifications.sla")}
           checked={prefs.slaBreachBrowserNotification}
           disabled={!hydrated}
           onChange={handleBrowserNotificationToggle}

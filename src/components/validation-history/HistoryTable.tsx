@@ -1,12 +1,8 @@
 import { PriorityBadge, Badge } from "@/components/ui/Badge";
 import { ReporterChip } from "@/components/ui/ReporterChip";
 import { cx } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import type { ValidationRecord } from "@/types";
-
-const entryTierLabels: Record<ValidationRecord["entryTier"], string> = {
-  emergency: "Emergency",
-  other_reports: "Standard intake",
-};
 
 export function HistoryTable({
   records,
@@ -18,16 +14,15 @@ export function HistoryTable({
   records: ValidationRecord[];
   isFiltered?: boolean;
 }) {
+  const t = useT();
   if (records.length === 0) {
     return (
       <div className="rounded-card border border-ink-100 bg-white px-4 py-10 text-center shadow-panel">
         <p className="text-sm font-medium text-ink-700">
-          {isFiltered ? "No records match these filters" : "No validation records yet"}
+          {t(isFiltered ? "history.empty.filteredTitle" : "history.empty.title")}
         </p>
         <p className="mt-1 text-xs text-ink-500">
-          {isFiltered
-            ? "Try a wider date range, or clear the outcome and official filters."
-            : "Records appear here once reports in your barangay's queue have been confirmed or rejected."}
+          {t(isFiltered ? "history.empty.filteredBody" : "history.empty.body")}
         </p>
       </div>
     );
@@ -36,18 +31,15 @@ export function HistoryTable({
   return (
     <div className="overflow-x-auto rounded-card border border-ink-100 bg-white shadow-panel">
       <table className="w-full min-w-[720px] text-left text-sm">
-        <caption className="sr-only">
-          Reviewed reports: report, category and priority, verdict, validating official,
-          reporter, and time reviewed
-        </caption>
+        <caption className="sr-only">{t("history.caption")}</caption>
         <thead>
           <tr className="border-b border-ink-100 bg-ink-50 text-[11px] uppercase tracking-wide text-ink-500">
-            <th scope="col" className="px-4 py-2.5 font-semibold">Report</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">Category / Priority</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">Verdict</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">Validating official</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">Reporter</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">Timestamp</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">{t("history.col.report")}</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">{t("history.col.categoryPriority")}</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">{t("history.col.verdict")}</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">{t("history.col.official")}</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">{t("field.reporter")}</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">{t("field.timestamp")}</th>
           </tr>
         </thead>
         <tbody>
@@ -65,12 +57,12 @@ export function HistoryTable({
                 {/* Intake tier, kept as plain text so it can't be mistaken for
                     a second priority reading. */}
                 <p className="mt-0.5 text-[11px] text-ink-500">
-                  {entryTierLabels[record.entryTier]}
+                  {t(`history.tier.${record.entryTier}`)}
                 </p>
               </td>
               <td className="px-4 py-3 align-top">
                 <Badge tone={record.verdict === "Confirmed" ? "success" : "warning"}>
-                  {record.verdict === "Confirmed" ? "✓ Confirmed" : "✕ Rejected"}
+                  {t(record.verdict === "Confirmed" ? "history.verdict.confirmed" : "history.verdict.rejected")}
                 </Badge>
                 {/* Rejection reason (incident_reports.review_reason). Only
                     rejected rows carry one — the RPC leaves it NULL on
@@ -96,7 +88,7 @@ export function HistoryTable({
               >
                 {record.timestamp}
                 {record.trustDelta && (
-                  <span className="ml-1.5 font-medium">({record.trustDelta} trust)</span>
+                  <span className="ml-1.5 font-medium">{t("history.trust", { delta: record.trustDelta })}</span>
                 )}
               </td>
             </tr>

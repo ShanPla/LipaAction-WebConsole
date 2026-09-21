@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "./Button";
 import { useDismissOnEscape } from "./useDismissOnEscape";
 import { useFocusTrap } from "./useFocusTrap";
+import { useT } from "@/lib/i18n";
 
 /**
  * Single-line text prompt with Save/Cancel.
@@ -36,6 +37,7 @@ export function TextPromptModal({
 }) {
   const [value, setValue] = useState(initialValue);
   // Not while saving — same reason Cancel is disabled then.
+  const t = useT();
   useDismissOnEscape(onCancel, !busy);
   const dialogRef = useFocusTrap<HTMLFormElement>();
   const trimmed = value.trim();
@@ -50,7 +52,7 @@ export function TextPromptModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <button
-        aria-label="Cancel"
+        aria-label={t("common.cancel")}
         className="absolute inset-0 bg-ink-900/40"
         onClick={onCancel}
         disabled={busy}
@@ -84,10 +86,10 @@ export function TextPromptModal({
 
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" type="button" disabled={busy} onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button variant="primary" size="sm" type="submit" disabled={!canSubmit}>
-            {busy ? "Saving…" : confirmLabel}
+            {busy ? t("common.saving") : confirmLabel}
           </Button>
         </div>
       </form>

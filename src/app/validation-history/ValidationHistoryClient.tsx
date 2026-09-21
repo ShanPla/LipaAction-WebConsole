@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { startOfManilaDay } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import { AppShell } from "@/components/layout/AppShell";
 import { SummaryTiles } from "@/components/validation-history/SummaryTiles";
 import {
@@ -26,6 +27,7 @@ export function ValidationHistoryClient({
   historyData: ValidationHistoryData;
 }) {
   const { summary: loadedSummary, records, limit, loadFailed } = historyData;
+  const t = useT();
 
   const [range, setRange] = useState<RangeFilter>("all");
   const [outcome, setOutcome] = useState<OutcomeFilter>("all");
@@ -51,8 +53,8 @@ export function ValidationHistoryClient({
   const isCapped = records.length === limit;
 
   return (
-    <AppShell breadcrumb={[official.barangayName, "Validation History"]} official={official}>
-      {loadFailed && <DataUnavailableBanner what="Validation History" />}
+    <AppShell breadcrumb={[official.barangayName, t("nav.validationHistory")]} official={official}>
+      {loadFailed && <DataUnavailableBanner what={t("banner.what.history")} />}
       <SummaryTiles summary={visibleSummary} />
       <HistoryFilters
         range={range}
@@ -69,16 +71,16 @@ export function ValidationHistoryClient({
       {records.length > 0 && (
         <p className="mt-3 text-xs text-ink-500">
           {isFiltered
-            ? `Showing ${filtered.length} of ${loadedSummary.total} loaded records`
-            : `Showing the ${records.length} most recent reviewed ${
-                records.length === 1 ? "report" : "reports"
-              } for ${official.barangayName}`}
-          {" · newest first"}
+            ? t("history.footer.filtered", { shown: filtered.length, total: loadedSummary.total })
+            : records.length === 1
+              ? t("history.footer.allOne", { barangay: official.barangayName })
+              : t("history.footer.all", { count: records.length, barangay: official.barangayName })}
+          {` · ${t("history.footer.newest")}`}
           {/* Filtering happens over the rows already fetched, so a barangay
               past the cap can have in-range records that never reached the
               browser. Say so rather than implying the filtered count is
               complete. */}
-          {isCapped && ` · capped at the ${limit} most recent, so filters apply to those only`}
+          {isCapped && ` · ${t("history.footer.capped", { limit })}`}
         </p>
       )}
     </AppShell>

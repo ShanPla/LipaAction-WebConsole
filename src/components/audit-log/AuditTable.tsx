@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/Badge";
 import { cx, initials } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import type { AuditLogEntry } from "@/types";
 
 const actionToneMap: Record<AuditLogEntry["actionType"], "neutral" | "brand" | "warning"> = {
@@ -13,13 +14,12 @@ const actionToneMap: Record<AuditLogEntry["actionType"], "neutral" | "brand" | "
 };
 
 export function AuditTable({ entries }: { entries: AuditLogEntry[] }) {
+  const t = useT();
   if (entries.length === 0) {
     return (
       <div className="rounded-card border border-ink-100 bg-white px-4 py-10 text-center shadow-panel">
-        <p className="text-sm font-medium text-ink-700">No audit events in this range</p>
-        <p className="mt-1 text-xs text-ink-500">
-          Try widening the date filter, or switch to &quot;All actors&quot; above.
-        </p>
+        <p className="text-sm font-medium text-ink-700">{t("audit.empty.title")}</p>
+        <p className="mt-1 text-xs text-ink-500">{t("audit.empty.body")}</p>
       </div>
     );
   }
@@ -28,19 +28,18 @@ export function AuditTable({ entries }: { entries: AuditLogEntry[] }) {
     <div className="overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
       <div className="flex items-center gap-2 border-b border-ink-100 bg-brand-50 px-4 py-2 text-xs text-brand-700">
         <span aria-hidden>🔒</span>
-        Read-only audit trail &mdash; every category and assignment write appends an immutable
-        row.
+        {t("audit.readOnly")}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] text-left text-sm">
-        <caption className="sr-only">Sample audit events, for layout only</caption>
+        <caption className="sr-only">{t("audit.caption")}</caption>
         <thead>
           <tr className="border-b border-ink-100 bg-ink-50 text-[11px] uppercase tracking-wide text-ink-500">
-            <th scope="col" className="px-4 py-2.5 font-semibold">Timestamp</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">Actor</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">Action</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">Affected entity</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">Before to after</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">{t("field.timestamp")}</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">{t("audit.col.actor")}</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">{t("audit.col.action")}</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">{t("audit.col.entity")}</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">{t("audit.col.diff")}</th>
           </tr>
         </thead>
         <tbody>

@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { cx } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import type { QueueTabId } from "@/types";
 
 export function queueTabDomId(id: QueueTabId): string {
@@ -32,6 +33,7 @@ export function QueueTabs({
   onChange: (id: QueueTabId) => void;
 }) {
   const buttonRefs = useRef<Partial<Record<QueueTabId, HTMLButtonElement | null>>>({});
+  const t = useT();
 
   function moveTo(index: number) {
     const next = tabs[(index + tabs.length) % tabs.length];
@@ -63,7 +65,7 @@ export function QueueTabs({
   return (
     <div
       role="tablist"
-      aria-label="Queue sections"
+      aria-label={t("queue.tabsLabel")}
       className="mb-4 flex items-center gap-1 border-b border-ink-100"
     >
       {tabs.map((tab, index) => {
@@ -87,7 +89,9 @@ export function QueueTabs({
               active ? "text-brand-700" : "text-ink-500 hover:text-ink-900"
             )}
           >
-            {tab.label}
+            {/* Named by id, not by the server's English label, so the tab
+                follows the chosen language. */}
+            {t(`queue.tab.${tab.id}`)}
             <span
               className={cx(
                 "rounded-full px-1.5 py-0.5 text-[11px] font-semibold",

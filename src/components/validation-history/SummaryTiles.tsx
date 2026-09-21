@@ -1,13 +1,15 @@
 import { Tile } from "@/components/ui/Tile";
+import { useT } from "@/lib/i18n";
 import type { ValidationSummary } from "@/types";
 
 export function SummaryTiles({ summary }: { summary: ValidationSummary }) {
+  const t = useT();
   return (
     <div className="mb-4 flex flex-wrap gap-3">
-      <Tile label="Total" value={summary.total} />
-      <Tile label="Confirmed" value={summary.confirmed} accent="brand" />
-      <Tile label="Confirmed-false" value={summary.confirmedFalse} accent="critical" />
-      <Tile label="Identity withheld" value={summary.identityWithheld} />
+      <Tile label={t("history.tile.total")} value={summary.total} />
+      <Tile label={t("history.tile.confirmed")} value={summary.confirmed} accent="brand" />
+      <Tile label={t("history.tile.confirmedFalse")} value={summary.confirmedFalse} accent="critical" />
+      <Tile label={t("reporter.withheld")} value={summary.identityWithheld} />
     </div>
   );
 }

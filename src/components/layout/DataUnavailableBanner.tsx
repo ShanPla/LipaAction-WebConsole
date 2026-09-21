@@ -1,3 +1,5 @@
+import { useT } from "@/lib/i18n";
+
 /**
  * Shown when a page's data query failed.
  *
@@ -10,17 +12,18 @@
  *
  * Carries no error text on purpose, for the same reason ErrorState doesn't:
  * the message can name tables, columns, or policies. The server log has it.
+ *
+ * `what` arrives already translated — it is spliced into the title.
  */
 export function DataUnavailableBanner({ what }: { what: string }) {
+  const t = useT();
   return (
     <div
       role="alert"
       className="mb-4 rounded-card border border-priority-critical/40 bg-priority-criticalBg px-4 py-3 text-xs text-ink-700"
     >
-      <span className="font-semibold text-priority-critical">{what} couldn&apos;t load.</span>{" "}
-      Nothing below is current. Refresh the page; if it keeps happening, sign out and back
-      in, then tell the pilot support desk. &middot; Hindi na-load ang datos. I-refresh ang
-      page.
+      <span className="font-semibold text-priority-critical">{t("banner.title", { what })}</span>{" "}
+      {t("banner.body")}
     </div>
   );
 }

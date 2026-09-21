@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { displayName, initials, MAX_NAME_LENGTH, roleLabel } from "@/lib/utils";
+import { displayName, initials, MAX_NAME_LENGTH } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import { Button } from "@/components/ui/Button";
 import { TextPromptModal } from "@/components/ui/TextPromptModal";
 import { useToast } from "@/components/ui/Toast";
 import { updateDisplayName } from "@/app/actions/profile";
 import { callAction } from "@/lib/callAction";
 import type { OfficialProfile } from "@/lib/auth";
-
-
 
 function FieldRow({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
@@ -27,6 +26,7 @@ export function ProfileCard({ official }: { official: OfficialProfile }) {
   const { showToast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const t = useT();
 
   const name = displayName(official.fullName);
 
@@ -35,14 +35,14 @@ export function ProfileCard({ official }: { official: OfficialProfile }) {
       const result = await callAction(() => updateDisplayName(nextName));
       if (result === null) {
         // The prompt stays open with the typed name, so retrying is one click.
-        showToast("Couldn't confirm your name was saved. Try again.", "danger");
+        showToast(t("profile.nameUnconfirmed"), "danger");
         return;
       }
       if (result.success) {
         setShowNamePrompt(false);
-        showToast("Display name updated", "success");
+        showToast(t("profile.nameUpdated"), "success");
       } else {
-        showToast(result.message ?? "Couldn't update display name", "danger");
+        showToast(result.message ?? t("profile.nameFailed"), "danger");
       }
     });
   }
@@ -57,12 +57,12 @@ export function ProfileCard({ official }: { official: OfficialProfile }) {
           <div>
             <p className="text-base font-semibold text-ink-900">{name}</p>
             <p className="text-xs text-ink-500">
-              {roleLabel(official.role)} &middot; {official.barangayName}
+              {t(`role.${official.role}`)} &middot; {official.barangayName}
             </p>
           </div>
         </div>
         <Button variant="secondary" size="sm" onClick={() => setShowNamePrompt(true)}>
-          Edit display name
+          {t("profile.editName")}
         </Button>
       </div>
 
@@ -75,14 +75,14 @@ export function ProfileCard({ official }: { official: OfficialProfile }) {
             been sent, when nothing was sent at all. A read-only value is
             honest; a button that lies about what it did is not. */}
         <FieldRow
-          label="Email"
-          value={official.email ?? "Not set"}
-          note="Ask a municipal admin to change this"
+          label={t("profile.email")}
+          value={official.email ?? t("profile.notSet")}
+          note={t("profile.askAdmin")}
         />
         <FieldRow
-          label="Phone"
-          value={official.phone ?? "Not set"}
-          note="Ask a municipal admin to change this"
+          label={t("profile.phone")}
+          value={official.phone ?? t("profile.notSet")}
+          note={t("profile.askAdmin")}
         />
       </div>
 
@@ -95,11 +95,11 @@ export function ProfileCard({ official }: { official: OfficialProfile }) {
 
       {showNamePrompt && (
         <TextPromptModal
-          title="Edit display name"
-          description="This is the name shown on reports you validate or reject, and in your barangay's audit trail."
-          label="Display name"
+          title={t("profile.editName")}
+          description={t("profile.nameDescription")}
+          label={t("profile.nameLabel")}
           initialValue={official.fullName?.trim() ?? ""}
-          confirmLabel="Save"
+          confirmLabel={t("common.save")}
           maxLength={MAX_NAME_LENGTH}
           busy={isPending}
           onCancel={() => setShowNamePrompt(false)}

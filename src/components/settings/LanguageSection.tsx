@@ -1,22 +1,25 @@
 "use client";
 
 import { cx } from "@/lib/utils";
+import { useLang, useT, type MessageKey } from "@/lib/i18n";
 import { usePreferences, type BilingualEmphasis, type InterfaceLanguage } from "@/lib/preferences";
 import type { BarangayRole } from "@/lib/auth";
 
 function SegmentedControl<T extends string>({
+  label,
   options,
   value,
   disabled,
   onChange,
 }: {
+  label: string;
   options: { value: T; label: string }[];
   value: T;
   disabled?: boolean;
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="inline-flex rounded-md border border-ink-100 bg-ink-50 p-0.5">
+    <div role="group" aria-label={label} className="inline-flex rounded-md border border-ink-100 bg-ink-50 p-0.5">
       {options.map((opt) => (
         <button
           key={opt.value}
@@ -36,45 +39,50 @@ function SegmentedControl<T extends string>({
   );
 }
 
-const languageOptions: { value: InterfaceLanguage; label: string }[] = [
-  { value: "en", label: "English primary" },
-  { value: "tl", label: "Tagalog Filipino" },
+const languageOptions: { value: InterfaceLanguage; label: MessageKey }[] = [
+  { value: "en", label: "language.option.en" },
+  { value: "tl", label: "language.option.tl" },
 ];
 
-const emphasisOptions: { value: BilingualEmphasis; label: string }[] = [
-  { value: "english-first", label: "English first" },
-  { value: "tagalog-first", label: "Tagalog first" },
-  { value: "english-only", label: "English only" },
-];
+const emphasisOptions: BilingualEmphasis[] = ["english-first", "tagalog-first", "english-only"];
 
 /**
  * Language preference, saved on this device.
  *
- * Honest about its reach: the console is English with Tagalog labels beside
- * the key terms, and no full Tagalog interface exists yet, so the choice is
- * recorded but changes no screen today. It stays because the thesis puts it
- * here (Fig. 50) and because the default is the one role-specific behaviour
- * the console can honour — senior barangay admins default to Tagalog. The
- * copy this replaced described a [Records List] that this console never had.
+ * Interface language is real: it switches the console's own text between
+ * English and Tagalog (src/lib/messages.ts), and it is the same stored value
+ * as the EN/TL switch in the top bar. The copy says what it does not reach —
+ * report text, server-formatted values, sign-in and error pages — rather
+ * than implying a fully Tagalog console.
+ *
+ * Bilingual emphasis is still recorded only. The thesis puts it here
+ * (Fig. 50), but nothing reads it yet, and the copy under it says so; don't
+ * make it look like it does more. Senior barangay admins default to Tagalog
+ * for both, as the paper specifies.
  */
 export function LanguageSection({ role }: { role: BarangayRole }) {
   const { prefs, update, hydrated } = usePreferences(role);
+  const t = useT();
+  const lang = useLang();
 
   return (
     <div className="rounded-card border border-ink-100 bg-white p-5 shadow-panel">
-      <p className="mb-1 text-sm font-semibold text-ink-900">Language preferences</p>
-      <p className="mb-4 text-xs text-ink-500">
-        Saved in this browser only &middot; Naka-save sa device na ito. The console is currently
-        shown in English with Tagalog labels alongside; a full Tagalog interface is not available
-        yet, so this choice is recorded but does not change the screens today.
-      </p>
+      <p className="mb-1 text-sm font-semibold text-ink-900">{t("language.title")}</p>
+      <p className="mb-4 text-xs text-ink-500">{t("language.body")}</p>
 
       <div className="mb-4">
         <p className="mb-1.5 text-xs font-medium text-ink-700">
-          Interface language &middot; <span className="text-ink-500">wika</span>
+          {t("language.interface")}
+          {lang === "en" && (
+            <>
+              {" "}
+              &middot; <span className="text-ink-500">wika</span>
+            </>
+          )}
         </p>
         <SegmentedControl
-          options={languageOptions}
+          label={t("language.interface")}
+          options={languageOptions.map((o) => ({ value: o.value, label: t(o.label) }))}
           value={prefs.interfaceLanguage}
           disabled={!hydrated}
           onChange={(interfaceLanguage) => update({ interfaceLanguage })}
@@ -83,15 +91,22 @@ export function LanguageSection({ role }: { role: BarangayRole }) {
 
       <div>
         <p className="mb-1.5 text-xs font-medium text-ink-700">
-          Bilingual emphasis &middot;{" "}
-          <span className="text-ink-500">diin sa pagkakasunud-sunod</span>
+          {t("language.emphasis")}
+          {lang === "en" && (
+            <>
+              {" "}
+              &middot; <span className="text-ink-500">diin sa pagkakasunud-sunod</span>
+            </>
+          )}
         </p>
         <SegmentedControl
-          options={emphasisOptions}
+          label={t("language.emphasis")}
+          options={emphasisOptions.map((value) => ({ value, label: t(`language.emphasis.${value}`) }))}
           value={prefs.bilingualEmphasis}
           disabled={!hydrated}
           onChange={(bilingualEmphasis) => update({ bilingualEmphasis })}
         />
+        <p className="mt-1.5 text-xs text-ink-500">{t("language.emphasisNote")}</p>
       </div>
     </div>
   );

@@ -92,7 +92,7 @@ official's browser is set.
 | **Queue** | Live. Shows the barangay's pending reports in four tabs — Emergency Fast-triage, Standard intake, Flagged duplicates, Recent validated — with a search box and a detail drawer showing the resident's full account and the classifier's reading of the report. Validate and Reject write to the database; rejection requires a reason. A validated report is then routed to the agencies its category maps to, by hand, after a confirmation step; the Recent validated tab separates reports awaiting routing from those already with agencies, and shows each agency's progress (acknowledged, resolved, or closed with an outcome) as the agencies record it. Opening a report's details is recorded in the access log, once per opening. A duplicate cluster can be validated as one action. The page updates live as reports change (a Supabase Realtime subscription, filtered to the barangay and enforced by Row-Level Security), falling back to a 30-second refresh if the live channel cannot connect. A report that arrives on its own is marked as new for a few seconds so it is not missed. The page can also chime when a new emergency arrives, and can raise a browser notification when an emergency has waited more than five minutes. If the data cannot be loaded it says so, rather than showing an empty queue. |
 | **Cluster Explorer** | Live query, currently empty, and says so. Groups pending reports that share a `cluster_id`. The duplicate-detection service computes clusters but does not yet write them back to reports, so no report carries a `cluster_id`; the page, and the queue's Flagged duplicates tab, state that duplicate detection isn't connected rather than implying none were found. |
 | **Validation History** | Live. Reviewed reports (validated or rejected) with the reviewing official, timestamp, rejection reason, and outcome filters. Exports the visible rows to CSV. |
-| **Settings** | Profile is live (name, role, barangay, email, phone); the display name is editable. Language and alert preferences are saved in the browser on the current device; the alert preferences drive the Queue page's chime and browser notification. Senior barangay administrators default to Tagalog, as the thesis specifies. |
+| **Settings** | Profile is live (name, role, barangay, email, phone); the display name is editable. Language and alert preferences are saved in the browser on the current device. The interface language switches the console between English and Tagalog — the same choice as the EN/TL switch at the top right of every page; the alert preferences drive the Queue page's chime and browser notification. Senior barangay administrators default to Tagalog, as the thesis specifies. The bilingual-emphasis setting is recorded but does not yet change any screen, and says so. |
 | **Audit Log** | Placeholder data, labelled as such on the page. The console writes to the audit trail (validations, rejections, and report views), but no barangay role can read it back: which columns the barangay desk may see is a data-protection decision pending with the adviser, and read access will be granted through a function that exposes only those columns, not through a table policy. |
 
 All report data is scoped to the signed-in official's own barangay by Row Level
@@ -198,8 +198,15 @@ In each case the console shows nothing rather than an approximation.
   in the account, because no profile column exists for them and browser-notification
   permission is granted per browser anyway. Alerts fire only while the Queue page is
   open; there is no push to a closed console.
-- **No full Tagalog interface.** The language preference is recorded but the screens
-  remain English with Tagalog labels alongside key terms.
+- **The Tagalog interface covers the console's own text, not everything on screen.**
+  Menus, buttons, tabs, dialogs, notices, and empty states switch language. Report
+  text is never translated — it is shown exactly as the resident wrote it. Values the
+  server formats (report categories, priority levels, relative times like "5m ago",
+  review timestamps) and error messages returned by the server stay in English, as do
+  the sign-in and error pages and the CSV export. The Cluster Explorer's populated
+  view, unreachable until duplicate detection is connected, is English only. The
+  Tagalog wording is a first draft pending review. A page loads in the role's default
+  language and switches to a different saved choice a moment later.
 - **Live updates need a websocket.** On a network that blocks them, the queue says so
   in its footer and falls back to a 30-second refresh.
 

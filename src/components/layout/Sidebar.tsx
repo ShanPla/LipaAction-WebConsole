@@ -2,20 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cx, displayName, initials, roleLabel } from "@/lib/utils";
+import { cx, displayName, initials } from "@/lib/utils";
+import { useT, type MessageKey } from "@/lib/i18n";
 import type { OfficialProfile } from "@/lib/auth";
 
-const primaryNav = [
-  { href: "/queue", label: "Queue", icon: "▤" },
-  { href: "/cluster-explorer", label: "Cluster Explorer", icon: "◎" },
+type NavItem = { href: string; label: MessageKey; icon: string };
+
+const primaryNav: NavItem[] = [
+  { href: "/queue", label: "nav.queue", icon: "▤" },
+  { href: "/cluster-explorer", label: "nav.clusterExplorer", icon: "◎" },
 ];
 
-const secondaryNav = [
-  { href: "/validation-history", label: "Validation History", icon: "✓" },
-  { href: "/audit-log", label: "Audit Log", icon: "≣" },
+const secondaryNav: NavItem[] = [
+  { href: "/validation-history", label: "nav.validationHistory", icon: "✓" },
+  { href: "/audit-log", label: "nav.auditLog", icon: "≣" },
 ];
 
-const bottomNav = [{ href: "/settings", label: "Settings", icon: "⚙" }];
+const bottomNav: NavItem[] = [{ href: "/settings", label: "nav.settings", icon: "⚙" }];
 
 function NavLink({
   href,
@@ -25,11 +28,12 @@ function NavLink({
   onNavigate,
 }: {
   href: string;
-  label: string;
+  label: MessageKey;
   icon: string;
   active: boolean;
   onNavigate?: () => void;
 }) {
+  const t = useT();
   return (
     <Link
       href={href}
@@ -45,7 +49,7 @@ function NavLink({
       <span className="w-4 text-center text-[13px]" aria-hidden>
         {icon}
       </span>
-      {label}
+      {t(label)}
     </Link>
   );
 }
@@ -59,6 +63,7 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const name = displayName(official.fullName);
+  const t = useT();
 
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-ink-100 bg-white">
@@ -68,7 +73,7 @@ export function Sidebar({
         </span>
         <div className="leading-tight">
           <p className="text-sm font-semibold text-ink-900">LipaAction</p>
-          <p className="text-[11px] text-ink-500">Barangay console</p>
+          <p className="text-[11px] text-ink-500">{t("shell.consoleName")}</p>
         </div>
       </div>
 
@@ -86,7 +91,7 @@ export function Sidebar({
 
         <div>
           <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-300">
-            Records
+            {t("nav.records")}
           </p>
           <div className="flex flex-col gap-0.5">
             {secondaryNav.map((item) => (
@@ -102,7 +107,7 @@ export function Sidebar({
 
         <div>
           <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-300">
-            Account
+            {t("nav.account")}
           </p>
           <div className="flex flex-col gap-0.5">
             {bottomNav.map((item) => (
@@ -124,7 +129,7 @@ export function Sidebar({
         <div className="min-w-0 leading-tight">
           <p className="truncate text-xs font-semibold text-ink-900">{name}</p>
           <p className="truncate text-[11px] text-ink-500">
-            {roleLabel(official.role)} · {official.barangayName}
+            {t(`role.${official.role}`)} · {official.barangayName}
           </p>
         </div>
       </div>

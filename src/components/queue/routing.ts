@@ -1,4 +1,7 @@
 import type { AgencyRouting, QueueReport, RoutingPlanEntry } from "@/types";
+// Type-only: the helpers below take a Translate function rather than calling
+// a hook, so they stay plain functions the row and the drawer can share.
+import type { Translate } from "@/lib/i18n";
 
 /**
  * Where a report stands with respect to agencies — one reading shared by the
@@ -19,7 +22,7 @@ export type RoutingState =
   // no-mapping, and must not be shown as one.
   | { kind: "unavailable" }
   // Routed or resolved: agencies own it now; the desk watches.
-  | { kind: "downstream"; routing: AgencyRouting[]; summary: string };
+  | { kind: "downstream"; status: "routed" | "resolved"; routing: AgencyRouting[] };
 
 export function routingState(report: QueueReport): RoutingState {
   const { status, routing, routingPlan } = report.details;
@@ -32,33 +35,31 @@ export function routingState(report: QueueReport): RoutingState {
   }
 
   if (status === "routed" || status === "resolved") {
-    return { kind: "downstream", routing, summary: downstreamSummary(status, routing) };
+    return { kind: "downstream", status, routing };
   }
 
   return { kind: "none" };
 }
 
-// resolution_outcome is a closed list on the backend. [resolved] needs no
-// qualifier; the other three are closures without a fix, and say so.
-const OUTCOME_LABELS: Record<NonNullable<AgencyRouting["resolutionOutcome"]>, string> = {
-  resolved: "resolved",
-  "confirmed-false": "confirmed false",
-  duplicate: "duplicate",
-  "out-of-scope": "out of scope",
-};
+// resolution_outcome is a closed list on the backend, one message key per
+// value (routing.outcome.*). [resolved] needs no qualifier; the other three
+// are closures without a fix, and say so.
+function outcomeLabel(outcome: NonNullable<AgencyRouting["resolutionOutcome"]>, t: Translate): string {
+  return t(`routing.outcome.${outcome}`);
+}
 
 /**
  * One agency's progress. There is no status column on agency_routing; the
  * stage is whichever timestamp the agency has set last.
  */
-export function agencyProgressLabel(row: AgencyRouting): string {
+export function agencyProgressLabel(row: AgencyRouting, t: Translate): string {
   if (row.resolvedAt) {
     return row.resolutionOutcome && row.resolutionOutcome !== "resolved"
-      ? `Closed — ${OUTCOME_LABELS[row.resolutionOutcome]}`
-      : "Resolved";
+      ? t("routing.progress.closed", { outcome: outcomeLabel(row.resolutionOutcome, t) })
+      : t("status.resolved");
   }
-  if (row.acknowledgedAt) return "Acknowledged";
-  return "Awaiting acknowledgement";
+  if (row.acknowledgedAt) return t("routing.progress.acknowledged");
+  return t("routing.progress.awaiting");
 }
 
 /**
@@ -66,11 +67,15 @@ export function agencyProgressLabel(row: AgencyRouting): string {
  * loader sorts it first) and counts the rest, because a row has room for one
  * name and the drawer lists them all.
  */
-function downstreamSummary(status: string, routing: AgencyRouting[]): string {
+export function downstreamSummary(
+  state: Extract<RoutingState, { kind: "downstream" }>,
+  t: Translate
+): string {
+  const { status, routing } = state;
   if (routing.length === 0) {
     // Routed by a path whose rows this desk can't see, or the routing load
     // failed. The status is still true; the detail just isn't available.
-    return status === "resolved" ? "Resolved" : "Routed to agency";
+    return t(status === "resolved" ? "status.resolved" : "status.routed");
   }
 
   const lead = routing[0];
@@ -78,14 +83,20 @@ function downstreamSummary(status: string, routing: AgencyRouting[]): string {
 
   if (routing.every((r) => r.resolvedAt)) {
     return lead.resolutionOutcome && lead.resolutionOutcome !== "resolved"
-      ? `Closed by ${lead.agencyName}${more} — ${OUTCOME_LABELS[lead.resolutionOutcome]}`
-      : `Resolved by ${lead.agencyName}${more}`;
+      ? t("routing.summary.closedBy", {
+          agency: lead.agencyName,
+          more,
+          outcome: outcomeLabel(lead.resolutionOutcome, t),
+        })
+      : t("routing.summary.resolvedBy", { agency: lead.agencyName, more });
   }
 
   const acknowledging = routing.find((r) => r.acknowledgedAt);
-  if (acknowledging) return `Acknowledged by ${acknowledging.agencyName}${more}`;
+  if (acknowledging) {
+    return t("routing.summary.acknowledgedBy", { agency: acknowledging.agencyName, more });
+  }
 
-  return `Routed to ${lead.agencyName}${more} · awaiting acknowledgement`;
+  return t("routing.summary.routedTo", { agency: lead.agencyName, more });
 }
 
 /**
@@ -96,32 +107,35 @@ function downstreamSummary(status: string, routing: AgencyRouting[]): string {
 export function routeConfirmCopy(
   report: QueueReport,
   plan: RoutingPlanEntry[] | null,
-  resuming: boolean
+  resuming: boolean,
+  t: Translate
 ): { title: string; description: string; confirmLabel: string } {
-  const names = plan && plan.length > 0 ? describePlan(plan) : null;
+  const names = plan && plan.length > 0 ? describePlan(plan, t) : null;
   const count = plan?.length ?? 0;
-  const agencies = count === 1 ? "1 agency" : `${count} agencies`;
+  const agencies = agencyCount(count, t);
 
   if (resuming) {
     return {
-      title: `Finish routing ${report.id}?`,
-      description:
-        "A previous attempt sent this report to some agencies but didn't complete. " +
-        "Finishing sends it to any agencies still missing and records the routing. " +
-        "Agencies that already have it won't receive it twice.",
-      confirmLabel: "Finish routing",
+      title: t("routing.finishTitle", { id: report.id }),
+      description: t("routing.finishDescription"),
+      confirmLabel: t("routing.finish"),
     };
   }
 
   return {
-    title: `Route ${report.id} to ${agencies}?`,
-    description:
-      `${names ?? "The mapped agencies"} will see it on their dashboards immediately. ` +
-      "Routing can't be undone from this console.",
-    confirmLabel: `Route to ${agencies}`,
+    title: t("routing.routeTitle", { id: report.id, agencies }),
+    description: t("routing.routeDescription", { names: names ?? t("routing.mappedAgencies") }),
+    confirmLabel: t("routing.routeConfirm", { agencies }),
   };
 }
 
-function describePlan(plan: RoutingPlanEntry[]): string {
-  return plan.map((p) => (p.isPrimary ? `${p.agencyName} (lead)` : p.agencyName)).join(", ");
+/** [1 agency] / [3 agencies] — shared with the routed toast. */
+export function agencyCount(count: number, t: Translate): string {
+  return count === 1 ? t("routing.agencyCountOne") : t("routing.agencyCount", { count });
+}
+
+function describePlan(plan: RoutingPlanEntry[], t: Translate): string {
+  return plan
+    .map((p) => (p.isPrimary ? `${p.agencyName} ${t("routing.lead")}` : p.agencyName))
+    .join(", ");
 }

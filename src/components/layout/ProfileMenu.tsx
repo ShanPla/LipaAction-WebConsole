@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { displayName, initials, roleLabel } from "@/lib/utils";
+import { displayName, initials } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import { signOut } from "@/app/actions/auth";
 import type { OfficialProfile } from "@/lib/auth";
 
@@ -10,6 +11,7 @@ export function ProfileMenu({ official }: { official: OfficialProfile }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const name = displayName(official.fullName);
+  const t = useT();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -35,7 +37,7 @@ export function ProfileMenu({ official }: { official: OfficialProfile }) {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`Account menu for ${name}`}
+        aria-label={t("shell.accountMenu", { name })}
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-xs font-semibold text-white transition-shadow hover:ring-2 hover:ring-brand-200"
       >
         {initials(name)}
@@ -49,7 +51,7 @@ export function ProfileMenu({ official }: { official: OfficialProfile }) {
           <div className="border-b border-ink-100 px-3.5 py-3">
             <p className="truncate text-sm font-semibold text-ink-900">{name}</p>
             <p className="truncate text-xs text-ink-500">
-              {roleLabel(official.role)} · {official.barangayName}
+              {t(`role.${official.role}`)} · {official.barangayName}
             </p>
           </div>
 
@@ -59,7 +61,7 @@ export function ProfileMenu({ official }: { official: OfficialProfile }) {
             onClick={() => setOpen(false)}
             className="block px-3.5 py-2.5 text-sm text-ink-700 hover:bg-ink-100"
           >
-            Settings
+            {t("nav.settings")}
           </Link>
 
           <div className="border-t border-ink-100" />
@@ -70,7 +72,7 @@ export function ProfileMenu({ official }: { official: OfficialProfile }) {
               role="menuitem"
               className="block w-full px-3.5 py-2.5 text-left text-sm font-medium text-priority-critical hover:bg-priority-criticalBg"
             >
-              Sign out
+              {t("shell.signOut")}
             </button>
           </form>
         </div>

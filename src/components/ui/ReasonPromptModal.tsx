@@ -5,6 +5,7 @@ import { Button } from "./Button";
 import { useDismissOnEscape } from "./useDismissOnEscape";
 import { useFocusTrap } from "./useFocusTrap";
 import { MAX_REASON_LENGTH } from "@/lib/utils";
+import { useLang, useT } from "@/lib/i18n";
 
 export function ReasonPromptModal({
   title,
@@ -20,6 +21,8 @@ export function ReasonPromptModal({
   onConfirm: (reason: string) => void;
 }) {
   const [reason, setReason] = useState("");
+  const t = useT();
+  const lang = useLang();
   useDismissOnEscape(onCancel);
   const dialogRef = useFocusTrap<HTMLDivElement>();
   const trimmed = reason.trim();
@@ -27,7 +30,7 @@ export function ReasonPromptModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <button
-        aria-label="Cancel"
+        aria-label={t("common.cancel")}
         className="absolute inset-0 bg-ink-900/40"
         onClick={onCancel}
       />
@@ -45,7 +48,14 @@ export function ReasonPromptModal({
         <p className="mb-3 text-xs text-ink-500">{description}</p>
 
         <label className="mb-1 block text-xs font-medium text-ink-500" htmlFor="reason-prompt-input">
-          Reason &middot; <span className="font-normal">dahilan</span>
+          {t("reason.label")}
+          {/* The English screen keeps the mockup Tagalog hint beside the term. */}
+          {lang === "en" && (
+            <>
+              {" "}
+              &middot; <span className="font-normal">dahilan</span>
+            </>
+          )}
         </label>
         <textarea
           id="reason-prompt-input"
@@ -55,13 +65,13 @@ export function ReasonPromptModal({
           rows={3}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="e.g. Duplicate of an existing report, resolved on-site, out of scope…"
+          placeholder={t("reason.placeholder")}
           className="mb-4 w-full resize-none rounded-md border border-ink-100 bg-ink-50 px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-brand-500 focus:outline-none"
         />
 
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             variant="danger"

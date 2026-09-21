@@ -3,21 +3,22 @@
 import { csvCell, cx, manilaTimestamp } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
+import { useT, type MessageKey } from "@/lib/i18n";
 import type { ValidationRecord } from "@/types";
 
 export type RangeFilter = "today" | "7d" | "all";
 export type OutcomeFilter = "all" | "Confirmed" | "Rejected";
 
-export const rangeOptions: { id: RangeFilter; label: string }[] = [
-  { id: "today", label: "Today" },
-  { id: "7d", label: "Last 7d" },
-  { id: "all", label: "All time" },
+export const rangeOptions: { id: RangeFilter; label: MessageKey }[] = [
+  { id: "today", label: "history.range.today" },
+  { id: "7d", label: "history.range.7d" },
+  { id: "all", label: "history.range.all" },
 ];
 
-const outcomeOptions: { id: OutcomeFilter; label: string }[] = [
-  { id: "all", label: "All outcomes" },
-  { id: "Confirmed", label: "Confirmed" },
-  { id: "Rejected", label: "Rejected" },
+const outcomeOptions: { id: OutcomeFilter; label: MessageKey }[] = [
+  { id: "all", label: "history.outcome.all" },
+  { id: "Confirmed", label: "history.outcome.Confirmed" },
+  { id: "Rejected", label: "history.outcome.Rejected" },
 ];
 
 // Controlled — ValidationHistoryClient owns the state and does the actual
@@ -48,14 +49,15 @@ export function HistoryFilters({
   records: ValidationRecord[];
 }) {
   const { showToast } = useToast();
+  const t = useT();
 
   function handleExport() {
     if (records.length === 0) {
-      showToast("Nothing to export with these filters", "info");
+      showToast(t("history.exportNothing"), "info");
       return;
     }
     downloadCsv(records);
-    showToast(`Exported ${records.length} records as CSV`, "success");
+    showToast(t("history.exported", { count: records.length }), "success");
   }
 
   return (
@@ -73,19 +75,19 @@ export function HistoryFilters({
                 : "bg-white text-ink-700 border border-ink-100 hover:bg-ink-50"
             )}
           >
-            {opt.label}
+            {t(opt.label)}
           </button>
         ))}
 
         <select
-          aria-label="Filter by outcome"
+          aria-label={t("history.filterOutcome")}
           value={outcome}
           onChange={(e) => onOutcomeChange(e.target.value as OutcomeFilter)}
           className="rounded-full border border-ink-100 bg-white px-3 py-1.5 text-xs font-medium text-ink-700"
         >
           {outcomeOptions.map((opt) => (
             <option key={opt.id} value={opt.id}>
-              {opt.label}
+              {t(opt.label)}
             </option>
           ))}
         </select>
@@ -94,12 +96,12 @@ export function HistoryFilters({
             a single-entry dropdown is just noise. */}
         {officialOptions.length > 1 && (
           <select
-            aria-label="Filter by validating official"
+            aria-label={t("history.filterOfficial")}
             value={official}
             onChange={(e) => onOfficialChange(e.target.value)}
             className="rounded-full border border-ink-100 bg-white px-3 py-1.5 text-xs font-medium text-ink-700"
           >
-            <option value="all">All officials</option>
+            <option value="all">{t("history.allOfficials")}</option>
             {officialOptions.map((name) => (
               <option key={name} value={name}>
                 {name}
@@ -110,7 +112,7 @@ export function HistoryFilters({
       </div>
 
       <Button variant="secondary" size="sm" onClick={handleExport}>
-        Export CSV
+        {t("history.export")}
       </Button>
     </div>
   );
@@ -119,6 +121,10 @@ export function HistoryFilters({
 // Exports exactly what's on screen (current filters included), not a fresh
 // server query — so the file always matches what the official was looking at
 // when they clicked.
+//
+// Always in English, whatever the interface language: the file is read by
+// other offices, and its column names are what the verified export was
+// checked against.
 //
 // The reporter column carries "Verified reporter" / "Identity withheld" only,
 // never a name — same privacy rule as the table itself. Nothing here widens

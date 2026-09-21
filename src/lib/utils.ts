@@ -11,15 +11,7 @@ export function initials(name: string): string {
     .join("");
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  barangay_official: "Brgy. Official",
-  barangay_admin: "Brgy. Admin",
-  senior_barangay_admin: "Senior Brgy. Admin",
-};
-
-export function roleLabel(role: string): string {
-  return ROLE_LABELS[role] ?? role;
-}
+// Role names are interface text: see role.* in src/lib/messages.ts.
 
 /**
  * An official's name as it should appear on screen.

@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ReasonPromptModal } from "@/components/ui/ReasonPromptModal";
 import { cx } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
 import { useReportRouting } from "./useReportRouting";
-import { routeConfirmCopy, routingState } from "./routing";
+import { downstreamSummary, routeConfirmCopy, routingState } from "./routing";
 import type { QueueReport } from "@/types";
 
 export function ReportRow({
@@ -35,13 +36,14 @@ export function ReportRow({
   );
   const routing = useReportRouting(report.id);
   const state = routingState(report);
+  const t = useT();
 
   if (resolvedAs) {
     return (
       <div className="flex items-center justify-between gap-4 border-b border-ink-100 bg-ink-50/60 px-4 py-3 text-sm text-ink-500 last:border-0">
         <span className="font-mono text-xs">{report.id}</span>
         <span>
-          {resolvedAs === "validated" ? "Validated — route it from Recent validated" : "Rejected"}
+          {resolvedAs === "validated" ? t("row.resolvedValidated") : t("status.rejected")}
         </span>
       </div>
     );
@@ -60,43 +62,45 @@ export function ReportRow({
             disabled={routing.isPending}
             onClick={routing.openConfirm}
           >
-            Route to agency
+            {t("routing.routeToAgency")}
           </Button>
         );
       case "incomplete":
         return (
           <>
-            <span className="text-xs font-medium text-priority-medium">Routing incomplete</span>
+            <span className="text-xs font-medium text-priority-medium">{t("row.routingIncomplete")}</span>
             <Button
               variant="primary"
               size="sm"
               disabled={routing.isPending}
               onClick={routing.openConfirm}
             >
-              Finish routing
+              {t("routing.finish")}
             </Button>
           </>
         );
       case "no-mapping":
         return (
           <span className="max-w-[14rem] text-right text-xs font-medium text-priority-medium">
-            No agency mapped — needs barangay review
+            {t("row.noMapping")}
           </span>
         );
       case "unavailable":
         return (
           <span className="max-w-[14rem] text-right text-xs text-ink-500">
-            Couldn&apos;t load routing options — refresh
+            {t("row.routingUnavailable")}
           </span>
         );
       case "downstream":
         return (
-          <span className="max-w-[16rem] text-right text-xs text-ink-700">{state.summary}</span>
+          <span className="max-w-[16rem] text-right text-xs text-ink-700">
+            {downstreamSummary(state, t)}
+          </span>
         );
       case "none":
         return (
           <span className="text-xs font-medium text-ink-500">
-            {statusLabel(report.details.status)}
+            {statusLabel(report.details.status, t)}
           </span>
         );
     }
@@ -121,13 +125,13 @@ export function ReportRow({
           type="button"
           onClick={onOpenDetails}
           className="min-w-0 flex-1 text-left"
-          aria-label={`View details for ${report.id}`}
+          aria-label={t("row.viewDetails", { id: report.id })}
         >
           <div className="mb-1 flex flex-wrap items-center gap-2">
             <span className="font-mono text-xs text-ink-500">{report.id}</span>
             {justArrived && (
               <span className="rounded-full bg-brand-500 px-2 py-0.5 text-[11px] font-semibold text-white">
-                New
+                {t("row.new")}
               </span>
             )}
             <PriorityBadge priority={report.priority} score={report.details.priorityScore} />
@@ -155,7 +159,7 @@ export function ReportRow({
           {isReviewable(report.details.status) ? (
             <>
               <Button variant="secondary" size="sm" disabled={isPending} onClick={openReject}>
-                Reject
+                {t("review.reject")}
               </Button>
               {/* data-validate-button: QueueClient's [Validate next] finds the
                   first one of these to scroll to and focus. */}
@@ -166,7 +170,7 @@ export function ReportRow({
                 disabled={isPending}
                 onClick={validate}
               >
-                Validate
+                {t("review.validate")}
               </Button>
             </>
           ) : (
@@ -177,9 +181,9 @@ export function ReportRow({
 
       {isRejecting && (
         <ReasonPromptModal
-          title={`Reject ${report.id}?`}
-          description="A reason is required — it's recorded on the report and shown to your barangay's desk."
-          confirmLabel="Reject report"
+          title={t("review.rejectTitle", { id: report.id })}
+          description={t("review.rejectDescription")}
+          confirmLabel={t("review.rejectConfirm")}
           onCancel={cancelReject}
           onConfirm={reject}
         />
@@ -187,7 +191,7 @@ export function ReportRow({
 
       {routing.isConfirming && (state.kind === "ready" || state.kind === "incomplete") && (
         <ConfirmModal
-          {...routeConfirmCopy(report, state.plan, state.kind === "incomplete")}
+          {...routeConfirmCopy(report, state.plan, state.kind === "incomplete", t)}
           busy={routing.isPending}
           onCancel={routing.cancelConfirm}
           onConfirm={routing.route}

@@ -1,4 +1,5 @@
 import { cx } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import type { PriorityTier, ReportPriority } from "@/types";
 
 const priorityStyles: Record<PriorityTier, string> = {
@@ -7,8 +8,6 @@ const priorityStyles: Record<PriorityTier, string> = {
   Medium: "bg-priority-mediumBg text-priority-medium",
   Low: "bg-priority-lowBg text-priority-low",
 };
-
-export const UNSCORED_LABEL = "Not scored";
 
 /**
  * An unscored report gets a neutral outline badge with no dot: visibly a
@@ -31,10 +30,11 @@ export function PriorityBadge({
   priority: ReportPriority;
   score?: number | null;
 }) {
+  const t = useT();
   if (priority === null) {
     return (
       <span className="inline-flex items-center rounded-full border border-ink-300 px-2.5 py-0.5 text-xs font-medium text-ink-500">
-        {UNSCORED_LABEL}
+        {t("priority.unscored")}
       </span>
     );
   }
