@@ -41,8 +41,10 @@ function verifyErrorMessage(error: AuthError): string {
   if (error.code === "over_request_rate_limit" || error.status === 429) {
     return "Too many attempts. Wait a few minutes, then try again.";
   }
-  if (error.code === "otp_expired") return "That code has expired. Request a new one below.";
-  return "That code is incorrect or expired. Check your email and try again.";
+  // No separate [expired] branch: Supabase answers otp_expired for a mistyped
+  // code as well as an expired one (its message is [Token has expired or is
+  // invalid]), so the code can't tell them apart and neither can this copy.
+  return "That code is incorrect or has expired. Check the email, or request a new code below.";
 }
 
 function sendCodeErrorMessage(error: AuthError): string {
@@ -225,7 +227,7 @@ export function LoginForm() {
                 test which emails belong to officials. */}
             <p className="mb-3 text-xs text-ink-500">
               If <span className="font-medium text-ink-700">{email}</span> has a console account,
-              a sign-in code is on its way. Enter it below — no need to open your email in a new tab.
+              a sign-in code is on its way. Type the code here — you don&apos;t need to click the link in the email.
             </p>
 
             <label className="mb-1.5 block text-xs font-medium text-ink-700" htmlFor="code">
