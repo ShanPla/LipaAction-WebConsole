@@ -1,5 +1,15 @@
 import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+
+// The two typefaces the design system names (tailwind.config.ts). Until
+// 2026-09 nothing actually loaded them, so every official saw the system
+// font fallback instead. next/font downloads them at BUILD time and serves
+// them from this site's own domain: an official's browser never contacts
+// Google, and the generated fallback metrics keep text from jumping when the
+// real font arrives. The latin subset covers English and Tagalog (ñ included).
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 import { ToastProvider } from "@/components/ui/Toast";
 
 export const metadata: Metadata = {
@@ -20,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
         <a
           href="#main-content"

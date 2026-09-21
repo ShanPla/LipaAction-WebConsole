@@ -38,7 +38,10 @@ const config: Config = {
         },
       },
       fontFamily: {
+        // var() first: the self-hosted faces loaded in layout.tsx via next/font.
+        // The names after it are the fallback if that ever fails to load.
         sans: [
+          "var(--font-inter)",
           "Inter",
           "-apple-system",
           "Segoe UI",
@@ -47,7 +50,7 @@ const config: Config = {
           "Arial",
           "sans-serif",
         ],
-        mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       boxShadow: {
         panel: "0 1px 2px 0 rgb(22 28 25 / 0.06), 0 1px 3px 0 rgb(22 28 25 / 0.08)",
