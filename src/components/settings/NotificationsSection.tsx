@@ -27,9 +27,16 @@ function Toggle({
         checked ? "bg-brand-500" : "bg-ink-300"
       }`}
     >
+      {/* left-0 is load-bearing. An absolutely positioned child with no
+          horizontal offset sits at its static position, and inside a
+          <button> — which centres its content — that is the middle of the
+          track. The knob started off-centre and, switched on, slid past the
+          right edge. Anchored at the left, the two translations give an even
+          2px inset: 44px track − 20px knob − 2px = 22px. */}
       <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-          checked ? "translate-x-5" : "translate-x-0.5"
+        aria-hidden
+        className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform motion-reduce:transition-none ${
+          checked ? "translate-x-[22px]" : "translate-x-0.5"
         }`}
       />
     </button>
