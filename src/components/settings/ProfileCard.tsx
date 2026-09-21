@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { displayName, initials, roleLabel } from "@/lib/utils";
+import { displayName, initials, MAX_NAME_LENGTH, roleLabel } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { TextPromptModal } from "@/components/ui/TextPromptModal";
 import { useToast } from "@/components/ui/Toast";
 import { updateDisplayName } from "@/app/actions/profile";
+import { callAction } from "@/lib/callAction";
 import type { OfficialProfile } from "@/lib/auth";
 
-const MAX_NAME_LENGTH = 80;
+
 
 function FieldRow({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
@@ -31,7 +32,12 @@ export function ProfileCard({ official }: { official: OfficialProfile }) {
 
   function handleSaveName(nextName: string) {
     startTransition(async () => {
-      const result = await updateDisplayName(nextName);
+      const result = await callAction(() => updateDisplayName(nextName));
+      if (result === null) {
+        // The prompt stays open with the typed name, so retrying is one click.
+        showToast("Couldn't confirm your name was saved. Try again.", "danger");
+        return;
+      }
       if (result.success) {
         setShowNamePrompt(false);
         showToast("Display name updated", "success");

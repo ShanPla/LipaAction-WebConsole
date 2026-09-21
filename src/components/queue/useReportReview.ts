@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { updateReportStatus } from "@/app/actions/reports";
+import { callAction, NO_ANSWER } from "@/lib/callAction";
 
 export type Verdict = "validated" | "rejected";
 
@@ -56,7 +57,11 @@ export function useReportReview(reportId: string, onResolved: (verdict: Verdict)
 
   function validate() {
     startTransition(async () => {
-      const result = await updateReportStatus(reportId, "validated");
+      const result = await callAction(() => updateReportStatus(reportId, "validated"));
+      if (result === null) {
+        showToast(NO_ANSWER, "danger");
+        return;
+      }
       if (result.success) {
         onResolved("validated");
         showToast(`${reportId} validated`, "success");
@@ -69,7 +74,11 @@ export function useReportReview(reportId: string, onResolved: (verdict: Verdict)
   function reject(reason: string) {
     setIsRejecting(false);
     startTransition(async () => {
-      const result = await updateReportStatus(reportId, "rejected", reason);
+      const result = await callAction(() => updateReportStatus(reportId, "rejected", reason));
+      if (result === null) {
+        showToast(NO_ANSWER, "danger");
+        return;
+      }
       if (result.success) {
         onResolved("rejected");
         // Rejected reports leave the queue entirely — no tab shows them, by

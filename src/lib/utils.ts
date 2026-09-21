@@ -31,8 +31,67 @@ export function roleLabel(role: string): string {
  * the mobile app and the other dashboard, and rows are also inserted by hand.
  */
 export function displayName(fullName: string | null | undefined): string {
-  const trimmed = fullName?.trim() ?? "";
-  return trimmed.length > 0 ? trimmed : "Unnamed official";
+  // Sanitised on read as well as on write: profiles.full_name can also be set
+  // by other surfaces sharing the project, or directly through PostgREST.
+  const cleaned = sanitizeName(fullName ?? "");
+  return cleaned.length > 0 ? cleaned : "Unnamed official";
+}
+
+// Characters that render as nothing, or reorder the text around them, but
+// still make two names compare unequal: C0/C1 controls, soft hyphen, the
+// zero-width family, bidirectional overrides and isolates, and the BOM. A
+// display name is an identity on this console — it's the [Validating
+// official] on every decision and in the CSV — so [Shan] and [Shan] with a
+// zero-width space must not be two different people, and a right-to-left
+// override must not be able to make a name read as someone else's.
+const INVISIBLE_OR_REORDERING =
+  /[\u0000-\u001F\u007F-\u009F­؜᠎​-‏‪-‮⁠-⁤⁦-⁩﻿]/g;
+
+/**
+ * Normalises a person's display name: NFKC (so full-width and compatibility
+ * forms collapse to one spelling), invisible and bidi characters removed,
+ * runs of whitespace collapsed, ends trimmed. Pure and safe on any string.
+ */
+export function sanitizeName(name: string): string {
+  return name.normalize("NFKC").replace(INVISIBLE_OR_REORDERING, "").replace(/\s+/g, " ").trim();
+}
+
+// Shape only — eight-four-four-four-twelve hex — not an RFC 4122 version
+// check. Server Actions are public POST endpoints: a report id arrives as
+// whatever the caller sent, and must be proven a string of this shape before
+// it reaches a query, a log line, or a loop.
+const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// The longest rejection reason accepted — by the reject prompt's textarea and
+// by updateReportStatus, which re-checks it because the action is a public
+// endpoint. Stops a caller storing a megabyte of text as a reason.
+export const MAX_REASON_LENGTH = 1000;
+
+// The longest display name accepted, for the same two places.
+export const MAX_NAME_LENGTH = 80;
+
+export function isUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_SHAPE.test(value);
+}
+
+/**
+ * One CSV cell, safe to open in a spreadsheet.
+ *
+ * RFC 4180 quoting alone is not enough: Excel, LibreOffice and Sheets decide
+ * formula-versus-text after unquoting, so a quoted cell that starts with
+ * `=`, `+`, `-`, `@` (or a tab or carriage return, which some of them skip
+ * first) is still evaluated. Three exported columns carry text other people
+ * typed — the rejection reason, the validating official's display name, and
+ * the category — so any of them could arrive as `=HYPERLINK(...)`. A leading
+ * apostrophe makes the cell text in all three programs; the cost is that a
+ * reason genuinely starting with a dash exports with an apostrophe in front.
+ * Full-width lookalikes are included because NFKC-folding spreadsheets treat
+ * them the same.
+ */
+export function csvCell(value: unknown): string {
+  const text = value === null || value === undefined ? "" : String(value);
+  const inert = /^[\t\r]|^\s*[=+\-@＝＋－＠]/.test(text) ? `'${text}` : text;
+  return `"${inert.replace(/"/g, '""')}"`;
 }
 
 /**

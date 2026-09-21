@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { routeReport } from "@/app/actions/reports";
+import { callAction, NO_ANSWER } from "@/lib/callAction";
 
 /**
  * The route-to-agency flow, shared by the queue row and the detail drawer,
@@ -20,8 +21,14 @@ export function useReportRouting(reportId: string) {
 
   function route() {
     startTransition(async () => {
-      const result = await routeReport(reportId);
+      const result = await callAction(() => routeReport(reportId));
       setIsConfirming(false);
+      if (result === null) {
+        // Routing is irreversible: never guess which way it went. The queue's
+        // live update shows whether the agencies have it.
+        showToast(NO_ANSWER, "danger");
+        return;
+      }
       if (result.success) {
         const count = result.agencyCount ?? 0;
         showToast(

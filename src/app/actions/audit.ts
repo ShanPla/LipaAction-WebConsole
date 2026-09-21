@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { isUuid } from "@/lib/utils";
 
 /**
  * How a view-log attempt ended. The caller decides what to show; nothing here
@@ -37,6 +38,12 @@ export type ViewLogOutcome = "logged" | "session-expired" | "refused" | "failed"
  * outcome the drawer reports.
  */
 export async function logReportView(reportId: string): Promise<ViewLogOutcome> {
+  // Shape first. This is a public endpoint: without the check, anything a
+  // caller sent — up to the 1 MB body limit, newlines included — was passed to
+  // the RPC and then interpolated into the server log, twice for 22P02, since
+  // Postgres echoes the input inside its own message.
+  if (!isUuid(reportId)) return "failed";
+
   const supabase = createClient();
 
   const { error, status } = await supabase.rpc("log_report_view", {
@@ -54,8 +61,9 @@ export async function logReportView(reportId: string): Promise<ViewLogOutcome> {
   const outcome: ViewLogOutcome =
     error.code === "42501" ? (status === 401 ? "session-expired" : "refused") : "failed";
 
-  console.error(
-    `log_report_view ${outcome} for ${reportId}: ${status} ${error.code} ${error.message}`
-  );
+  // Structured fields only, never error.message: a missed access-log entry
+  // must be findable in the host's logs, and the message can carry the
+  // caller's input back in.
+  console.error("[log_report_view] not logged", JSON.stringify({ outcome, report: reportId, status, code: error.code }));
   return outcome;
 }

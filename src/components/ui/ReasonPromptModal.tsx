@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "./Button";
 import { useDismissOnEscape } from "./useDismissOnEscape";
 import { useFocusTrap } from "./useFocusTrap";
+import { MAX_REASON_LENGTH } from "@/lib/utils";
 
 export function ReasonPromptModal({
   title,
@@ -50,6 +51,7 @@ export function ReasonPromptModal({
           id="reason-prompt-input"
           autoFocus
           required
+          maxLength={MAX_REASON_LENGTH}
           rows={3}
           value={reason}
           onChange={(e) => setReason(e.target.value)}

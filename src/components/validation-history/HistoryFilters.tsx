@@ -1,6 +1,6 @@
 "use client";
 
-import { cx, manilaTimestamp } from "@/lib/utils";
+import { csvCell, cx, manilaTimestamp } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import type { ValidationRecord } from "@/types";
@@ -152,7 +152,9 @@ function downloadCsv(records: ValidationRecord[]) {
     manilaTimestamp(r.reviewedAt),
   ]);
 
-  const csv = [header, ...rows].map((row) => row.map(escapeCsvCell).join(",")).join("\r\n");
+  // csvCell, not plain quoting: it also neutralises cells a spreadsheet would
+  // run as a formula. Three of these columns hold text other people typed.
+  const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
 
   // ﻿ (BOM) so Excel opens it as UTF-8 — without it, a rejection reason
   // typed in Filipino renders as mojibake.
@@ -160,15 +162,14 @@ function downloadCsv(records: ValidationRecord[]) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `validation-history-${new Date().toISOString().slice(0, 10)}.csv`;
+  // Dated in Manila: toISOString() is UTC, so an export made before 8am
+  // was named for the previous day.
+  link.download = `validation-history-${manilaTimestamp(new Date().toISOString()).slice(0, 10)}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  // Revoked on the next tick, not immediately: some browsers start the
+  // download asynchronously after click(), and revoking first cancels it.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function escapeCsvCell(value: string): string {
-  // Wrap in quotes and double any inner quote — rejection reasons are free
-  // text and will contain commas, quotes, and newlines.
-  return `"${value.replace(/"/g, '""')}"`;
-}

@@ -7,6 +7,7 @@ import { PriorityBadge } from "@/components/ui/Badge";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useToast } from "@/components/ui/Toast";
 import { validateReports } from "@/app/actions/reports";
+import { callAction, NO_ANSWER } from "@/lib/callAction";
 import type { SituationCluster } from "@/types";
 
 export function ClusterCard({ cluster }: { cluster: SituationCluster }) {
@@ -17,8 +18,13 @@ export function ClusterCard({ cluster }: { cluster: SituationCluster }) {
 
   function handleValidateCluster() {
     startTransition(async () => {
-      const { validated, failures } = await validateReports(cluster.members.map((m) => m.id));
+      const result = await callAction(() => validateReports(cluster.members.map((m) => m.id)));
       setShowConfirm(false);
+      if (result === null) {
+        showToast(NO_ANSWER, "danger");
+        return;
+      }
+      const { validated, failures } = result;
 
       // Partial success is the normal case here, not an edge case: another
       // official can review one member between page load and this click. Say
