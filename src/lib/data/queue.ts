@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { categoryLabel, startOfManilaDay } from "@/lib/utils";
+import { categoryLabel, reporterLabel, startOfManilaDay } from "@/lib/utils";
 import type {
   AgencyRouting,
   KpiSummary,
@@ -183,14 +183,14 @@ export async function getBarangayQueue(
   const routed = (routedRes.error ? [] : routedRes.data ?? []) as RawReport[];
   const validatedUnavailable = Boolean(awaitingRes.error || routedRes.error);
 
-  const routingExtras = await loadRouting(supabase, awaiting, routed);
+  const routingExtras = await loadRouting(supabase, pending, awaiting, routed);
 
   const emergency = pending
     .filter((r) => r.entry_tier === "emergency")
-    .map((r) => toQueueReport(r));
+    .map((r) => toQueueReport(r, routingExtras.get(r.id)));
   const standard = pending
     .filter((r) => r.entry_tier === "other_reports")
-    .map((r) => toQueueReport(r));
+    .map((r) => toQueueReport(r, routingExtras.get(r.id)));
   // Awaiting routing first: those still need someone to act. Routed ones
   // are there to show what the agencies have done since.
   const validated = [...awaiting, ...routed].map((r) =>
@@ -207,7 +207,7 @@ export async function getBarangayQueue(
     clusterGroups.set(r.cluster_id, group);
   }
   const duplicateGroups = [...clusterGroups.values()].filter((g) => g.length >= 2);
-  const duplicates = duplicateGroups.flat().map((r) => toQueueReport(r));
+  const duplicates = duplicateGroups.flat().map((r) => toQueueReport(r, routingExtras.get(r.id)));
 
   // Active-cluster banner (the "ACTIVE FLOODING"-style card): the single
   // largest duplicate group, if any exist.
@@ -223,7 +223,7 @@ export async function getBarangayQueue(
         // one barangay's members from here.
         barangaysAffected: [barangayName],
         identityWithheldMembers: largestGroup.filter((r) => r.identity_withheld).length,
-        members: largestGroup.map((r) => toQueueReport(r)),
+        members: largestGroup.map((r) => toQueueReport(r, routingExtras.get(r.id))),
       }
     : null;
 
@@ -277,29 +277,39 @@ export async function getBarangayQueue(
  *    reports, which the UI shows as [couldn't load routing options] rather
  *    than as [no agency mapped], a claim it couldn't back up.
  *  - agency names fail → [Unnamed agency].
+ *
+ * Pending reports get the category mapping too, for the drawer's preview of
+ * where a report would go once validated (the paper's [you're confirming,
+ * not choosing], p.186). A preview sends nothing: routing is still its own
+ * confirmed step after validation.
  */
 async function loadRouting(
   supabase: ReturnType<typeof createClient>,
+  pending: RawReport[],
   awaiting: RawReport[],
   routed: RawReport[]
 ): Promise<Map<string, RoutingExtras>> {
   const extras = new Map<string, RoutingExtras>();
   const reportIds = [...awaiting, ...routed].map((r) => r.id);
-  if (reportIds.length === 0) return extras;
 
   // Only well-formed category keys reach the filter. category is written by
   // the mobile app and ends up inside a PostgREST in.() list; a key is
   // snake_case by contract, so anything else is dropped rather than quoted and
   // hoped for. A dropped category simply shows [couldn't load routing options].
-  const categories = [...new Set(awaiting.map((r) => r.category))].filter((c) => /^[a-z0-9_]{1,64}$/.test(c));
+  const categories = [...new Set([...pending, ...awaiting].map((r) => r.category))].filter((c) =>
+    /^[a-z0-9_]{1,64}$/.test(c)
+  );
+  if (reportIds.length === 0 && categories.length === 0) return extras;
 
   const [routingRes, mappingRes, agenciesRes] = await Promise.all([
-    supabase
-      .from("agency_routing")
-      .select(
-        "incident_report_id, agency_id, is_primary, routed_at, acknowledged_at, resolved_at, resolution_outcome"
-      )
-      .in("incident_report_id", reportIds),
+    reportIds.length > 0
+      ? supabase
+          .from("agency_routing")
+          .select(
+            "incident_report_id, agency_id, is_primary, routed_at, acknowledged_at, resolved_at, resolution_outcome"
+          )
+          .in("incident_report_id", reportIds)
+      : Promise.resolve({ data: [] as RawRouting[], error: null }),
     categories.length > 0
       ? supabase
           .from("category_agency_routing")
@@ -363,6 +373,13 @@ async function loadRouting(
     }
   }
 
+  // Nothing is routed while pending, so only the plan applies.
+  for (const r of pending) {
+    extras.set(r.id, {
+      routing: [],
+      routingPlan: mappingRes.error ? null : planByCategory.get(r.category) ?? [],
+    });
+  }
   for (const r of awaiting) {
     extras.set(r.id, {
       routing: routingByReport.get(r.id) ?? [],
@@ -395,7 +412,7 @@ function toQueueReport(r: RawReport, extras: RoutingExtras = NO_ROUTING): QueueR
     reporter: {
       // Real system never shows a reporter's name, identity-withheld or not
       // (privacy-by-design) — this matches that, not a data gap.
-      name: r.identity_withheld ? "Identity withheld" : "Verified reporter",
+      name: reporterLabel(r.identity_withheld),
       identityWithheld: r.identity_withheld,
     },
     details: {

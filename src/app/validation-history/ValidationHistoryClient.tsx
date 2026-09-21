@@ -114,7 +114,7 @@ function summarize(records: ValidationRecord[]): ValidationSummary {
   return {
     total: records.length,
     confirmed: records.filter((r) => r.verdict === "Confirmed").length,
-    confirmedFalse: records.filter((r) => r.verdict === "Rejected").length,
+    rejected: records.filter((r) => r.verdict === "Rejected").length,
     identityWithheld: records.filter((r) => r.reporter.identityWithheld).length,
   };
 }

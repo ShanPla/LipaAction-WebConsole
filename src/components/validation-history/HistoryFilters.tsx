@@ -1,6 +1,7 @@
 "use client";
 
-import { csvCell, cx, manilaTimestamp } from "@/lib/utils";
+import { cx, manilaTimestamp, REJECT_REASON_LABELS } from "@/lib/utils";
+import { downloadCsv } from "@/lib/downloadCsv";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { useT, type MessageKey } from "@/lib/i18n";
@@ -56,7 +57,7 @@ export function HistoryFilters({
       showToast(t("history.exportNothing"), "info");
       return;
     }
-    downloadCsv(records);
+    exportCsv(records);
     showToast(t("history.exported", { count: records.length }), "success");
   }
 
@@ -129,13 +130,14 @@ export function HistoryFilters({
 // The reporter column carries "Verified reporter" / "Identity withheld" only,
 // never a name — same privacy rule as the table itself. Nothing here widens
 // what leaves the system.
-function downloadCsv(records: ValidationRecord[]) {
+function exportCsv(records: ValidationRecord[]) {
   const header = [
     "Report ID",
     "Category",
     "Priority",
     "Entry tier",
     "Verdict",
+    "Reason category",
     "Reason",
     "Validating official",
     "Reporter",
@@ -149,7 +151,11 @@ function downloadCsv(records: ValidationRecord[]) {
     r.priority ?? "Not scored",
     r.entryTier,
     r.verdict,
-    r.reason ?? "",
+    // The category in words; [Uncategorised] for a rejection whose reason has
+    // no known prefix, blank for a confirmation, which carries no reason.
+    r.verdict === "Rejected" ? (r.reasonCode ? REJECT_REASON_LABELS[r.reasonCode] : "Uncategorised") : "",
+    // The note without its prefix, or the whole text of an uncategorised one.
+    r.reasonNote ?? "",
     r.validatingOfficial,
     r.reporter.name,
     // Manila, like the table above it. The raw column is UTC, so exporting
@@ -158,24 +164,10 @@ function downloadCsv(records: ValidationRecord[]) {
     manilaTimestamp(r.reviewedAt),
   ]);
 
-  // csvCell, not plain quoting: it also neutralises cells a spreadsheet would
-  // run as a formula. Three of these columns hold text other people typed.
-  const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
-
-  // ﻿ (BOM) so Excel opens it as UTF-8 — without it, a rejection reason
-  // typed in Filipino renders as mojibake.
-  const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
   // Dated in Manila: toISOString() is UTC, so an export made before 8am
   // was named for the previous day.
-  link.download = `validation-history-${manilaTimestamp(new Date().toISOString()).slice(0, 10)}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  // Revoked on the next tick, not immediately: some browsers start the
-  // download asynchronously after click(), and revoking first cancels it.
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  downloadCsv(
+    `validation-history-${manilaTimestamp(new Date().toISOString()).slice(0, 10)}.csv`,
+    [header, ...rows]
+  );
 }
-

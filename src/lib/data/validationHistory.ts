@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { categoryLabel, displayName } from "@/lib/utils";
+import { categoryLabel, displayName, parseRejectReason, reporterLabel } from "@/lib/utils";
 import type { ValidationRecord, ValidationSummary } from "@/types";
 
 interface RawReviewedReport {
@@ -110,11 +110,11 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
     // Everything that isn't rejected: validated, routed, and resolved are all
     // reports this barangay confirmed.
     confirmed: rows.filter((r) => r.status !== "rejected").length,
-    // "confirmedFalse" mapped to rejected count — the schema doesn't
-    // distinguish WHY a report was rejected (duplicate vs. inaccurate vs.
-    // malicious) the way the original mockup's naming implied; rejected is
-    // the closest real equivalent.
-    confirmedFalse: rows.filter((r) => r.status === "rejected").length,
+    // Barangay rejections. This tile used to be labelled [Confirmed-false],
+    // but in the paper that is an agency's resolution outcome
+    // (agency_routing.resolution_outcome) with a sanction effect — a desk
+    // rejection is neither, so it is called what it is.
+    rejected: rows.filter((r) => r.status === "rejected").length,
     identityWithheld: rows.filter((r) => r.identity_withheld).length,
   };
 
@@ -126,6 +126,7 @@ function toValidationRecord(
   reviewerNames: Map<string, string>,
   namesUnavailable: boolean
 ): ValidationRecord {
+  const parsedReason = r.review_reason ? parseRejectReason(r.review_reason) : null;
   return {
     reportId: r.id,
     category: categoryLabel(r.category),
@@ -150,18 +151,20 @@ function toValidationRecord(
     reporter: {
       // Privacy-by-design: officials never see a reporter's name, withheld
       // or not. Same rule as the queue.
-      name: r.identity_withheld ? "Identity withheld" : "Verified reporter",
+      name: reporterLabel(r.identity_withheld),
       identityWithheld: r.identity_withheld,
     },
     // Only present for rejected rows — review_reason is NULL for validated
     // ones (the RPC only fills it on rejection).
     reason: r.review_reason ?? undefined,
+    reasonCode: parsedReason?.code ?? null,
+    reasonNote: parsedReason?.note,
   };
 }
 
 function failedValidationHistoryData(): ValidationHistoryData {
   return {
-    summary: { total: 0, confirmed: 0, confirmedFalse: 0, identityWithheld: 0 },
+    summary: { total: 0, confirmed: 0, rejected: 0, identityWithheld: 0 },
     records: [],
     limit: HISTORY_LIMIT,
     loadFailed: true,

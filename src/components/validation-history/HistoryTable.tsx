@@ -66,14 +66,16 @@ export function HistoryTable({
                 </Badge>
                 {/* Rejection reason (incident_reports.review_reason). Only
                     rejected rows carry one — the RPC leaves it NULL on
-                    validate — so this row is absent, not empty, otherwise. */}
+                    validate — so this block is absent, not empty, otherwise.
+                    The category is parsed from the reason's prefix; a reason
+                    without one shows its text alone. */}
                 {record.reason && (
-                  <p
-                    className="mt-1 max-w-[220px] text-xs leading-snug text-ink-500"
-                    title={record.reason}
-                  >
-                    {record.reason}
-                  </p>
+                  <div className="mt-1 max-w-[220px] text-xs leading-snug text-ink-500">
+                    {record.reasonCode && (
+                      <p className="font-medium text-ink-700">{t(`rejectReason.${record.reasonCode}`)}</p>
+                    )}
+                    {record.reasonNote && <p>{record.reasonNote}</p>}
+                  </div>
                 )}
               </td>
               <td className="px-4 py-3 text-xs text-ink-700">{record.validatingOfficial}</td>

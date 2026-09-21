@@ -15,6 +15,7 @@ const primaryNav: NavItem[] = [
 
 const secondaryNav: NavItem[] = [
   { href: "/validation-history", label: "nav.validationHistory", icon: "✓" },
+  { href: "/reports", label: "nav.reports", icon: "▦" },
   { href: "/audit-log", label: "nav.auditLog", icon: "≣" },
 ];
 

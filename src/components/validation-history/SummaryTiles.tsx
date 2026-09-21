@@ -8,8 +8,8 @@ export function SummaryTiles({ summary }: { summary: ValidationSummary }) {
     <div className="mb-4 flex flex-wrap gap-3">
       <Tile label={t("history.tile.total")} value={summary.total} />
       <Tile label={t("history.tile.confirmed")} value={summary.confirmed} accent="brand" />
-      <Tile label={t("history.tile.confirmedFalse")} value={summary.confirmedFalse} accent="critical" />
-      <Tile label={t("reporter.withheld")} value={summary.identityWithheld} />
+      <Tile label={t("history.tile.rejected")} value={summary.rejected} accent="critical" />
+      <Tile label={t("history.tile.withheld")} value={summary.identityWithheld} />
     </div>
   );
 }

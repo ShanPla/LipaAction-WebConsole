@@ -1,4 +1,5 @@
 import { NO_ANSWER } from "@/lib/callAction";
+import { REJECT_REASON_LABELS } from "@/lib/utils";
 
 export type Lang = "en" | "tl";
 
@@ -41,6 +42,7 @@ export const MESSAGES = {
   "nav.clusterExplorer": { en: "Cluster Explorer", tl: "Mga Kumpol ng Ulat" },
   "nav.validationHistory": { en: "Validation History", tl: "Kasaysayan ng Pag-validate" },
   "nav.auditLog": { en: "Audit Log", tl: "Talaan ng Audit" },
+  "nav.reports": { en: "Reports", tl: "Mga Buod" },
   "nav.settings": { en: "Settings", tl: "Mga Setting" },
   "nav.records": { en: "Records", tl: "Mga Rekord" },
   "nav.account": { en: "Account", tl: "Account" },
@@ -59,7 +61,10 @@ export const MESSAGES = {
     tl: "Hindi makumpirma kung natuloy iyon. Tingnan muna ang pila bago subukang muli.",
   },
   "reporter.verified": { en: "Verified reporter", tl: "Beripikadong nag-ulat" },
-  "reporter.withheld": { en: "Identity withheld", tl: "Nakatagong pagkakakilanlan" },
+  "reporter.withheld": {
+    en: "Verified reporter, identity withheld",
+    tl: "Beripikadong nag-ulat, nakatago ang pagkakakilanlan",
+  },
   "priority.unscored": { en: "Not scored", tl: "Wala pang iskor" },
   "field.reporter": { en: "Reporter", tl: "Nag-ulat" },
   "field.timestamp": { en: "Timestamp", tl: "Oras" },
@@ -81,6 +86,7 @@ export const MESSAGES = {
   "banner.what.queue": { en: "The queue", tl: "pila" },
   "banner.what.history": { en: "Validation History", tl: "Kasaysayan ng Pag-validate" },
   "banner.what.clusters": { en: "Cluster Explorer", tl: "Mga Kumpol ng Ulat" },
+  "banner.what.reports": { en: "The daily summary", tl: "buod ng araw" },
 
   // --- Queue page -----------------------------------------------------------
   "queue.tabsLabel": { en: "Queue sections", tl: "Mga seksyon ng pila" },
@@ -177,6 +183,7 @@ export const MESSAGES = {
 
   // --- Report row, review, routing ------------------------------------------
   "row.new": { en: "New", tl: "Bago" },
+  "row.discreet": { en: "Discreet", tl: "Discreet" },
   "row.viewDetails": { en: "View details for {id}", tl: "Tingnan ang detalye ng {id}" },
   "row.resolvedValidated": {
     en: "Validated — route it from Recent validated",
@@ -195,11 +202,14 @@ export const MESSAGES = {
   "review.reject": { en: "Reject", tl: "Tanggihan" },
   "review.rejectTitle": { en: "Reject {id}?", tl: "Tanggihan ang {id}?" },
   "review.rejectDescription": {
-    en: "A reason is required — it's recorded on the report and shown to your barangay's desk.",
-    tl: "Kailangan ng dahilan — itinatala ito sa ulat at makikita ng desk ng inyong barangay.",
+    en: "Choose a reason. It's recorded on the report and shown to your barangay's desk.",
+    tl: "Pumili ng dahilan. Itinatala ito sa ulat at makikita ng desk ng inyong barangay.",
   },
   "review.rejectConfirm": { en: "Reject report", tl: "Tanggihan ang ulat" },
-  "review.validatedToast": { en: "{id} validated", tl: "Na-validate ang {id}" },
+  "review.validatedToast": {
+    en: "{id} validated — not sent to any agency yet. It's under Recent validated.",
+    tl: "Na-validate ang {id} — hindi pa naipapasa sa anumang ahensya. Nasa Kamakailang Na-validate ito.",
+  },
   "review.rejectedToast": {
     en: "{id} rejected — moved to Validation History",
     tl: "Tinanggihan ang {id} — inilipat sa Kasaysayan ng Pag-validate",
@@ -207,9 +217,19 @@ export const MESSAGES = {
   "review.failed": { en: "Failed to update report", tl: "Hindi na-update ang ulat" },
   "reason.label": { en: "Reason", tl: "Dahilan" },
   "reason.placeholder": {
-    en: "e.g. Duplicate of an existing report, resolved on-site, out of scope…",
-    tl: "hal. Doble ng isang ulat, naayos na sa lugar, labas sa saklaw…",
+    en: "e.g. Same incident as the report filed at 10:42",
+    tl: "hal. Parehong insidente ng ulat na naisumite nang 10:42",
   },
+  "reason.note": { en: "Note", tl: "Tala" },
+  "reason.noteOptional": { en: "optional", tl: "opsyonal" },
+  "reason.noteRequired": { en: "required for Other", tl: "kailangan para sa Iba pa" },
+  // English names come from REJECT_REASON_LABELS, which the CSV also uses.
+  "rejectReason.wrong_category": { en: REJECT_REASON_LABELS.wrong_category, tl: "Maling kategorya" },
+  "rejectReason.already_resolved": { en: REJECT_REASON_LABELS.already_resolved, tl: "Naayos na" },
+  "rejectReason.mistaken_identity": { en: REJECT_REASON_LABELS.mistaken_identity, tl: "Maling pagkakakilanlan" },
+  "rejectReason.not_an_emergency": { en: REJECT_REASON_LABELS.not_an_emergency, tl: "Hindi emergency" },
+  "rejectReason.duplicate": { en: REJECT_REASON_LABELS.duplicate, tl: "Doble" },
+  "rejectReason.other": { en: REJECT_REASON_LABELS.other, tl: "Iba pa" },
   "routing.routeToAgency": { en: "Route to agency", tl: "Ipasa sa ahensya" },
   "routing.finish": { en: "Finish routing", tl: "Tapusin ang pagpasa" },
   "routing.lead": { en: "(lead)", tl: "(pangunahin)" },
@@ -230,6 +250,14 @@ export const MESSAGES = {
   "routing.summary.acknowledgedBy": {
     en: "Acknowledged by {agency}{more}",
     tl: "Kinilala ng {agency}{more}",
+  },
+  "routing.summary.returned": {
+    en: "Returned by {agency}{more} — out of scope · handle it at the barangay",
+    tl: "Ibinalik ng {agency}{more} — labas sa saklaw · asikasuhin sa barangay",
+  },
+  "routing.summary.returnedOpen": {
+    en: "Returned by {agency} — out of scope · {agencies} still open",
+    tl: "Ibinalik ng {agency} — labas sa saklaw · {agencies} pa ang humahawak",
   },
   "routing.summary.routedTo": {
     en: "Routed to {agency}{more} · awaiting acknowledgement",
@@ -252,6 +280,10 @@ export const MESSAGES = {
     tl: "Makikita agad ito ng {names} sa kanilang dashboard. Hindi na ito mababawi mula sa console na ito.",
   },
   "routing.mappedAgencies": { en: "The mapped agencies", tl: "mga nakatalagang ahensya" },
+  "routing.discreetNote": {
+    en: "The reporter asked for discreet reporting.",
+    tl: "Humiling ang nag-ulat ng discreet na pag-uulat.",
+  },
   "routing.routeConfirm": { en: "Route to {agencies}", tl: "Ipasa sa {agencies}" },
   "routing.routedToast": { en: "{id} routed to {agencies}", tl: "Naipasa ang {id} sa {agencies}" },
   "routing.failed": { en: "Couldn't route this report", tl: "Hindi naipasa ang ulat na ito" },
@@ -286,6 +318,14 @@ export const MESSAGES = {
   "drawer.submitted": { en: "Submitted", tl: "Isinumite" },
   "drawer.section.routing": { en: "Agency routing", tl: "Pagpasa sa ahensya" },
   "drawer.plan.willRoute": { en: "Will route to", tl: "Ipapasa sa" },
+  "drawer.preview.willRoute": {
+    en: "After validation, routing sends it to",
+    tl: "Pagkatapos ma-validate, ipapasa ito sa",
+  },
+  "drawer.preview.noMapping": {
+    en: "No agency is mapped to this category — after validation it stays with the barangay.",
+    tl: "Walang ahensyang nakatalaga sa kategoryang ito — pagkatapos ma-validate, mananatili ito sa barangay.",
+  },
   "drawer.plan.finishing": {
     en: "Finishing sends it to all of",
     tl: "Kapag tinapos, ipapasa ito sa lahat ng sumusunod",
@@ -318,6 +358,10 @@ export const MESSAGES = {
     en: "With the agencies now — they update its progress, not this desk.",
     tl: "Nasa mga ahensya na ito — sila ang nag-a-update ng progreso, hindi ang desk na ito.",
   },
+  "drawer.footer.returned": {
+    en: "Returned by the agencies as out of scope — handle it at the barangay. Re-routing isn't available from this console.",
+    tl: "Ibinalik ng mga ahensya bilang labas sa saklaw — asikasuhin ito sa barangay. Hindi pa ito maipapasa muli mula sa console na ito.",
+  },
   "drawer.footer.reviewed": {
     en: "Already reviewed — no further action available here.",
     tl: "Nasuri na — wala nang ibang magagawa rito.",
@@ -337,7 +381,8 @@ export const MESSAGES = {
   // --- Validation History ---------------------------------------------------
   "history.tile.total": { en: "Total", tl: "Kabuuan" },
   "history.tile.confirmed": { en: "Confirmed", tl: "Kumpirmado" },
-  "history.tile.confirmedFalse": { en: "Confirmed-false", tl: "Kumpirmadong hindi totoo" },
+  "history.tile.rejected": { en: "Rejected", tl: "Tinanggihan" },
+  "history.tile.withheld": { en: "Identity withheld", tl: "Nakatagong pagkakakilanlan" },
   "history.range.today": { en: "Today", tl: "Ngayong araw" },
   "history.range.7d": { en: "Last 7d", tl: "Nakaraang 7 araw" },
   "history.range.all": { en: "All time", tl: "Lahat" },
@@ -402,6 +447,45 @@ export const MESSAGES = {
   "history.footer.capped": {
     en: "capped at the {limit} most recent, so filters apply to those only",
     tl: "hanggang {limit} pinakabago lamang ang na-load, kaya sa mga iyon lang gumagana ang mga filter",
+  },
+
+  // --- Reports ----------------------------------------------------------------
+  "reports.dailyTitle": { en: "Daily Queue Summary", tl: "Pang-araw-araw na Buod ng Pila" },
+  "reports.dailyIntro": {
+    en: "Reports submitted on the chosen day, by category, counted by where each one stands now.",
+    tl: "Mga ulat na isinumite sa napiling araw, ayon sa kategorya, binilang ayon sa kasalukuyang katayuan ng bawat isa.",
+  },
+  "reports.date": { en: "Date", tl: "Petsa" },
+  "reports.tile.submitted": { en: "Submitted", tl: "Naisumite" },
+  "reports.tile.awaiting": { en: "Awaiting review", tl: "Naghihintay ng pagsusuri" },
+  "reports.col.category": { en: "Category", tl: "Kategorya" },
+  "reports.empty": { en: "No reports were submitted on {date}.", tl: "Walang ulat na naisumite noong {date}." },
+  "reports.caption": {
+    en: "Reports submitted on {date} by category: submitted, awaiting review, validated, and rejected",
+    tl: "Mga ulat na naisumite noong {date} ayon sa kategorya: naisumite, naghihintay ng pagsusuri, na-validate, at tinanggihan",
+  },
+  "reports.footer": {
+    en: "Days and times are Manila. A report submitted that day and decided later counts under its decision.",
+    tl: "Araw at oras sa Maynila. Ang ulat na naisumite sa araw na iyon at napagpasyahan kalaunan ay binibilang ayon sa pasya.",
+  },
+  "reports.capped": {
+    en: "Only the first {limit} reports of the day were counted.",
+    tl: "Ang unang {limit} ulat lamang ng araw ang nabilang.",
+  },
+  "reports.exported": { en: "Exported the summary for {date} as CSV", tl: "Na-export ang buod ng {date} bilang CSV" },
+  "reports.exportNothing": { en: "Nothing to export for this day", tl: "Walang mai-e-export para sa araw na ito" },
+  "reports.weeklyTitle": {
+    en: "Weekly False-Report Rate per Reporter",
+    tl: "Lingguhang Bilang ng Maling Ulat bawat Nag-ulat",
+  },
+  "reports.weeklyUnavailable": {
+    en:
+      "Not available in this console. It counts false reports per reporter, which needs each " +
+      "reporter's identity and sanction history — data the barangay desk never reads.",
+    tl:
+      "Hindi available sa console na ito. Binibilang nito ang maling ulat bawat nag-ulat, kaya " +
+      "kailangan nito ang pagkakakilanlan at kasaysayan ng parusa ng bawat isa — datos na hindi " +
+      "kailanman binabasa ng desk ng barangay.",
   },
 
   // --- Cluster Explorer (empty state only; see ClusterExplorerClient) -------

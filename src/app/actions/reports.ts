@@ -5,7 +5,7 @@ import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 // Constants live in utils, not here: a "use server" file may export only
 // async functions, and ReasonPromptModal needs the same limit.
-import { isUuid, MAX_REASON_LENGTH } from "@/lib/utils";
+import { isUuid, MAX_REASON_LENGTH, parseRejectReason } from "@/lib/utils";
 
 /*
  * Every function in this file is a public POST endpoint. Its arguments are
@@ -112,6 +112,17 @@ export async function updateReportStatus(
         success: false,
         message: `A reason can be at most ${MAX_REASON_LENGTH} characters.`,
       };
+    }
+    // The reject prompt always sends a category prefix (composeRejectReason),
+    // and Validation History reads the category back from it. Checked here
+    // too because the action is a public endpoint: a reason without a known
+    // category didn't come from the prompt, so it isn't stored.
+    const { code, note } = parseRejectReason(trimmed);
+    if (code === null) {
+      return { success: false, message: "Choose a reason category for this rejection." };
+    }
+    if (code === "other" && note.length === 0) {
+      return { success: false, message: "Add a note explaining the reason." };
     }
     // The trimmed text is what's stored, not the original with its padding.
     pReason = trimmed;

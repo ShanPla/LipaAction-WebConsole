@@ -81,8 +81,19 @@ export function downstreamSummary(
   const lead = routing[0];
   const more = routing.length > 1 ? ` +${routing.length - 1}` : "";
 
-  if (routing.every((r) => r.resolvedAt)) {
-    return lead.resolutionOutcome && lead.resolutionOutcome !== "resolved"
+  // The agency that fixed it is named, whichever it was. This used to name
+  // the lead agency whenever every row was closed, even when another agency
+  // did the resolving.
+  const fixer = routing.find((r) => r.resolvedAt && (r.resolutionOutcome ?? "resolved") === "resolved");
+  if (fixer) return t("routing.summary.resolvedBy", { agency: fixer.agencyName, more });
+
+  const open = routing.filter((r) => !r.resolvedAt);
+  if (open.length === 0) {
+    // Every agency closed it, none with a fix.
+    if (isReturnedToBarangay(state)) {
+      return t("routing.summary.returned", { agency: lead.agencyName, more });
+    }
+    return lead.resolutionOutcome
       ? t("routing.summary.closedBy", {
           agency: lead.agencyName,
           more,
@@ -91,12 +102,42 @@ export function downstreamSummary(
       : t("routing.summary.resolvedBy", { agency: lead.agencyName, more });
   }
 
-  const acknowledging = routing.find((r) => r.acknowledgedAt);
+  // The report's own status leads. Once it is resolved, an agency row still
+  // open must not read it back down to [Acknowledged] or [awaiting].
+  if (status === "resolved") return t("status.resolved");
+
+  // An agency sent it back as outside its remit while others still hold it
+  // (the paper returns out-of-scope closures to the barangay, p.224).
+  const returned = routing.find((r) => r.resolvedAt && r.resolutionOutcome === "out-of-scope");
+  if (returned) {
+    return t("routing.summary.returnedOpen", {
+      agency: returned.agencyName,
+      agencies: agencyCount(open.length, t),
+    });
+  }
+
+  // Only agencies still holding it count from here: a closed lead is not the
+  // one to wait on.
+  const acknowledging = open.find((r) => r.acknowledgedAt);
   if (acknowledging) {
     return t("routing.summary.acknowledgedBy", { agency: acknowledging.agencyName, more });
   }
 
-  return t("routing.summary.routedTo", { agency: lead.agencyName, more });
+  return t("routing.summary.routedTo", { agency: open[0].agencyName, more });
+}
+
+/**
+ * True when every agency closed the report as out of scope. The paper sends
+ * such a report back to the barangay (p.224). Re-routing it elsewhere needs a
+ * backend path that doesn't exist yet — the status only moves forward and the
+ * desk can't touch agency_routing — so the console can only say so.
+ */
+export function isReturnedToBarangay(state: RoutingState): boolean {
+  return (
+    state.kind === "downstream" &&
+    state.routing.length > 0 &&
+    state.routing.every((r) => Boolean(r.resolvedAt) && r.resolutionOutcome === "out-of-scope")
+  );
 }
 
 /**
@@ -113,18 +154,21 @@ export function routeConfirmCopy(
   const names = plan && plan.length > 0 ? describePlan(plan, t) : null;
   const count = plan?.length ?? 0;
   const agencies = agencyCount(count, t);
+  // Said at the moment the report leaves the barangay. The drawer already
+  // showed the flag; the confirmation used to be the one place it didn't.
+  const discreet = report.details.discreetReporting ? ` ${t("routing.discreetNote")}` : "";
 
   if (resuming) {
     return {
       title: t("routing.finishTitle", { id: report.id }),
-      description: t("routing.finishDescription"),
+      description: t("routing.finishDescription") + discreet,
       confirmLabel: t("routing.finish"),
     };
   }
 
   return {
     title: t("routing.routeTitle", { id: report.id, agencies }),
-    description: t("routing.routeDescription", { names: names ?? t("routing.mappedAgencies") }),
+    description: t("routing.routeDescription", { names: names ?? t("routing.mappedAgencies") }) + discreet,
     confirmLabel: t("routing.routeConfirm", { agencies }),
   };
 }

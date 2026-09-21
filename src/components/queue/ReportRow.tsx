@@ -135,6 +135,15 @@ export function ReportRow({
               </span>
             )}
             <PriorityBadge priority={report.priority} score={report.details.priorityScore} />
+            {/* Visible before the decision, not only inside the drawer. */}
+            {report.details.discreetReporting && (
+              <span
+                title={t("drawer.discreet")}
+                className="rounded-full bg-priority-mediumBg px-2 py-0.5 text-[11px] font-semibold text-priority-medium"
+              >
+                {t("row.discreet")}
+              </span>
+            )}
             <span className="text-xs font-medium text-ink-700">{report.category}</span>
           </div>
           <p className="mb-1.5 truncate text-sm text-ink-900">{report.summary}</p>

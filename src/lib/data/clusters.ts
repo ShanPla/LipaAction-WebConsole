@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { categoryLabel } from "@/lib/utils";
+import { categoryLabel, reporterLabel } from "@/lib/utils";
 import type { ClusterExplorerEntry, ClusterMemberDetail } from "@/types";
 
 const PENDING_STATUSES = ["pending_priority", "prioritized"];
@@ -93,7 +93,7 @@ export async function getBarangayClusters(
       relationship: idx === 0 ? "Primary" : "Related",
       timestamp: timeAgo(r.created_at),
       reporter: {
-        name: r.identity_withheld ? "Identity withheld" : "Verified reporter",
+        name: reporterLabel(r.identity_withheld),
         identityWithheld: r.identity_withheld,
       },
       // visualHash / temporalDeltaSeconds / sitio intentionally omitted — no

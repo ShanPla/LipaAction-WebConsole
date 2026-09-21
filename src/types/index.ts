@@ -1,6 +1,8 @@
 // Shared domain types for the Barangay Web Console mockup.
 // All data consumed by these types is static/dummy — see src/data/*.
 
+import type { RejectReasonCode } from "@/lib/utils";
+
 export type PriorityTier = "Critical" | "High" | "Medium" | "Low";
 
 // null = not scored yet. priority_name is written by the inference service,
@@ -74,9 +76,11 @@ export interface ReportDetails {
   // non-empty on a validated report only when a routing attempt stopped
   // part-way, which the UI offers to finish.
   routing: AgencyRouting[];
-  // Where routing would send it, from category_agency_routing. null when
-  // routing doesn't apply (not validated); [] when the category has no
-  // mapping — shown as [needs barangay review], never filled with a guess.
+  // Where routing would send it, from category_agency_routing. Carried by
+  // pending reports too, for the drawer's preview before a decision. [] when
+  // the category has no mapping — shown as [needs barangay review], never
+  // filled with a guess; null when the mapping couldn't be loaded, and on
+  // routed or resolved reports, where it no longer applies.
   routingPlan: RoutingPlanEntry[] | null;
 }
 
@@ -144,12 +148,18 @@ export interface ValidationRecord {
   // Real data from the review_report() cutover (incident_reports.review_reason).
   // Only present on rejected rows — the RPC only fills it on rejection.
   reason?: string;
+  // The category prefix parsed out of `reason` (parseRejectReason) and the
+  // note after it. reasonCode is null for a reason without a known prefix —
+  // older rejections, or the other dashboard's — and reasonNote is then the
+  // whole text, shown as it stands.
+  reasonCode?: RejectReasonCode | null;
+  reasonNote?: string;
 }
 
 export interface ValidationSummary {
   total: number;
   confirmed: number;
-  confirmedFalse: number;
+  rejected: number;
   identityWithheld: number;
 }
 

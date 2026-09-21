@@ -89,9 +89,10 @@ official's browser is set.
 
 | Page | Status |
 |------|--------|
-| **Queue** | Live. Shows the barangay's pending reports in four tabs — Emergency Fast-triage, Standard intake, Flagged duplicates, Recent validated — with a search box and a detail drawer showing the resident's full account and the classifier's reading of the report. Validate and Reject write to the database; rejection requires a reason. A validated report is then routed to the agencies its category maps to, by hand, after a confirmation step; the Recent validated tab separates reports awaiting routing from those already with agencies, and shows each agency's progress (acknowledged, resolved, or closed with an outcome) as the agencies record it. Opening a report's details is recorded in the access log, once per opening. A duplicate cluster can be validated as one action. The page updates live as reports change (a Supabase Realtime subscription, filtered to the barangay and enforced by Row-Level Security), falling back to a 30-second refresh if the live channel cannot connect. A report that arrives on its own is marked as new for a few seconds so it is not missed. The page can also chime when a new emergency arrives, and can raise a browser notification when an emergency has waited more than five minutes. If the data cannot be loaded it says so, rather than showing an empty queue. |
+| **Queue** | Live. Shows the barangay's pending reports in four tabs — Emergency Fast-triage, Standard intake, Flagged duplicates, Recent validated — with a search box and a detail drawer showing the resident's full account and the classifier's reading of the report. Validate and Reject write to the database; rejection requires one of the thesis's reason categories (wrong category, already resolved, mistaken identity, not an emergency, duplicate, or other) plus an optional note, required for Other. Before a report is validated, its detail drawer shows which agencies routing would send it to. A report whose resident asked for discreet handling is marked as such on its row and in the routing confirmation. A validated report is then routed to the agencies its category maps to, by hand, after a confirmation step; the Recent validated tab separates reports awaiting routing from those already with agencies, and shows each agency's progress (acknowledged, resolved, or closed with an outcome) as the agencies record it. Opening a report's details is recorded in the access log, once per opening. A duplicate cluster can be validated as one action. The page updates live as reports change (a Supabase Realtime subscription, filtered to the barangay and enforced by Row-Level Security), falling back to a 30-second refresh if the live channel cannot connect. A report that arrives on its own is marked as new for a few seconds so it is not missed. The page can also chime when a new emergency arrives, and can raise a browser notification when an emergency has waited more than five minutes. If the data cannot be loaded it says so, rather than showing an empty queue. |
 | **Cluster Explorer** | Live query, currently empty, and says so. Groups pending reports that share a `cluster_id`. The duplicate-detection service computes clusters but does not yet write them back to reports, so no report carries a `cluster_id`; the page, and the queue's Flagged duplicates tab, state that duplicate detection isn't connected rather than implying none were found. |
-| **Validation History** | Live. Reviewed reports (validated or rejected) with the reviewing official, timestamp, rejection reason, and outcome filters. Exports the visible rows to CSV. |
+| **Validation History** | Live. Reviewed reports (validated or rejected) with the reviewing official, timestamp, rejection category and note, and outcome filters. Exports the visible rows to CSV. |
+| **Reports** | Live. The thesis's Daily Queue Summary: the reports submitted on a chosen day (today by default), by category, counted by where each stands now — awaiting review, validated, or rejected — with a CSV export. The thesis's second barangay report, the weekly false-report rate per reporter, is listed as unavailable: it needs each reporter's identity and sanction history, which the console never reads. |
 | **Settings** | Profile is live (name, role, barangay, email, phone); the display name is editable. Language and alert preferences are saved in the browser on the current device. The interface language switches the console between English and Tagalog — the same choice as the EN/TL switch at the top right of every page; the alert preferences drive the Queue page's chime and browser notification. Senior barangay administrators default to Tagalog, as the thesis specifies. The bilingual-emphasis setting is recorded but does not yet change any screen, and says so. |
 | **Audit Log** | Placeholder data, labelled as such on the page. The console writes to the audit trail (validations, rejections, and report views), but no barangay role can read it back: which columns the barangay desk may see is a data-protection decision pending with the adviser, and read access will be granted through a function that exposes only those columns, not through a table policy. |
 
@@ -101,7 +102,8 @@ Security in the database. The application does not, and cannot, widen that scope
 ## Privacy
 
 Officials never see a reporter's name, whether or not the resident chose to withhold
-their identity. The interface shows only "Verified reporter" or "Identity withheld".
+their identity. The interface shows only "Verified reporter" or "Verified reporter,
+identity withheld", the thesis's wording.
 This is deliberate — the system exposes no reporter-name field to officials at all —
 and it applies to every page, the CSV export included.
 
@@ -184,7 +186,14 @@ In each case the console shows nothing rather than an approximation.
   not by the official. A category with no mapping is reported as needing barangay
   review rather than sent anywhere. Routing cannot be undone or redirected from the
   console, and the thesis's recall window for automatic routes is not implemented,
-  because automatic routing itself is not.
+  because automatic routing itself is not. When every agency closes a report as out
+  of scope, the console says it is back with the barangay, but it cannot route it to a
+  different agency.
+- **Rejection categories are stored inside the reason text.** The database has one
+  free-text reason per decision and no category column, so the category is saved as a
+  short prefix (for example `[duplicate]`) that the console reads back. Rejections made
+  before categories existed, or by another dashboard sharing the database, appear
+  without a category.
 - **Manual report intake** is not offered. Reports are attributable to a resident
   account by design, so intake on a walk-in resident's behalf requires a decision on
   attribution before it can be built.
@@ -194,6 +203,8 @@ In each case the console shows nothing rather than an approximation.
   no location text is displayed.
 - **Validation History** shows the 50 most recent reviewed reports. Filters apply to
   those rows.
+- **The Daily Queue Summary exports CSV only.** The thesis also describes a PNG export,
+  which is not built.
 - **Preferences are per device.** Language and alert settings live in the browser, not
   in the account, because no profile column exists for them and browser-notification
   permission is granted per browser anyway. Alerts fire only while the Queue page is

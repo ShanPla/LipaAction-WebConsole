@@ -14,7 +14,13 @@ import { useDismissOnEscape } from "@/components/ui/useDismissOnEscape";
 import { useFocusTrap } from "@/components/ui/useFocusTrap";
 import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
 import { useReportRouting } from "./useReportRouting";
-import { agencyProgressLabel, routeConfirmCopy, routingState } from "./routing";
+import {
+  agencyProgressLabel,
+  isReturnedToBarangay,
+  routeConfirmCopy,
+  routingState,
+  type RoutingState,
+} from "./routing";
 import type { AgencyRouting, QueueReport, RoutingPlanEntry } from "@/types";
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
@@ -206,6 +212,17 @@ export function ReportDetailPanel({
                 yet. Omitted rather than filled with a placeholder. */}
           </div>
 
+          {/* Before the decision: where this report would go once validated.
+              Read-only — routing stays a separate, confirmed step. */}
+          {isReviewable(d.status) && (
+            <>
+              <p className="mb-1.5 mt-5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+                {t("drawer.section.routing")}
+              </p>
+              <RoutingPreview plan={d.routingPlan} />
+            </>
+          )}
+
           {routeState.kind !== "none" && (
             <>
               <p className="mb-1.5 mt-5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
@@ -240,7 +257,7 @@ export function ReportDetailPanel({
               {t(routeState.kind === "ready" ? "routing.routeToAgency" : "routing.finish")}
             </Button>
           ) : (
-            <p className="text-xs text-ink-500">{footerNote(routeState.kind, t)}</p>
+            <p className="text-xs text-ink-500">{footerNote(routeState, t)}</p>
           )}
         </footer>
       </aside>
@@ -267,14 +284,16 @@ export function ReportDetailPanel({
   );
 }
 
-function footerNote(kind: ReturnType<typeof routingState>["kind"], t: Translate): string {
-  switch (kind) {
+function footerNote(state: RoutingState, t: Translate): string {
+  switch (state.kind) {
     case "no-mapping":
       return t("drawer.footer.noMapping");
     case "unavailable":
       return t("drawer.footer.unavailable");
     case "downstream":
-      return t("drawer.footer.downstream");
+      // Every agency sent it back as out of scope: it is the barangay's
+      // again, and saying the agencies own it would be false.
+      return t(isReturnedToBarangay(state) ? "drawer.footer.returned" : "drawer.footer.downstream");
     default:
       return t("drawer.footer.reviewed");
   }
@@ -318,6 +337,19 @@ function RoutingSection({ state }: { state: ReturnType<typeof routingState> }) {
     case "none":
       return null;
   }
+}
+
+/**
+ * Where routing would send a report that hasn't been decided yet, from the
+ * same category mapping routeReport uses — the paper's [you're confirming,
+ * not choosing] (p.186). Nothing is sent from here: an official still
+ * validates, then routes with its own confirmation.
+ */
+function RoutingPreview({ plan }: { plan: RoutingPlanEntry[] | null }) {
+  const t = useT();
+  if (plan === null) return <p className="text-sm text-ink-500">{t("drawer.unavailable")}</p>;
+  if (plan.length === 0) return <p className="text-sm text-ink-700">{t("drawer.preview.noMapping")}</p>;
+  return <PlanList plan={plan} lead={t("drawer.preview.willRoute")} />;
 }
 
 function PlanList({ plan, lead }: { plan: RoutingPlanEntry[]; lead: string }) {

@@ -62,6 +62,70 @@ export const MAX_REASON_LENGTH = 1000;
 // The longest display name accepted, for the same two places.
 export const MAX_NAME_LENGTH = 80;
 
+// The paper's rejection categories (A.3.2: wrong category, already resolved,
+// mistaken identity, not an emergency, duplicate), plus Other from the recall
+// sheet's list (A.2.4). review_report() takes one free-text reason and the
+// schema has no reason-code column, so the category travels inside that text
+// as a stable prefix — `[duplicate] same incident as …` — and is parsed back
+// out for display. A reason without a known prefix (rejections from before
+// this, or from the other dashboard sharing the database) is shown as it
+// stands and never guessed into a category.
+export const REJECT_REASON_CODES = [
+  "wrong_category",
+  "already_resolved",
+  "mistaken_identity",
+  "not_an_emergency",
+  "duplicate",
+  "other",
+] as const;
+
+export type RejectReasonCode = (typeof REJECT_REASON_CODES)[number];
+
+// English names: the dictionary's English column, and the CSV export, which
+// stays English whatever the interface language.
+export const REJECT_REASON_LABELS: Record<RejectReasonCode, string> = {
+  wrong_category: "Wrong category",
+  already_resolved: "Already resolved",
+  mistaken_identity: "Mistaken identity",
+  not_an_emergency: "Not an emergency",
+  duplicate: "Duplicate",
+  other: "Other",
+};
+
+// The note after the prefix, kept short enough that the longest prefix still
+// fits inside MAX_REASON_LENGTH.
+export const MAX_REJECT_NOTE_LENGTH = 900;
+
+export function isRejectReasonCode(value: unknown): value is RejectReasonCode {
+  return typeof value === "string" && (REJECT_REASON_CODES as readonly string[]).includes(value);
+}
+
+export function composeRejectReason(code: RejectReasonCode, note: string): string {
+  const trimmed = note.trim();
+  return trimmed.length > 0 ? `[${code}] ${trimmed}` : `[${code}]`;
+}
+
+const REJECT_REASON_PREFIX = /^\[([a-z_]+)\](?:\s+([\s\S]*))?$/;
+
+export function parseRejectReason(reason: string): { code: RejectReasonCode | null; note: string } {
+  const text = reason.trim();
+  const match = REJECT_REASON_PREFIX.exec(text);
+  if (match && isRejectReasonCode(match[1])) return { code: match[1], note: (match[2] ?? "").trim() };
+  return { code: null, note: text };
+}
+
+/**
+ * How a reporter is described on every surface. The paper's wording (A.3.2,
+ * A.3.3): a withheld report still comes from a verified account — the system
+ * has no anonymous path — so it reads [Verified reporter, identity withheld]
+ * rather than a bare [Identity withheld], which suggested an unknown sender.
+ * Shared by the three loaders so the queue, Cluster Explorer and Validation
+ * History (and its CSV) can't drift. Never a name, withheld or not.
+ */
+export function reporterLabel(identityWithheld: boolean): string {
+  return identityWithheld ? "Verified reporter, identity withheld" : "Verified reporter";
+}
+
 export function isUuid(value: unknown): value is string {
   return typeof value === "string" && UUID_SHAPE.test(value);
 }

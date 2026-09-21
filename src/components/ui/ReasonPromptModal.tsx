@@ -4,9 +4,27 @@ import { useState } from "react";
 import { Button } from "./Button";
 import { useDismissOnEscape } from "./useDismissOnEscape";
 import { useFocusTrap } from "./useFocusTrap";
-import { MAX_REASON_LENGTH } from "@/lib/utils";
+import {
+  composeRejectReason,
+  cx,
+  MAX_REJECT_NOTE_LENGTH,
+  REJECT_REASON_CODES,
+  type RejectReasonCode,
+} from "@/lib/utils";
 import { useLang, useT } from "@/lib/i18n";
 
+/**
+ * The reject prompt: a required reason category, and a note.
+ *
+ * The categories are the paper's (A.3.2) plus Other. None is preselected —
+ * the point of a coded reason is an auditable choice, and a default would be
+ * recorded for every official who didn't look. The note is optional except
+ * for Other, where the category alone says nothing.
+ *
+ * onConfirm receives the composed reason (`[code] note`, see
+ * composeRejectReason), so the callers and updateReportStatus keep their
+ * signatures and review_report() still receives one text reason.
+ */
 export function ReasonPromptModal({
   title,
   description,
@@ -20,12 +38,15 @@ export function ReasonPromptModal({
   onCancel: () => void;
   onConfirm: (reason: string) => void;
 }) {
-  const [reason, setReason] = useState("");
+  const [code, setCode] = useState<RejectReasonCode | null>(null);
+  const [note, setNote] = useState("");
   const t = useT();
   const lang = useLang();
   useDismissOnEscape(onCancel);
   const dialogRef = useFocusTrap<HTMLDivElement>();
-  const trimmed = reason.trim();
+  const trimmedNote = note.trim();
+  const noteRequired = code === "other";
+  const ready = code !== null && (!noteRequired || trimmedNote.length > 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
@@ -47,24 +68,59 @@ export function ReasonPromptModal({
         </p>
         <p className="mb-3 text-xs text-ink-500">{description}</p>
 
-        <label className="mb-1 block text-xs font-medium text-ink-500" htmlFor="reason-prompt-input">
-          {t("reason.label")}
-          {/* The English screen keeps the mockup Tagalog hint beside the term. */}
-          {lang === "en" && (
-            <>
-              {" "}
-              &middot; <span className="font-normal">dahilan</span>
-            </>
-          )}
+        <fieldset className="mb-3">
+          <legend className="mb-1.5 text-xs font-medium text-ink-500">
+            {t("reason.label")}
+            {/* The English screen keeps the mockup Tagalog hint beside the term. */}
+            {lang === "en" && (
+              <>
+                {" "}
+                &middot; <span className="font-normal">dahilan</span>
+              </>
+            )}
+          </legend>
+          {/* Native radios: arrow keys move the choice within the group and
+              Tab leaves it, with nothing to re-implement. Focus lands on the
+              first option without choosing it. */}
+          <div className="grid grid-cols-2 gap-1.5">
+            {REJECT_REASON_CODES.map((option, index) => (
+              <label
+                key={option}
+                className={cx(
+                  "flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-2 text-xs transition-colors",
+                  code === option
+                    ? "border-brand-500 bg-brand-50 font-medium text-brand-700"
+                    : "border-ink-100 text-ink-700 hover:bg-ink-50"
+                )}
+              >
+                <input
+                  type="radio"
+                  name="reject-reason"
+                  value={option}
+                  checked={code === option}
+                  onChange={() => setCode(option)}
+                  autoFocus={index === 0}
+                  className="accent-brand-500"
+                />
+                {t(`rejectReason.${option}`)}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <label className="mb-1 block text-xs font-medium text-ink-500" htmlFor="reason-prompt-note">
+          {t("reason.note")}{" "}
+          <span className="font-normal">
+            ({t(noteRequired ? "reason.noteRequired" : "reason.noteOptional")})
+          </span>
         </label>
         <textarea
-          id="reason-prompt-input"
-          autoFocus
-          required
-          maxLength={MAX_REASON_LENGTH}
+          id="reason-prompt-note"
+          required={noteRequired}
+          maxLength={MAX_REJECT_NOTE_LENGTH}
           rows={3}
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
           placeholder={t("reason.placeholder")}
           className="mb-4 w-full resize-none rounded-md border border-ink-100 bg-ink-50 px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-brand-500 focus:outline-none"
         />
@@ -76,8 +132,10 @@ export function ReasonPromptModal({
           <Button
             variant="danger"
             size="sm"
-            disabled={trimmed.length === 0}
-            onClick={() => onConfirm(trimmed)}
+            disabled={!ready}
+            onClick={() => {
+              if (code) onConfirm(composeRejectReason(code, trimmedNote));
+            }}
           >
             {confirmLabel}
           </Button>
