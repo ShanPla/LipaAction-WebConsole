@@ -50,12 +50,31 @@ function readStored(): Partial<ConsolePreferences> | null {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? (parsed as Partial<ConsolePreferences>) : null;
+    return validStored(JSON.parse(raw));
   } catch {
     // Private window, storage disabled, or a corrupt value — behave as unset.
     return null;
   }
+}
+
+/**
+ * Keeps only the stored fields that are well-formed. localStorage is written
+ * by an older version of this page, by another tab, or by anyone with the
+ * devtools open; spreading its parsed JSON straight over the defaults let a
+ * non-boolean flag or an unknown language code reach every component that
+ * reads preferences. A field that fails its check falls back to the default.
+ */
+function validStored(parsed: unknown): Partial<ConsolePreferences> | null {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  const raw = parsed as Record<string, unknown>;
+  const out: Partial<ConsolePreferences> = {};
+  if (raw.interfaceLanguage === "en" || raw.interfaceLanguage === "tl") out.interfaceLanguage = raw.interfaceLanguage;
+  if (raw.bilingualEmphasis === "english-first" || raw.bilingualEmphasis === "tagalog-first" || raw.bilingualEmphasis === "english-only") {
+    out.bilingualEmphasis = raw.bilingualEmphasis;
+  }
+  if (typeof raw.audibleAlertNewEmergency === "boolean") out.audibleAlertNewEmergency = raw.audibleAlertNewEmergency;
+  if (typeof raw.slaBreachBrowserNotification === "boolean") out.slaBreachBrowserNotification = raw.slaBreachBrowserNotification;
+  return out;
 }
 
 function writeStored(prefs: ConsolePreferences): void {

@@ -85,19 +85,25 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
   ];
 
   const reviewerNames = new Map<string, string>();
+  // If this lookup fails, the names are UNKNOWN, not absent. It used to drop
+  // its error, so every decision read [Unnamed official] — which looks like a
+  // fact about the officials rather than a failed query.
+  let namesUnavailable = false;
   if (reviewerIds.length > 0) {
-    const { data: reviewers } = await supabase
+    const { data: reviewers, error: reviewersError } = await supabase
       .from("profiles")
       .select("id, full_name")
       .in("id", reviewerIds);
-    if (reviewers) {
-      for (const r of reviewers) {
-        reviewerNames.set(r.id, displayName(r.full_name));
-      }
+    if (reviewersError) {
+      console.error("[validation-history] reviewer names failed", reviewersError.code, reviewersError.message);
+      namesUnavailable = true;
+    }
+    for (const r of reviewers ?? []) {
+      reviewerNames.set(r.id, displayName(r.full_name));
     }
   }
 
-  const records = rows.map((r) => toValidationRecord(r, reviewerNames));
+  const records = rows.map((r) => toValidationRecord(r, reviewerNames, namesUnavailable));
 
   const summary: ValidationSummary = {
     total: rows.length,
@@ -117,7 +123,8 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
 
 function toValidationRecord(
   r: RawReviewedReport,
-  reviewerNames: Map<string, string>
+  reviewerNames: Map<string, string>,
+  namesUnavailable: boolean
 ): ValidationRecord {
   return {
     reportId: r.id,
@@ -133,7 +140,7 @@ function toValidationRecord(
     // and a reviewer whose profiles row isn't readable falls through the
     // same way — both surface as "Unknown official" rather than a blank cell.
     validatingOfficial: r.reviewed_by
-      ? reviewerNames.get(r.reviewed_by) ?? "Unnamed official"
+      ? reviewerNames.get(r.reviewed_by) ?? (namesUnavailable ? "Name unavailable" : "Unnamed official")
       : "Unknown official",
     // Pre-cutover rows have no reviewed_at, so created_at stands in — for both
     // the display string and the raw value the range filter compares against,

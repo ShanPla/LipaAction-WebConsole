@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const TABBABLE = 'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
@@ -33,16 +33,20 @@ function tabbablesIn(root: HTMLElement): HTMLElement[] {
 export function useFocusTrap<T extends HTMLElement>(active = true) {
   const ref = useRef<T>(null);
 
-  // Return focus on unmount only. Captured once — the element that opened
-  // the dialog, e.g. the row's Details button or the Reject button — and
-  // skipped if it has since left the DOM (a resolved row re-rendered, or a
-  // stacked prompt unmounting together with its parent drawer).
+  // Return focus on unmount only. Captured during the FIRST RENDER, not in an
+  // effect: React applies autoFocus during commit, before effects run, so an
+  // effect saw the dialog's own input as [the opener] and returned focus to
+  // a node that was about to disappear — dropping keyboard users back at the
+  // top of the page. Skipped if the opener has since left the DOM (a resolved
+  // row re-rendered, or a stacked prompt unmounting with its parent drawer).
+  const [opener] = useState<HTMLElement | null>(() =>
+    typeof document === "undefined" ? null : (document.activeElement as HTMLElement | null)
+  );
   useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
     return () => {
       if (opener?.isConnected) opener.focus();
     };
-  }, []);
+  }, [opener]);
 
   useEffect(() => {
     const root = ref.current;

@@ -16,14 +16,34 @@ let context: AudioContext | null = null;
 export function playChime(): void {
   try {
     if (context === null) context = new AudioContext();
-    if (context.state === "suspended") void context.resume();
-
-    const start = context.currentTime;
-    tone(context, 880, start, 0.12);
-    tone(context, 1175, start + 0.14, 0.18);
+    const ctx = context;
+    if (ctx.state === "running") {
+      playTones(ctx);
+      return;
+    }
+    // Suspended by the browser's autoplay policy. resume() only settles once
+    // the page has had a user gesture — possibly hours later — and tones
+    // scheduled now would all play THEN, as a burst announcing reports long
+    // since handled. So the chime only plays if the context is running
+    // within a moment; otherwise it is skipped. The report is on screen either
+    // way, and the [New] marker still shows.
+    const settled = ctx.resume().then(
+      () => ctx.state === "running",
+      () => false
+    );
+    const tooLate = new Promise<boolean>((resolve) => window.setTimeout(() => resolve(false), 300));
+    void Promise.race([settled, tooLate]).then((running) => {
+      if (running) playTones(ctx);
+    });
   } catch {
     // No audio available in this environment.
   }
+}
+
+function playTones(ctx: AudioContext): void {
+  const start = ctx.currentTime;
+  tone(ctx, 880, start, 0.12);
+  tone(ctx, 1175, start + 0.14, 0.18);
 }
 
 function tone(ctx: AudioContext, frequency: number, start: number, duration: number): void {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { logReportView } from "@/app/actions/audit";
+import { callAction } from "@/lib/callAction";
 import { useToast } from "@/components/ui/Toast";
 import { PriorityBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -68,7 +69,15 @@ export function ReportDetailPanel({
   // routing confirmation — so Escape backs out one layer at a time, and
   // while a write is in flight.
   const stacked = isRejecting || routing.isConfirming;
-  useDismissOnEscape(onClose, !stacked && !isPending && !routing.isPending);
+  const writing = isPending || routing.isPending;
+  useDismissOnEscape(onClose, !stacked && !writing);
+
+  // The scrim and the close button honour the same rule as Escape: not while
+  // a write is in flight. Closing mid-write unmounted the hook that owned the
+  // result, so the official never saw whether it landed.
+  const closeUnlessWriting = () => {
+    if (!writing) onClose();
+  };
   // Same stacking rule for Tab: whichever prompt is up owns focus.
   const dialogRef = useFocusTrap<HTMLElement>(!stacked);
 
@@ -90,7 +99,10 @@ export function ReportDetailPanel({
   useEffect(() => {
     if (loggedReportId.current === report.id) return;
     loggedReportId.current = report.id;
-    void logReportView(report.id).then((outcome) => {
+    // callAction: a rejected promise here used to be an unhandled rejection —
+    // a missed access-log entry with no trace on screen at all.
+    void callAction(() => logReportView(report.id)).then((result) => {
+      const outcome = result ?? "failed";
       if (outcome === "logged") return;
       showToast(
         outcome === "session-expired"
@@ -108,7 +120,7 @@ export function ReportDetailPanel({
       <button
         aria-label="Close report details"
         className="absolute inset-0 bg-ink-900/40 motion-safe:animate-scrimIn"
-        onClick={onClose}
+        onClick={closeUnlessWriting}
       />
 
       <aside
@@ -128,7 +140,7 @@ export function ReportDetailPanel({
             </p>
             <p className="truncate font-mono text-xs text-ink-500">{report.id}</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close">
+          <Button variant="ghost" size="sm" onClick={closeUnlessWriting} aria-label="Close">
             ✕
           </Button>
         </header>

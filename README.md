@@ -62,6 +62,10 @@ emailed sign-in link is refused otherwise, and Supabase falls back to the projec
 Site URL. Don't add a wildcard for a shared hosting domain such as `*.vercel.app`;
 that would make any site on that domain a valid destination for sign-in tokens.
 
+`vercel.json` pins the server functions to Singapore (`sin1`), next to the Supabase
+project. Without it Vercel runs them in Washington DC, and every database call a page
+makes crosses the Pacific twice. If the Supabase project is ever moved, move this too.
+
 ## Signing in
 
 Login is passwordless. An official enters their email, receives a one-time code, and
@@ -85,7 +89,7 @@ official's browser is set.
 
 | Page | Status |
 |------|--------|
-| **Queue** | Live. Shows the barangay's pending reports in four tabs — Emergency Fast-triage, Standard intake, Flagged duplicates, Recent validated — with a search box and a detail drawer showing everything the barangay holds on a report. Validate and Reject write to the database; rejection requires a reason. A validated report is then routed to the agencies its category maps to, by hand, after a confirmation step; the Recent validated tab separates reports awaiting routing from those already with agencies, and shows each agency's progress (acknowledged, resolved, or closed with an outcome) as the agencies record it. Opening a report's details is reported to the audit trail. A duplicate cluster can be validated as one action. The page updates live as reports change (a Supabase Realtime subscription, filtered to the barangay and enforced by Row-Level Security), falling back to a 30-second refresh if the live channel cannot connect. A report that arrives on its own is marked as new for a few seconds so it is not missed. The page can also chime when a new emergency arrives, and can raise a browser notification when an emergency has waited more than five minutes. If the data cannot be loaded it says so, rather than showing an empty queue. |
+| **Queue** | Live. Shows the barangay's pending reports in four tabs — Emergency Fast-triage, Standard intake, Flagged duplicates, Recent validated — with a search box and a detail drawer showing the resident's full account and the classifier's reading of the report. Validate and Reject write to the database; rejection requires a reason. A validated report is then routed to the agencies its category maps to, by hand, after a confirmation step; the Recent validated tab separates reports awaiting routing from those already with agencies, and shows each agency's progress (acknowledged, resolved, or closed with an outcome) as the agencies record it. Opening a report's details is recorded in the access log, once per opening. A duplicate cluster can be validated as one action. The page updates live as reports change (a Supabase Realtime subscription, filtered to the barangay and enforced by Row-Level Security), falling back to a 30-second refresh if the live channel cannot connect. A report that arrives on its own is marked as new for a few seconds so it is not missed. The page can also chime when a new emergency arrives, and can raise a browser notification when an emergency has waited more than five minutes. If the data cannot be loaded it says so, rather than showing an empty queue. |
 | **Cluster Explorer** | Live query, currently empty, and says so. Groups pending reports that share a `cluster_id`. The duplicate-detection service computes clusters but does not yet write them back to reports, so no report carries a `cluster_id`; the page, and the queue's Flagged duplicates tab, state that duplicate detection isn't connected rather than implying none were found. |
 | **Validation History** | Live. Reviewed reports (validated or rejected) with the reviewing official, timestamp, rejection reason, and outcome filters. Exports the visible rows to CSV. |
 | **Settings** | Profile is live (name, role, barangay, email, phone); the display name is editable. Language and alert preferences are saved in the browser on the current device; the alert preferences drive the Queue page's chime and browser notification. Senior barangay administrators default to Tagalog, as the thesis specifies. |
@@ -101,12 +105,17 @@ their identity. The interface shows only "Verified reporter" or "Identity withhe
 This is deliberate — the system exposes no reporter-name field to officials at all —
 and it applies to every page, the CSV export included.
 
-Access is logged as well as restricted. Opening a report's detail drawer — the point at
-which the reporter's own account of the incident reaches an official's screen — calls
-the backend's `log_report_view` function, which records the official, the report, and
-the resident whose data was viewed. The console never supplies the resident's identity
-to that call; the backend resolves it from the report. Validations and rejections are
-logged by the same mechanism through `review_report`.
+Access is logged as well as restricted. Opening a report's detail drawer calls the
+backend's `log_report_view` function, which records the official, the report, and the
+resident whose data was viewed. The console never supplies the resident's identity to
+that call; the backend resolves it from the report. Validations, rejections and routings
+are logged through the backend functions that perform them. If a view can't be logged,
+the console says so on screen rather than failing silently.
+
+What the log does not cover yet: the queue list itself shows each report's category and
+the opening line of its description before any view is logged, and the Validation
+History CSV export writes no audit record. Both are recorded as open questions for the
+backend and data-protection review.
 
 ## Folder structure
 
@@ -153,6 +162,9 @@ In each case the console shows nothing rather than an approximation.
 - **Audit Log** is on placeholder data, and the page says so. Read access for barangay
   roles is waiting on a decision about which audit columns the desk may see; it is a
   data-protection question rather than an engineering one.
+- **Access-log coverage is incomplete.** See the Privacy section: list rows and the CSV
+  export are not individually logged, and live updates deliver full report rows to the
+  browser because Supabase cannot filter that feed by column.
 - **Report views are logged but cannot be read back here.** Opening a report records
   the access, and the console reports it on screen if that recording fails. Which
   audit fields a barangay desk may see is the data-protection decision above, so there

@@ -12,7 +12,7 @@ export function KpiHeader({ summary }: { summary: KpiSummary }) {
           measured. It is not the mockup's median resolution time; no
           resolution-time column exists yet. */}
       <Tile label="Median wait" value={formatDuration(summary.medianMinutes)} />
-      <Tile label="Validated today" value={summary.validatedCount} accent="brand" />
+      <Tile label="Validated today" value={summary.validatedCount ?? "—"} accent="brand" />
     </div>
   );
 }

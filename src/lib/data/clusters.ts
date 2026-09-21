@@ -49,8 +49,14 @@ export async function getBarangayClusters(
     .select("id, category, priority_name, status, identity_withheld, created_at, cluster_id")
     .eq("incident_barangay_id", barangayId)
     .not("cluster_id", "is", null)
+    // Status filtered in SQL, not after the fact: this used to fetch every
+    // clustered report the barangay ever had and discard the decided ones in
+    // JS. The JS filter below stays as a harmless second check.
+    .in("status", PENDING_STATUSES)
     // Ascending so the earliest-created report in each group is "Primary".
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    // Far above any real cluster volume; a bound, not a page size.
+    .limit(500);
 
   if (error || !data) {
     console.error("[cluster-explorer] load failed", error?.code, error?.message);

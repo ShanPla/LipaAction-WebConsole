@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { DataUnavailableBanner } from "@/components/layout/DataUnavailableBanner";
@@ -40,6 +40,10 @@ const NO_ARRIVALS: ReadonlySet<string> = new Set();
 // Fast-triage SLA from the thesis (p.102): a Tier 0 report should have a
 // decision within 5 minutes of submission.
 const TIER0_SLA_MS = 5 * 60_000;
+
+// How often the SLA check runs on its own clock. A quarter-minute of slack on
+// a five-minute window.
+const SLA_CHECK_MS = 15_000;
 
 export function QueueClient({
   official,
@@ -93,7 +97,80 @@ export function QueueClient({
 
   const router = useRouter();
   const { prefs } = usePreferences(official.role);
+  // Read inside long-lived callbacks (the Realtime handler, the SLA timer)
+  // that must not be torn down and re-created every time a preference flips.
+  const prefsRef = useRef(prefs);
+  useEffect(() => {
+    prefsRef.current = prefs;
+  });
 
+  // ---------------------------------------------------------------------
+  // Refresh scheduling.
+  //
+  // Every reason to re-fetch — a Realtime event, a reconnect, the tab coming
+  // back, the poll — asks through requestRefresh(), and one place decides
+  // when it may actually run. A refresh is HELD, never dropped, while:
+  //
+  //  - a dialog is open: a drawer or prompt must never have its report
+  //    swapped out from under a decision;
+  //  - the pointer is over the list: a refresh re-sorts rows, and a list that
+  //    reflows under a cursor can turn a click meant for one report's
+  //    Validate into a decision on another — which cannot be undone;
+  //  - the browser reports itself offline: on Next 14 a refresh that fails
+  //    becomes a hard navigation, which on a dead connection replaces the
+  //    console with the browser's own error page.
+  //
+  // A held refresh runs the moment all three clear. The footer says one is
+  // waiting, so a held queue never passes for an idle one; and new emergencies
+  // still chime while held, straight from the Realtime event (see below).
+  // The dialog check reads the DOM because the modals live in ReportRow and
+  // ClusterCard and this component doesn't see them open.
+  const refreshPending = useRef(false);
+  const pointerOverList = useRef(false);
+  const [updateWaiting, setUpdateWaiting] = useState(false);
+
+  const tryRefresh = useCallback(() => {
+    if (!refreshPending.current) return;
+    const held =
+      pointerOverList.current ||
+      document.querySelector('[role="dialog"]') !== null ||
+      navigator.onLine === false;
+    if (held) {
+      setUpdateWaiting(true);
+      return;
+    }
+    refreshPending.current = false;
+    setUpdateWaiting(false);
+    router.refresh();
+  }, [router]);
+
+  const requestRefresh = useCallback(() => {
+    refreshPending.current = true;
+    tryRefresh();
+  }, [tryRefresh]);
+
+  // Flushes a held refresh once it's clear, and catches up after the gaps a
+  // Realtime channel can't see: the tab hidden or the laptop asleep (events
+  // missed while suspended are not replayed), and the network coming back.
+  useEffect(() => {
+    const flush = window.setInterval(tryRefresh, 1000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") requestRefresh();
+    };
+    window.addEventListener("online", requestRefresh);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(flush);
+      window.removeEventListener("online", requestRefresh);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [tryRefresh, requestRefresh]);
+
+  // Emergencies already chimed for, so the Realtime event and the next
+  // refresh's arrival check don't both sound for the same report.
+  const chimedIds = useRef(new Set<string>());
+
+  // ---------------------------------------------------------------------
   // Live updates. incident_reports is in the supabase_realtime publication
   // and postgres_changes delivery is RLS-filtered per authenticated user
   // (backend owner, 2026-09-11; verified on prod 2026-06-01). The barangay
@@ -101,35 +178,20 @@ export function QueueClient({
   //
   // An event doesn't carry enough to update the screen by itself — priority
   // shaping, tab partitioning, and the KPI count all live server-side — so
-  // each event just asks the server component to re-run: router.refresh()
-  // streams new props in, and React state here (active tab, search, resolved
-  // marks) survives it. Refreshes are held while any dialog is open, so a
-  // drawer or reject prompt never has its report swapped out from under a
-  // decision; the held refresh runs as soon as the dialog closes. The dialog
-  // check reads the DOM because the modals live in ReportRow and ClusterCard
-  // and this component doesn't see them open.
+  // each event asks for a refresh, which re-runs the server component and
+  // streams new props in; React state here (active tab, search, resolved
+  // marks) survives it.
   const [freshness, setFreshness] = useState<Freshness>("connecting");
   useEffect(() => {
     const supabase = createClient();
     let debounce: number | undefined;
-    let heldUntilDialogCloses: number | undefined;
-
-    function refreshWhenClear() {
-      if (document.querySelector('[role="dialog"]')) {
-        window.clearInterval(heldUntilDialogCloses);
-        heldUntilDialogCloses = window.setInterval(() => {
-          if (document.querySelector('[role="dialog"]')) return;
-          window.clearInterval(heldUntilDialogCloses);
-          router.refresh();
-        }, 1000);
-        return;
-      }
-      router.refresh();
-    }
+    // Callbacks can still arrive after cleanup has started removing the
+    // channel; they must not touch state or schedule work by then.
+    let disposed = false;
 
     function onChange() {
       window.clearTimeout(debounce);
-      debounce = window.setTimeout(refreshWhenClear, REALTIME_DEBOUNCE_MS);
+      debounce = window.setTimeout(requestRefresh, REALTIME_DEBOUNCE_MS);
     }
 
     const channel = supabase
@@ -142,54 +204,76 @@ export function QueueClient({
           table: "incident_reports",
           filter: `incident_barangay_id=eq.${official.barangayId}`,
         },
-        onChange
+        (payload) => {
+          if (disposed) return;
+          // The chime fires from the event itself, not from the refresh it
+          // triggers: a refresh can be held for as long as a drawer is open,
+          // and an official busy in a drawer is exactly who needs to hear a
+          // new emergency arrive.
+          if (payload.eventType === "INSERT") {
+            const row = payload.new as { id?: unknown; entry_tier?: unknown };
+            if (row.entry_tier === "emergency" && typeof row.id === "string" && !chimedIds.current.has(row.id)) {
+              chimedIds.current.add(row.id);
+              if (prefsRef.current.audibleAlertNewEmergency) playChime();
+            }
+          }
+          onChange();
+        }
       )
       .subscribe((status) => {
-        if (status === "SUBSCRIBED") setFreshness("live");
-        // Any failure state falls back to polling below rather than going
-        // silent — the page must never look live when it isn't.
-        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        if (disposed) return;
+        if (status === "SUBSCRIBED") {
+          setFreshness("live");
+          // Catch up on every (re)subscribe. Changes made between the server
+          // render and the first subscribe, or during a reconnect gap, are
+          // never replayed as events — without this the footer said [Live]
+          // over a queue that could be missing a report indefinitely.
+          requestRefresh();
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          // Any failure state falls back to polling below rather than going
+          // silent — the page must never look live when it isn't.
           setFreshness("polling");
         }
       });
 
     return () => {
+      disposed = true;
       window.clearTimeout(debounce);
-      window.clearInterval(heldUntilDialogCloses);
       void supabase.removeChannel(channel);
     };
-  }, [router, official.barangayId]);
+  }, [requestRefresh, official.barangayId]);
 
-  // Polling, only while the channel isn't delivering. Same dialog and
-  // visibility rules.
+  // Polling, only while the channel isn't delivering.
   useEffect(() => {
     if (freshness === "live") return;
     const id = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      if (document.querySelector('[role="dialog"]')) return;
-      router.refresh();
+      if (document.visibilityState === "visible") requestRefresh();
     }, REFRESH_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, [router, freshness]);
+  }, [requestRefresh, freshness]);
 
   // When the data on screen was last received — the honest version of a
-  // [Live] badge. Set on every new queueData, including the first.
+  // [Live] badge. Not moved by a failed load: that would stamp a fresh time
+  // on data that didn't arrive.
   const [receivedAt, setReceivedAt] = useState<Date | null>(null);
   useEffect(() => {
-    setReceivedAt(new Date());
+    if (!queueData.loadFailed) setReceivedAt(new Date());
   }, [queueData]);
 
   // What arrived on its own. The queue updates without being asked, so a
-  // report can appear while the official is reading something else — these
-  // two signals, the chime and the row tint, are how they find out.
+  // report can appear while the official is reading something else — the
+  // row tint and the chime are how they find out.
   //
   // The first fetch seeds the set silently: the official just opened the
   // page and can see everything on it. Ids are compared, not counts, because
   // a count stays flat when one report is validated and another arrives in
-  // the same refresh.
+  // the same refresh. A failed load is skipped entirely: its empty lists are
+  // a fallback, not [everything left], and treating them as real made the
+  // next good load mark every report New and chime.
   const seenReportIds = useRef<Set<string> | null>(null);
   const [arrivedIds, setArrivedIds] = useState<ReadonlySet<string>>(NO_ARRIVALS);
   useEffect(() => {
+    if (queueData.loadFailed) return;
     const emergencies = queueData.queueByTab.emergency;
     // Deduplicated across tabs — the duplicates tab repeats pending rows.
     const ids = new Set(Object.values(queueData.queueByTab).flat().map((r) => r.id));
@@ -200,36 +284,74 @@ export function QueueClient({
     const arrived = [...ids].filter((id) => !previous.has(id));
     if (arrived.length === 0) return;
 
-    // A later arrival replaces an earlier highlight rather than extending
-    // it, so the tint can never outlive its own timer.
+    // A later arrival replaces an earlier highlight rather than extending it.
     setArrivedIds(new Set(arrived));
-    if (prefs.audibleAlertNewEmergency && emergencies.some((r) => arrived.includes(r.id))) {
-      playChime();
-    }
+
+    // Chime only for emergencies the Realtime event didn't already announce
+    // — this path covers arrivals seen by polling, or after a reconnect.
+    const unannounced = emergencies.filter((r) => arrived.includes(r.id) && !chimedIds.current.has(r.id));
+    unannounced.forEach((r) => chimedIds.current.add(r.id));
+    if (unannounced.length > 0 && prefsRef.current.audibleAlertNewEmergency) playChime();
+  }, [queueData]);
+
+  // Clears the highlight. Its own effect, keyed on the highlight itself: when
+  // the timer lived in the arrival effect, the next fetch's cleanup cancelled
+  // it, and a fetch with nothing new never set another — so the [New] chip
+  // could stay on a row indefinitely.
+  useEffect(() => {
+    if (arrivedIds.size === 0) return;
     const timer = window.setTimeout(() => setArrivedIds(NO_ARRIVALS), ARRIVAL_HIGHLIGHT_MS);
     return () => window.clearTimeout(timer);
-  }, [queueData.queueByTab, prefs.audibleAlertNewEmergency]);
+  }, [arrivedIds]);
 
   // SLA breach: one browser notification per Tier 0 report the first time it
   // is seen past the 5-minute window, and only with permission already
   // granted — Settings is where permission is requested, on the toggle.
-  // Category and report id only; never anything about the reporter.
+  //
+  // On its own clock. It used to run only when the data changed, and a live
+  // queue with no activity never changes — so a report that arrived under
+  // five minutes old was never checked again and the alert never came. The
+  // latest list is read through a ref so the timer isn't rebuilt per refresh.
   const notifiedBreachIds = useRef(new Set<string>());
+  const slaSource = useRef({ emergency: queueData.queueByTab.emergency, resolved });
+  useEffect(() => {
+    slaSource.current = { emergency: queueData.queueByTab.emergency, resolved };
+  });
   useEffect(() => {
     if (!prefs.slaBreachBrowserNotification) return;
-    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
-    const now = Date.now();
-    for (const report of queueData.queueByTab.emergency) {
-      if (resolved[report.id] || notifiedBreachIds.current.has(report.id)) continue;
-      const waitedMs = now - new Date(report.details.submittedAt).getTime();
-      if (waitedMs < TIER0_SLA_MS) continue;
-      notifiedBreachIds.current.add(report.id);
-      new Notification("Tier 0 report past its 5-minute window", {
-        body: `${report.category} · ${report.id}`,
-        tag: report.id,
-      });
+
+    function notifyBreach(report: QueueReport) {
+      // Nothing that identifies the incident on a report the resident filed
+      // discreetly: an OS notification can surface on a lock screen or a
+      // shared display, outside the console entirely.
+      const body = report.details.discreetReporting
+        ? "Details hidden — discreet report. Open the queue."
+        : `${report.category} · ${report.id}`;
+      try {
+        new Notification("Tier 0 report past its 5-minute window", { body, tag: report.id });
+      } catch {
+        // Some browsers (Chrome on Android) refuse the Notification
+        // constructor outright and require a service worker. The alert still
+        // has to reach the official, so it falls back to an in-page toast.
+        showToast("A Tier 0 report is past its 5-minute window", "danger");
+      }
     }
-  }, [queueData.queueByTab.emergency, prefs.slaBreachBrowserNotification, resolved]);
+
+    function check() {
+      if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+      const now = Date.now();
+      for (const report of slaSource.current.emergency) {
+        if (slaSource.current.resolved[report.id] || notifiedBreachIds.current.has(report.id)) continue;
+        if (now - new Date(report.details.submittedAt).getTime() < TIER0_SLA_MS) continue;
+        notifiedBreachIds.current.add(report.id);
+        notifyBreach(report);
+      }
+    }
+
+    check();
+    const id = window.setInterval(check, SLA_CHECK_MS);
+    return () => window.clearInterval(id);
+  }, [prefs.slaBreachBrowserNotification, showToast]);
 
   /**
    * Moves the official to the next report awaiting a decision: scrolls the
@@ -294,13 +416,29 @@ export function QueueClient({
       <KpiHeader summary={queueData.kpiSummary} />
 
       {activeTab === "emergency" && queueData.activeCluster && (
-        <ClusterCard cluster={queueData.activeCluster} />
+        // Keyed on the cluster: its local [resolved] flag must not carry over
+        // to a different cluster that takes its place after a refresh.
+        <ClusterCard key={queueData.activeCluster.id} cluster={queueData.activeCluster} />
       )}
 
       <QueueTabs tabs={queueData.queueTabMeta} activeTab={activeTab} onChange={setActiveTab} />
 
+      {activeTab === "validated" && queueData.validatedUnavailable && (
+        <p role="status" className="mb-2 text-xs text-priority-medium">
+          Part of this tab couldn’t be loaded, so it may be incomplete. Refresh to try again.
+        </p>
+      )}
+
       <div
         ref={listRef}
+        // Holds refreshes while the pointer is over the rows — see tryRefresh.
+        onPointerEnter={() => {
+          pointerOverList.current = true;
+        }}
+        onPointerLeave={() => {
+          pointerOverList.current = false;
+          tryRefresh();
+        }}
         role="tabpanel"
         id={queuePanelDomId(activeTab)}
         aria-labelledby={queueTabDomId(activeTab)}
@@ -313,7 +451,9 @@ export function QueueClient({
             <p className="px-4 py-10 text-center text-sm text-ink-500">
               {isFiltered
                 ? `No reports in this tab match “${query.trim()}”.`
-                : "No reports in this queue right now."}
+                : queueData.loadFailed
+                  ? "Reports couldn’t be loaded — see the notice above."
+                  : "No reports in this queue right now."}
             </p>
           )
         ) : activeTab === "validated" ? (
@@ -351,6 +491,7 @@ export function QueueClient({
         {freshness === "polling" && `Live updates unavailable — refreshes every ${REFRESH_INTERVAL_MS / 1000} s`}
         {freshness === "connecting" && "Connecting to live updates…"}
         {receivedAt && ` · Data as of ${formatClock(receivedAt)}`}
+        {updateWaiting && " · Update waiting — it appears when you’re done here"}
       </p>
 
       {selected && selectedReport && (

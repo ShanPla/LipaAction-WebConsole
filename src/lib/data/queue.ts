@@ -96,6 +96,9 @@ export interface QueueData {
   // in this queue right now] is the one message an emergency console must
   // never show by accident.
   loadFailed: boolean;
+  // The pending list loaded but part of Recent validated didn't. That tab
+  // says so instead of showing a partial list as if it were complete.
+  validatedUnavailable: boolean;
 }
 
 /**
@@ -159,18 +162,26 @@ export async function getBarangayQueue(
       .gte("reviewed_at", dayStart),
   ]);
 
-  const failure = pendingRes.error ?? awaitingRes.error ?? routedRes.error ?? todayRes.error;
-  if (failure || !pendingRes.data || !awaitingRes.data || !routedRes.data) {
+  // Only the pending list takes the page down. It IS the emergency console;
+  // the other three are secondary, and a failure in any of them used to
+  // replace a working list of live emergencies with an outage banner. Each
+  // now degrades only its own part, logged under its own name — a HEAD count
+  // that fails has no error code, so the log has to say which query it was.
+  if (pendingRes.error || !pendingRes.data) {
     // Fail closed to an empty queue rather than crashing the whole page on a
     // transient query error — but say so in the returned data, and put the
     // real reason in the server log, where table and column names belong.
-    console.error("[queue] load failed", failure?.code, failure?.message);
+    console.error("[queue] pending load failed", pendingRes.status, pendingRes.error?.code, pendingRes.error?.message);
     return failedQueueData();
+  }
+  for (const [part, res] of [["awaiting-routing", awaitingRes], ["recently-routed", routedRes], ["validated-today", todayRes]] as const) {
+    if (res.error) console.error(`[queue] ${part} failed`, res.status, res.error.code, res.error.message);
   }
 
   const pending = pendingRes.data as RawReport[];
-  const awaiting = awaitingRes.data as RawReport[];
-  const routed = routedRes.data as RawReport[];
+  const awaiting = (awaitingRes.error ? [] : awaitingRes.data ?? []) as RawReport[];
+  const routed = (routedRes.error ? [] : routedRes.data ?? []) as RawReport[];
+  const validatedUnavailable = Boolean(awaitingRes.error || routedRes.error);
 
   const routingExtras = await loadRouting(supabase, awaiting, routed);
 
@@ -230,7 +241,8 @@ export async function getBarangayQueue(
     // day. Includes routed and resolved, so routing a report doesn't take it
     // back off the tile. This previously counted every validated report ever
     // while the tile was labelled [Validated today].
-    validatedCount: todayRes.count ?? 0,
+    // null, not 0, when the count failed: [0 validated today] would be a claim.
+    validatedCount: todayRes.error ? null : todayRes.count ?? 0,
   };
 
   const queueByTab: Record<QueueTabId, QueueReport[]> = {
@@ -247,7 +259,7 @@ export async function getBarangayQueue(
     { id: "validated", label: "Recent validated", count: validated.length },
   ];
 
-  return { kpiSummary, activeCluster, queueByTab, queueTabMeta, loadFailed: false };
+  return { kpiSummary, activeCluster, queueByTab, queueTabMeta, loadFailed: false, validatedUnavailable };
 }
 
 /**
@@ -275,7 +287,11 @@ async function loadRouting(
   const reportIds = [...awaiting, ...routed].map((r) => r.id);
   if (reportIds.length === 0) return extras;
 
-  const categories = [...new Set(awaiting.map((r) => r.category))];
+  // Only well-formed category keys reach the filter. category is written by
+  // the mobile app and ends up inside a PostgREST in.() list; a key is
+  // snake_case by contract, so anything else is dropped rather than quoted and
+  // hoped for. A dropped category simply shows [couldn't load routing options].
+  const categories = [...new Set(awaiting.map((r) => r.category))].filter((c) => /^[a-z0-9_]{1,64}$/.test(c));
 
   const [routingRes, mappingRes, agenciesRes] = await Promise.all([
     supabase
@@ -416,6 +432,8 @@ function failedQueueData(): QueueData {
       { id: "validated", label: "Recent validated", count: 0 },
     ],
     loadFailed: true,
+    // The whole page failed; the banner already says so.
+    validatedUnavailable: false,
   };
 }
 

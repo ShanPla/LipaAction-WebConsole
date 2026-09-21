@@ -14,7 +14,8 @@ export interface KpiSummary {
   fastTriageCount: number;
   standardIntakeCount: number;
   medianMinutes: number;
-  validatedCount: number;
+  // null when the count couldn't be loaded — rendered as a dash, not as 0.
+  validatedCount: number | null;
 }
 
 export interface ReporterInfo {
