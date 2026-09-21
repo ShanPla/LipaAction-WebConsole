@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { SESSION_COOKIE_OPTIONS } from "./cookieOptions";
 
 // Browser-side Supabase client. Use this inside "use client" components — e.g.
 // the login form's supabase.auth.signInWithOtp() / verifyOtp() calls.
@@ -19,5 +20,5 @@ export function createClient() {
     );
   }
 
-  return createBrowserClient(url, anonKey);
+  return createBrowserClient(url, anonKey, { cookieOptions: SESSION_COOKIE_OPTIONS });
 }

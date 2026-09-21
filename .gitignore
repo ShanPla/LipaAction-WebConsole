@@ -2,6 +2,11 @@ node_modules
 .next
 out
 .env*.local
+# Any other env file too. Only .env.example belongs in the repo — it holds
+# placeholders, never values.
+.env
+.env.*
+!.env.example
 npm-debug.log*
 .DS_Store
 tsconfig.tsbuildinfo

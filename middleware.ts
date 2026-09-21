@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { SESSION_COOKIE_OPTIONS } from "@/lib/supabase/cookieOptions";
 
 // Refreshes the Supabase auth session cookie on each request (the @supabase/ssr
 // SSR pattern). This does NOT gate routes by itself — actual "is this user allowed
@@ -16,16 +17,23 @@ export async function middleware(request: NextRequest) {
   if (!url || !anonKey) return response;
 
   const supabase = createServerClient(url, anonKey, {
+    cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet) {
+      // The second argument matters. When @supabase/ssr refreshes a token it
+      // passes cache headers (no-store, Expires: 0, Pragma: no-cache) that
+      // must travel on the SAME response as the new Set-Cookie. Dropping them
+      // lets a response carrying a fresh refresh token be cached — and the
+      // matcher covers prerendered pages like / and /not-authorized.
+      setAll(cookiesToSet, headers) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
         cookiesToSet.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options)
         );
+        Object.entries(headers ?? {}).forEach(([key, value]) => response.headers.set(key, value));
       },
     },
   });

@@ -4,8 +4,14 @@ import { ToastProvider } from "@/components/ui/Toast";
 
 export const metadata: Metadata = {
   title: "LipaAction — Barangay Web Console",
+  // Said [Static UI mockup] until 2026-09 — false since the console went
+  // live against the real database, and now public on the deployed URL.
   description:
-    "Static UI mockup of the LipaAction Barangay Web Console (Queue, Cluster Explorer, Validation History, Audit Log, Settings).",
+    "Barangay officials’ console for reviewing and routing LipaAction incident reports.",
+  // A sign-in page for pre-provisioned officials has no business in a search
+  // index. Nothing here is secret — the page is public — but listing it only
+  // invites credential-stuffing traffic at an OTP form.
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({

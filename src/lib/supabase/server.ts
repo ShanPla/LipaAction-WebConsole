@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { SESSION_COOKIE_OPTIONS } from "./cookieOptions";
 
 // Server-side Supabase client. Use this in Server Components, Server Actions, and
 // Route Handlers — anywhere that runs on the server and needs the signed-in
@@ -23,6 +24,7 @@ export function createClient() {
   const cookieStore = cookies();
 
   return createServerClient(url, anonKey, {
+    cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll() {
         return cookieStore.getAll();

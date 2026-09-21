@@ -1,15 +1,62 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useSearchParams } from "next/navigation";
+import type { AuthError } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/Button";
 
 type Step = "email" | "code";
 type Status = "idle" | "loading" | "error";
 
+// Codes Supabase returns when an address has no account and
+// shouldCreateUser is false. Treated as success on purpose — see
+// handleSendCode.
+const UNKNOWN_ACCOUNT_CODES = new Set(["otp_disabled", "signup_disabled", "user_not_found"]);
+
+function isUnknownAccount(error: AuthError): boolean {
+  return error.code !== undefined && UNKNOWN_ACCOUNT_CODES.has(error.code);
+}
+
+// Loaded on first use, not with the page. supabase-js is the bulk of this
+// page's JavaScript (~68 KB gzipped, plus a Buffer polyfill), and nobody
+// needs it until they submit an email. Type imports above are erased, so
+// they don't pull it in.
+async function getSupabase() {
+  const { createClient } = await import("@/lib/supabase/client");
+  return createClient();
+}
+
+// Name, not isAuthRetryableFetchError(): importing that helper would pull
+// supabase-js back into this page's initial bundle.
+function isNetworkError(error: AuthError): boolean {
+  return error.name === "AuthRetryableFetchError" || error.status === 0;
+}
+
+// Fixed copy only. error.message is the Auth server's own wording — it can
+// name internals, it changes between versions, and it is what made unknown
+// addresses distinguishable. Branch on error.code, with status as the only
+// fallback; never on the message text.
+function verifyErrorMessage(error: AuthError): string {
+  if (isNetworkError(error)) return "Couldn't reach the sign-in service. Check your connection, then try again.";
+  if (error.code === "over_request_rate_limit" || error.status === 429) {
+    return "Too many attempts. Wait a few minutes, then try again.";
+  }
+  if (error.code === "otp_expired") return "That code has expired. Request a new one below.";
+  return "That code is incorrect or expired. Check your email and try again.";
+}
+
+function sendCodeErrorMessage(error: AuthError): string {
+  if (isNetworkError(error)) return "Couldn't reach the sign-in service. Check your connection, then try again.";
+  if (error.code === "over_email_send_rate_limit" || error.code === "over_request_rate_limit" || error.status === 429) {
+    return "Too many sign-in attempts. Wait a few minutes, then try again.";
+  }
+  if (error.code === "email_address_invalid" || error.code === "validation_failed") {
+    return "That doesn't look like a valid email address.";
+  }
+  return "Couldn't send a sign-in code right now. Try again in a moment.";
+}
+
 export function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
@@ -29,7 +76,16 @@ export function LoginForm() {
     setStatus("loading");
     setErrorMessage("");
 
-    const supabase = createClient();
+    // The client loads on demand; offline, that load itself can fail, and an
+    // uncaught rejection here left the button stuck on its loading label.
+    let supabase: Awaited<ReturnType<typeof getSupabase>>;
+    try {
+      supabase = await getSupabase();
+    } catch {
+      setStatus("error");
+      setErrorMessage("Couldn’t reach the sign-in service. Check your connection, then try again.");
+      return;
+    }
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -46,12 +102,17 @@ export function LoginForm() {
       },
     });
 
-    if (error) {
+    if (error && !isUnknownAccount(error)) {
       setStatus("error");
-      setErrorMessage(error.message);
+      setErrorMessage(sendCodeErrorMessage(error));
       return;
     }
 
+    // An address with no console account advances too, deliberately. With
+    // shouldCreateUser: false, Supabase refuses unknown addresses — and
+    // showing that refusal told anyone typing into this public form which
+    // emails belong to LipaAction officials. The code step's copy says a code
+    // is on its way only if the address has an account.
     setStatus("idle");
     setStep("code");
   }
@@ -61,7 +122,16 @@ export function LoginForm() {
     setStatus("loading");
     setErrorMessage("");
 
-    const supabase = createClient();
+    // The client loads on demand; offline, that load itself can fail, and an
+    // uncaught rejection here left the button stuck on its loading label.
+    let supabase: Awaited<ReturnType<typeof getSupabase>>;
+    try {
+      supabase = await getSupabase();
+    } catch {
+      setStatus("error");
+      setErrorMessage("Couldn’t reach the sign-in service. Check your connection, then try again.");
+      return;
+    }
     const { error } = await supabase.auth.verifyOtp({
       email,
       token: code,
@@ -70,15 +140,19 @@ export function LoginForm() {
 
     if (error) {
       setStatus("error");
-      setErrorMessage("That code is incorrect or expired. Check your email and try again.");
+      // Every failure used to read [incorrect] — including a dropped
+      // connection or a rate limit, which sent officials retyping a code that
+      // was right all along.
+      setErrorMessage(verifyErrorMessage(error));
       return;
     }
 
     // Full navigation (not client-side router.push) so the server picks up
     // the freshly-set session cookie on the very next request — avoids any
     // race between the cookie write and the RSC navigation to a
-    // force-dynamic, auth-gated page.
-    router.refresh();
+    // force-dynamic, auth-gated page. No router.refresh() first: it started
+    // a full server render of /login that this navigation immediately threw
+    // away.
     window.location.href = "/queue";
   }
 
@@ -144,10 +218,14 @@ export function LoginForm() {
                 Supabase project Auth setting, not something this repo
                 controls — it emits 8 digits today, and the [6-digit]
                 inherited from the mockup contradicted what officials
-                actually received. */}
+                actually received.
+
+                Worded conditionally on purpose: this step is reached for
+                every address, known or not, so the page can't be used to
+                test which emails belong to officials. */}
             <p className="mb-3 text-xs text-ink-500">
-              We sent a sign-in code to <span className="font-medium text-ink-700">{email}</span>.
-              Enter it below — no need to open your email in a new tab.
+              If <span className="font-medium text-ink-700">{email}</span> has a console account,
+              a sign-in code is on its way. Enter it below — no need to open your email in a new tab.
             </p>
 
             <label className="mb-1.5 block text-xs font-medium text-ink-700" htmlFor="code">
