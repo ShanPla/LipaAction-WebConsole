@@ -259,6 +259,10 @@ export const MESSAGES = {
     en: "Returned by {agency}{more} — out of scope · handle it at the barangay",
     tl: "Ibinalik ng {agency}{more} — labas sa saklaw · asikasuhin sa barangay",
   },
+  "routing.summary.resolvedOpen": {
+    en: "Resolved by {agency} · {agencies} still open",
+    tl: "Nalutas ng {agency} · {agencies} pa ang humahawak",
+  },
   "routing.summary.returnedOpen": {
     en: "Returned by {agency} — out of scope · {agencies} still open",
     tl: "Ibinalik ng {agency} — labas sa saklaw · {agencies} pa ang humahawak",

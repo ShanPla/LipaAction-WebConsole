@@ -80,15 +80,15 @@ export function downstreamSummary(
 
   const lead = routing[0];
   const more = routing.length > 1 ? ` +${routing.length - 1}` : "";
+  const open = routing.filter((r) => !r.resolvedAt);
 
   // The agency that fixed it is named, whichever it was. This used to name
   // the lead agency whenever every row was closed, even when another agency
   // did the resolving.
   const fixer = routing.find((r) => r.resolvedAt && (r.resolutionOutcome ?? "resolved") === "resolved");
-  if (fixer) return t("routing.summary.resolvedBy", { agency: fixer.agencyName, more });
 
-  const open = routing.filter((r) => !r.resolvedAt);
   if (open.length === 0) {
+    if (fixer) return t("routing.summary.resolvedBy", { agency: fixer.agencyName, more });
     // Every agency closed it, none with a fix.
     if (isReturnedToBarangay(state)) {
       return t("routing.summary.returned", { agency: lead.agencyName, more });
@@ -104,17 +104,20 @@ export function downstreamSummary(
 
   // The report's own status leads. Once it is resolved, an agency row still
   // open must not read it back down to [Acknowledged] or [awaiting].
-  if (status === "resolved") return t("status.resolved");
-
-  // An agency sent it back as outside its remit while others still hold it
-  // (the paper returns out-of-scope closures to the barangay, p.224).
-  const returned = routing.find((r) => r.resolvedAt && r.resolutionOutcome === "out-of-scope");
-  if (returned) {
-    return t("routing.summary.returnedOpen", {
-      agency: returned.agencyName,
-      agencies: agencyCount(open.length, t),
-    });
+  if (status === "resolved") {
+    return fixer ? t("routing.summary.resolvedBy", { agency: fixer.agencyName, more }) : t("status.resolved");
   }
+
+  // One agency has closed its part while others still hold the report. Say
+  // both: a partial closure must never read as the whole report finished —
+  // the rule since routing was built (2026-09-11), briefly lost on
+  // 2026-09-22 when [Resolved by] was made to name the resolving agency.
+  const stillOpen = agencyCount(open.length, t);
+  if (fixer) return t("routing.summary.resolvedOpen", { agency: fixer.agencyName, agencies: stillOpen });
+  // An agency sent it back as outside its remit (the paper returns
+  // out-of-scope closures to the barangay, p.224).
+  const returned = routing.find((r) => r.resolvedAt && r.resolutionOutcome === "out-of-scope");
+  if (returned) return t("routing.summary.returnedOpen", { agency: returned.agencyName, agencies: stillOpen });
 
   // Only agencies still holding it count from here: a closed lead is not the
   // one to wait on.
