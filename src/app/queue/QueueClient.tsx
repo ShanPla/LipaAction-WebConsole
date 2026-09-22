@@ -9,6 +9,7 @@ import { usePreferences } from "@/lib/preferences";
 import { useT } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
 import { medianAgeMinutes } from "@/lib/utils";
+import { useNow } from "@/lib/useNow";
 import { KpiHeader } from "@/components/queue/KpiHeader";
 import { ClusterCard } from "@/components/queue/ClusterCard";
 import { QueueTabs, queuePanelDomId, queueTabDomId } from "@/components/queue/QueueTabs";
@@ -58,12 +59,6 @@ const CATCH_UP_LIMIT = 1000;
 // lag it, so data this old gets refreshed on a catch-up even when nothing it
 // compares has changed.
 const STALE_DATA_MS = 60_000;
-
-// How often the ages on screen ([5m ago], Median wait) are worked out again.
-// They are computed here from each report's exact submission time rather
-// than taken from the server, because a live queue with nothing changing
-// doesn't fetch, and server-formatted ages froze at the last fetch.
-const AGE_TICK_MS = 30_000;
 
 // Agency progress arrives on this clock rather than live — see the agency
 // progress check in the component.
@@ -222,14 +217,9 @@ export function QueueClient({
   const pointerOverList = useRef(false);
   const [updateWaiting, setUpdateWaiting] = useState(false);
 
-  // The page's own clock for ages (see AGE_TICK_MS). null until mounted, so
-  // the first render uses the server's strings and matches its HTML.
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
-    setNow(Date.now());
-    const id = window.setInterval(() => setNow(Date.now()), AGE_TICK_MS);
-    return () => window.clearInterval(id);
-  }, []);
+  // The page's own clock for ages: rows, cluster members and Median wait are
+  // worked out from it rather than taken from the last fetch (see useNow).
+  const now = useNow();
 
   const tryRefresh = useCallback(() => {
     if (!refreshPending.current) return;
@@ -632,7 +622,7 @@ export function QueueClient({
       {activeTab === "emergency" && queueData.activeCluster && (
         // Keyed on the cluster: its local [resolved] flag must not carry over
         // to a different cluster that takes its place after a refresh.
-        <ClusterCard key={queueData.activeCluster.id} cluster={queueData.activeCluster} />
+        <ClusterCard key={queueData.activeCluster.id} cluster={queueData.activeCluster} now={now} />
       )}
 
       <QueueTabs tabs={queueData.queueTabMeta} activeTab={activeTab} onChange={setActiveTab} />

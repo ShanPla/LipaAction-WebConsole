@@ -1,4 +1,7 @@
+"use client";
+
 import { cx } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import type { ClusterExplorerEntry } from "@/types";
 
 const statusStyles: Record<string, string> = {
@@ -16,11 +19,21 @@ export function ClusterList({
   activeId: string;
   onSelect: (id: string) => void;
 }) {
+  const t = useT();
+
+  // Critical and High are the model's class names, which stay English like
+  // every priority badge; Standard is this console's own word for the rest.
+  function statusText(status: ClusterExplorerEntry["status"]): string {
+    if (status === null) return t("priority.unscored");
+    if (status === "Standard") return t("cluster.status.standard");
+    return status;
+  }
+
   return (
     <div className="flex w-full shrink-0 flex-col overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel lg:w-64 lg:max-h-none max-h-64">
       <div className="border-b border-ink-100 px-3 py-2.5">
         <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">
-          Clusters &middot; {clusters.length}
+          {t("cluster.list.title", { count: clusters.length })}
         </p>
       </div>
       <div className="flex-1 overflow-y-auto scrollbar-thin">
@@ -40,16 +53,16 @@ export function ClusterList({
                 <span
                   className={cx(
                     "text-[11px] font-semibold",
-                    statusStyles[cluster.status]
+                    cluster.status === null ? "text-ink-500" : statusStyles[cluster.status]
                   )}
                 >
-                  {cluster.status}
+                  {statusText(cluster.status)}
                 </span>
               </div>
               <span className="text-sm font-medium text-ink-900">{cluster.category}</span>
               <span className="text-xs text-ink-500">
-                {cluster.memberCount} members
-                {cluster.radiusMeters !== undefined && ` · ${cluster.radiusMeters}m radius`}
+                {t("cluster.list.members", { count: cluster.memberCount })}
+                {cluster.radiusMeters !== undefined && t("cluster.list.radius", { meters: cluster.radiusMeters })}
               </span>
             </button>
           );

@@ -2,6 +2,8 @@
 
 import { PriorityBadge } from "@/components/ui/Badge";
 import { ReporterChip } from "@/components/ui/ReporterChip";
+import { useLang, useT } from "@/lib/i18n";
+import { timeAgo } from "@/lib/utils";
 import type { ClusterExplorerEntry } from "@/types";
 
 /**
@@ -15,18 +17,30 @@ import type { ClusterExplorerEntry } from "@/types";
  * pin/override design exists — it doesn't. Re-add only with a backend path.
  * Same reasoning as ClusterCard's removed [Split into commitments].
  */
-export function MemberPanel({ cluster }: { cluster: ClusterExplorerEntry }) {
+export function MemberPanel({
+  cluster,
+  // The page's clock, so member ages keep moving; null on the first render,
+  // which shows the server's own strings.
+  now = null,
+}: {
+  cluster: ClusterExplorerEntry;
+  now?: number | null;
+}) {
+  const t = useT();
+  const lang = useLang();
   return (
     <div className="flex min-h-[16rem] flex-1 flex-col overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
       <div className="flex flex-col gap-2 border-b border-ink-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-ink-900">
-            {cluster.id} &middot; {cluster.category}, {cluster.memberCount} reports clustered
+            {t("cluster.member.title", { id: cluster.id, category: cluster.category, count: cluster.memberCount })}
           </p>
           <p className="text-xs text-ink-500">{cluster.centroidLabel}</p>
         </div>
         <p className="text-xs text-ink-500">
-          Validate members from the Queue &middot; Mga aksyon sa Queue
+          {t("cluster.member.where")}
+          {/* The English screen keeps the mockup's Tagalog hint. */}
+          {lang === "en" && <> &middot; Mga aksyon sa Queue</>}
         </p>
       </div>
 
@@ -40,9 +54,11 @@ export function MemberPanel({ cluster }: { cluster: ClusterExplorerEntry }) {
               <span className="font-mono text-xs text-ink-500">{member.reportId}</span>
               <PriorityBadge priority={member.priority} />
               <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-medium text-ink-700">
-                {member.relationship}
+                {member.relationship === "Primary" ? t("cluster.member.primary") : t("cluster.member.related")}
               </span>
-              <span className="text-xs text-ink-500">{member.timestamp}</span>
+              <span className="text-xs text-ink-500">
+                {now === null ? member.timestamp : timeAgo(member.submittedAt, now)}
+              </span>
             </div>
             <div className="mb-1.5">
               <ReporterChip reporter={member.reporter} />
@@ -50,15 +66,17 @@ export function MemberPanel({ cluster }: { cluster: ClusterExplorerEntry }) {
             {idx > 0 && (member.visualHash || member.temporalDeltaSeconds || member.sitio) && (
               <div className="flex flex-wrap gap-3 rounded-md bg-ink-50 px-2.5 py-1.5 text-[11px] text-ink-500">
                 {member.visualHash !== undefined && (
-                  <span>Visual hash {member.visualHash.toFixed(2)}</span>
+                  <span>{t("cluster.signal.visualHash", { value: member.visualHash.toFixed(2) })}</span>
                 )}
                 {member.temporalDeltaSeconds !== undefined && (
                   <span>
-                    Temporal &Delta; {Math.floor(member.temporalDeltaSeconds / 60)}m{" "}
-                    {member.temporalDeltaSeconds % 60}s
+                    {t("cluster.signal.temporal", {
+                      minutes: Math.floor(member.temporalDeltaSeconds / 60),
+                      seconds: member.temporalDeltaSeconds % 60,
+                    })}
                   </span>
                 )}
-                {member.sitio && <span>{member.sitio} radius</span>}
+                {member.sitio && <span>{t("cluster.signal.sitio", { sitio: member.sitio })}</span>}
               </div>
             )}
           </div>

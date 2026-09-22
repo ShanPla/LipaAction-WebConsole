@@ -112,6 +112,7 @@ export interface ClusterMemberDetail {
   priority: ReportPriority;
   relationship: "Primary" | "Related";
   timestamp: string;
+  submittedAt: string; // exact ISO timestamp, for ages that keep moving (timeAgo)
   reporter: ReporterInfo;
   visualHash?: number; // pairwise proximity signal
   temporalDeltaSeconds?: number;
@@ -122,7 +123,9 @@ export interface ClusterExplorerEntry {
   id: string;
   category: string;
   memberCount: number;
-  status: "Critical" | "High" | "Standard";
+  // The highest tier any member was scored; null when no member has been
+  // scored yet, shown as [Not scored] rather than defaulted to a tier.
+  status: "Critical" | "High" | "Standard" | null;
   radiusMeters?: number; // no real geospatial computation exists yet — mock/demo only
   centroidLabel: string;
   members: ClusterMemberDetail[];

@@ -7,11 +7,23 @@ import { PriorityBadge } from "@/components/ui/Badge";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useToast } from "@/components/ui/Toast";
 import { validateReports } from "@/app/actions/reports";
-import { callAction, NO_ANSWER } from "@/lib/callAction";
+import { callAction } from "@/lib/callAction";
+import { useLang, useT } from "@/lib/i18n";
+import { timeAgo } from "@/lib/utils";
 import type { SituationCluster } from "@/types";
 
-export function ClusterCard({ cluster }: { cluster: SituationCluster }) {
+export function ClusterCard({
+  cluster,
+  // QueueClient's clock, so member ages keep moving while nothing refreshes;
+  // null on the first render, which shows the server's own strings.
+  now = null,
+}: {
+  cluster: SituationCluster;
+  now?: number | null;
+}) {
   const { showToast } = useToast();
+  const t = useT();
+  const lang = useLang();
   const [isPending, startTransition] = useTransition();
   const [showConfirm, setShowConfirm] = useState(false);
   const [resolved, setResolved] = useState(false);
@@ -21,7 +33,7 @@ export function ClusterCard({ cluster }: { cluster: SituationCluster }) {
       const result = await callAction(() => validateReports(cluster.members.map((m) => m.id)));
       setShowConfirm(false);
       if (result === null) {
-        showToast(NO_ANSWER, "danger");
+        showToast(t("common.noAnswer"), "danger");
         return;
       }
       const { validated, failures } = result;
@@ -36,14 +48,20 @@ export function ClusterCard({ cluster }: { cluster: SituationCluster }) {
       // exact failure this button was fixed to stop making.
       if (failures.length === 0 && validated > 0) {
         setResolved(true);
-        showToast(`Validated all ${validated} reports in ${cluster.id}`, "success");
+        showToast(t("cluster.toast.all", { count: validated, id: cluster.id }), "success");
       } else if (validated > 0) {
         showToast(
-          `Validated ${validated} of ${cluster.members.length} — ${failures.length} could not be validated`,
+          t("cluster.toast.partial", {
+            validated,
+            total: cluster.members.length,
+            failed: failures.length,
+          }),
           "info"
         );
       } else {
-        showToast(failures[0]?.message ?? "Could not validate this cluster", "danger");
+        // The server's own reason when it gave one, which stays English like
+        // every message a server action returns.
+        showToast(failures[0]?.message ?? t("cluster.toast.failed"), "danger");
       }
     });
   }
@@ -51,11 +69,22 @@ export function ClusterCard({ cluster }: { cluster: SituationCluster }) {
   if (resolved) {
     return (
       <div className="mb-4 rounded-card border border-ink-100 bg-ink-50/60 px-4 py-3 text-sm text-ink-500">
-        <span className="font-mono text-xs">{cluster.id}</span> — all {cluster.memberCount}{" "}
-        reports validated. They move to Recent validated on refresh.
+        <span className="font-mono text-xs">{cluster.id}</span>{" "}
+        {t("cluster.card.done", { count: cluster.memberCount })}
       </div>
     );
   }
+
+  // RLS shows this official only their own barangay's reports, so a cluster
+  // reaches this card with one barangay; it read [2 reports across 1
+  // barangays].
+  const summary =
+    cluster.barangaysAffected.length === 1
+      ? t("cluster.card.inBarangay", { count: cluster.memberCount, barangay: cluster.barangaysAffected[0] })
+      : t("cluster.card.acrossBarangays", {
+          count: cluster.memberCount,
+          barangays: cluster.barangaysAffected.length,
+        });
 
   return (
     <div className="mb-4 overflow-hidden rounded-card border border-priority-critical/30 bg-priority-criticalBg/40">
@@ -64,12 +93,10 @@ export function ClusterCard({ cluster }: { cluster: SituationCluster }) {
           <span className="rounded-full bg-priority-critical px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
             {cluster.label}
           </span>
-          <span className="text-sm font-medium text-ink-900">
-            {cluster.memberCount} reports across {cluster.barangaysAffected.length} barangays
-          </span>
+          <span className="text-sm font-medium text-ink-900">{summary}</span>
           {cluster.identityWithheldMembers > 0 && (
             <span className="text-xs text-ink-500">
-              · {cluster.identityWithheldMembers} identity-withheld
+              {t("cluster.card.withheld", { count: cluster.identityWithheldMembers })}
             </span>
           )}
         </div>
@@ -85,13 +112,14 @@ export function ClusterCard({ cluster }: { cluster: SituationCluster }) {
           disabled={isPending}
           onClick={() => setShowConfirm(true)}
         >
-          Validate as one cluster
+          {t("cluster.card.validate")}
         </Button>
       </div>
 
-      <p className="px-4 pt-2 text-xs text-ink-500">
-        Mga aksyon &middot; pag-verify, pag-recall, at pag-merge
-      </p>
+      {/* The English screen keeps a Tagalog hint, as elsewhere. It used to
+          read [pag-verify, pag-recall, at pag-merge], naming recall and merge
+          actions this card doesn't have; validating is the only one. */}
+      {lang === "en" && <p className="px-4 pt-2 text-xs text-ink-500">Mga aksyon &middot; pag-verify</p>}
 
       <div className="divide-y divide-priority-critical/10">
         {cluster.members.map((member) => (
@@ -109,7 +137,7 @@ export function ClusterCard({ cluster }: { cluster: SituationCluster }) {
                     <span aria-hidden>·</span>
                   </>
                 )}
-                <span>{member.timestamp}</span>
+                <span>{now === null ? member.timestamp : timeAgo(member.details.submittedAt, now)}</span>
                 <span aria-hidden>·</span>
                 <ReporterChip reporter={member.reporter} />
               </div>
@@ -120,9 +148,9 @@ export function ClusterCard({ cluster }: { cluster: SituationCluster }) {
 
       {showConfirm && (
         <ConfirmModal
-          title={`Validate all ${cluster.memberCount} reports in ${cluster.id}?`}
-          description="Each report is validated individually. Any that another official has already reviewed will be skipped and reported back."
-          confirmLabel={`Validate ${cluster.memberCount} reports`}
+          title={t("cluster.confirm.title", { count: cluster.memberCount, id: cluster.id })}
+          description={t("cluster.confirm.body")}
+          confirmLabel={t("cluster.confirm.label", { count: cluster.memberCount })}
           busy={isPending}
           onCancel={() => setShowConfirm(false)}
           onConfirm={handleValidateCluster}

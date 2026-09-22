@@ -7,6 +7,7 @@ import { MemberPanel } from "@/components/cluster-explorer/MemberPanel";
 import { MapPanel } from "@/components/cluster-explorer/MapPanel";
 import { DataUnavailableBanner } from "@/components/layout/DataUnavailableBanner";
 import { useLang, useT } from "@/lib/i18n";
+import { useNow } from "@/lib/useNow";
 import type { OfficialProfile } from "@/lib/auth";
 // Type-only import from a server-only module — erased at compile time.
 import type { ClusterData } from "@/lib/data/clusters";
@@ -24,6 +25,8 @@ export function ClusterExplorerClient({
   const activeCluster = clusters.find((c) => c.id === activeId);
   const t = useT();
   const lang = useLang();
+  // Member ages keep moving; this page doesn't refetch on its own.
+  const now = useNow();
 
   return (
     <AppShell breadcrumb={[official.barangayName, t("nav.clusterExplorer")]} official={official}>
@@ -54,11 +57,12 @@ export function ClusterExplorerClient({
         )
       ) : (
         <div className="flex h-auto flex-col gap-4 lg:h-[calc(100vh-6.5rem)] lg:flex-row">
-          {/* The populated view below is still English only. It is
-              unreachable until cluster write-back ships, and its labels mix
-              in values the server formats; translate it when that lands. */}
+          {/* Translated like the rest of the console since 2026-09-23, ahead
+              of the demo pair whose grouping the backend owner writes by
+              hand. Category names and tier names stay English, as
+              everywhere. */}
           <ClusterList clusters={clusters} activeId={activeId} onSelect={setActiveId} />
-          {activeCluster && <MemberPanel cluster={activeCluster} />}
+          {activeCluster && <MemberPanel cluster={activeCluster} now={now} />}
           {activeCluster && <MapPanel cluster={activeCluster} />}
         </div>
       )}

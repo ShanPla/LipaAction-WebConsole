@@ -20,9 +20,10 @@ type Entry = { en: string; tl: string };
  * Deliberately not in this file, so they stay as they are in both languages:
  * - Anything a resident wrote (descriptions, their answers in the drawer).
  *   Translating a report would put words in the reporter's mouth.
- * - Values that arrive preformatted from the server: category names, priority
- *   tiers (the model's class names), relative times like [5m ago], review
- *   timestamps, and error messages returned by server actions.
+ * - Values formatted from report data: category names, priority tiers (the
+ *   model's class names), relative times like [5m ago] (worked out in the
+ *   browser by timeAgo, still English), review timestamps, and error messages
+ *   returned by server actions.
  * - The CSV export, which other offices read.
  * - Screens outside a gated page: sign-in, not-authorized, error pages, and
  *   the toast container's own dismiss label.
@@ -166,11 +167,15 @@ export const MESSAGES = {
     en:
       "Reports aren't being grouped into duplicates yet, so this tab stays empty — that " +
       "doesn't mean none of today's reports are duplicates. Review each report in the " +
-      "Emergency tab. · Hindi pa nakakonekta ang pag-flag ng duplicate.",
+      "Emergency tab. When grouping is on, only reports with a location, from the same " +
+      "barangay and filed within 72 hours of each other, can be grouped. · Hindi pa " +
+      "nakakonekta ang pag-flag ng duplicate.",
     tl:
       "Hindi pa pinagsasama-sama ang mga ulat bilang doble, kaya walang laman ang tab na ito — " +
       "hindi ibig sabihin nito na walang dobleng ulat ngayong araw. Suriin ang bawat ulat sa " +
-      "tab na Emergency.",
+      "tab na Emergency. Kapag bukas na ang pagsasama-sama, ang mga ulat lang na may " +
+      "lokasyon, mula sa iisang barangay, at naipadala sa loob ng 72 oras ng isa't isa ang " +
+      "maaaring pagsamahin.",
   },
   "queue.sla.title": {
     en: "Tier 0 report past its 5-minute window",
@@ -497,6 +502,34 @@ export const MESSAGES = {
   },
 
   // --- Cluster Explorer (empty state only; see ClusterExplorerClient) -------
+  "cluster.card.inBarangay": { en: "{count} reports in {barangay}", tl: "{count} ulat sa {barangay}" },
+  "cluster.card.acrossBarangays": { en: "{count} reports across {barangays} barangays", tl: "{count} ulat mula sa {barangays} barangay" },
+  "cluster.card.withheld": { en: "· {count} identity-withheld", tl: "· {count} nakatago ang pagkakakilanlan" },
+  "cluster.card.validate": { en: "Validate as one cluster", tl: "I-validate bilang isang kumpol" },
+  "cluster.card.done": { en: "— all {count} reports validated. They move to Recent validated.", tl: "— na-validate ang lahat ng {count} ulat. Lilipat ang mga ito sa Kamakailang Na-validate." },
+  "cluster.toast.all": { en: "Validated all {count} reports in {id}", tl: "Na-validate ang lahat ng {count} ulat sa {id}" },
+  "cluster.toast.partial": { en: "Validated {validated} of {total} — {failed} could not be validated", tl: "Na-validate ang {validated} sa {total} — hindi na-validate ang {failed}" },
+  "cluster.toast.failed": { en: "Could not validate this cluster", tl: "Hindi ma-validate ang kumpol na ito" },
+  "cluster.confirm.title": { en: "Validate all {count} reports in {id}?", tl: "I-validate ang lahat ng {count} ulat sa {id}?" },
+  "cluster.confirm.body": { en: "Each report is validated individually. Any that another official has already reviewed will be skipped and reported back.", tl: "Isa-isang iva-validate ang bawat ulat. Lalaktawan ang anumang nasuri na ng ibang opisyal, at sasabihin kung alin." },
+  "cluster.confirm.label": { en: "Validate {count} reports", tl: "I-validate ang {count} ulat" },
+  "cluster.list.title": { en: "Clusters · {count}", tl: "Mga kumpol · {count}" },
+  "cluster.list.members": { en: "{count} members", tl: "{count} kasapi" },
+  "cluster.list.radius": { en: " · {meters}m radius", tl: " · {meters}m radius" },
+  "cluster.status.standard": { en: "Standard", tl: "Karaniwan" },
+  "cluster.member.title": { en: "{id} · {category}, {count} reports clustered", tl: "{id} · {category}, {count} ulat sa kumpol" },
+  "cluster.member.where": { en: "Validate members from the Queue", tl: "I-validate ang mga kasapi mula sa Pila ng Ulat" },
+  "cluster.member.primary": { en: "Primary", tl: "Pangunahin" },
+  "cluster.member.related": { en: "Related", tl: "Kaugnay" },
+  "cluster.signal.visualHash": { en: "Visual hash {value}", tl: "Visual hash {value}" },
+  "cluster.signal.temporal": { en: "Temporal Δ {minutes}m {seconds}s", tl: "Agwat sa oras {minutes}m {seconds}s" },
+  "cluster.signal.sitio": { en: "{sitio} radius", tl: "Radius ng {sitio}" },
+  "cluster.map.title": { en: "Spatial extent", tl: "Saklaw sa mapa" },
+  "cluster.map.radius": { en: "{meters}m radius around centroid", tl: "{meters}m radius mula sa gitna" },
+  "cluster.map.noExtent": { en: "Precise spatial extent not available yet", tl: "Wala pang eksaktong saklaw sa mapa" },
+  "cluster.map.aria": { en: "Cluster map, schematic and not to scale", tl: "Mapa ng kumpol, iskematiko at hindi eksakto ang sukat" },
+  "cluster.map.schematic": { en: "Schematic, not to scale: each dot is one of the cluster's reports, not its real position.", tl: "Iskematiko at hindi eksakto ang sukat: bawat tuldok ay isa sa mga ulat ng kumpol, hindi ang tunay nitong lokasyon." },
+  "cluster.map.area": { en: "Barangay: {name}", tl: "Barangay: {name}" },
   "clusters.emptyTitle": {
     en: "Duplicate detection isn't connected yet",
     tl: "Hindi pa nakakonekta ang pagtukoy ng doble",
@@ -506,13 +539,15 @@ export const MESSAGES = {
       "Reports aren't being grouped into clusters yet, so this page stays empty — that " +
       "doesn't mean there are no duplicates. Once grouping is switched on, clusters of two " +
       "or more related reports will appear here. Reports sent without a location, including " +
-      "every identity-withheld report, can't be grouped.",
+      "every identity-withheld report, can't be grouped, and only reports from the same " +
+      "barangay, filed within 72 hours of each other, are compared.",
     tl:
       "Hindi pa pinagsasama-sama ang mga ulat sa mga kumpol, kaya walang laman ang page na " +
       "ito — hindi ibig sabihin nito na walang dobleng ulat. Kapag binuksan na ang " +
       "pagsasama-sama, lalabas dito ang mga kumpol ng dalawa o higit pang magkakaugnay na " +
       "ulat. Hindi maisasama ang mga ulat na walang lokasyon, kasama ang bawat ulat na " +
-      "nakatago ang pagkakakilanlan.",
+      "nakatago ang pagkakakilanlan, at ang mga ulat lang mula sa iisang barangay, na " +
+      "naipadala sa loob ng 72 oras ng isa't isa, ang pinaghahambing.",
   },
 
   // --- Audit Log (sample page) ----------------------------------------------

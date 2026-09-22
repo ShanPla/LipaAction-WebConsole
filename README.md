@@ -175,7 +175,10 @@ In each case the console shows nothing rather than an approximation.
   assignments back to reports, so the Cluster Explorer and the queue's Flagged
   duplicates tab are empty against live data. There is also no dedicated clusters
   table, so no centroid, radius, or per-report proximity signals exist to show; the
-  spatial panel says so rather than displaying invented figures.
+  spatial panel is a labelled schematic rather than a map with invented positions.
+  Even once connected, only reports that carry a location, from the same barangay and
+  filed within 72 hours of each other, can be grouped; identity-withheld reports carry
+  no location by design, so they never are.
 - **Priority comes from the inference service.** A report it has not scored is labelled
   Not scored rather than given a tier, and pending reports are listed highest score
   first, then longest-waiting first, with unscored reports after scored ones. Because
@@ -214,9 +217,8 @@ In each case the console shows nothing rather than an approximation.
   text is never translated — it is shown exactly as the resident wrote it. Values the
   server formats (report categories, priority levels, relative times like "5m ago",
   review timestamps) and error messages returned by the server stay in English, as do
-  the sign-in and error pages and the CSV export. The Cluster Explorer's populated
-  view, unreachable until duplicate detection is connected, is English only. The
-  Tagalog wording is a first draft pending review. A page loads in the role's default
+  the sign-in and error pages and the CSV export. The Tagalog wording is a first draft
+  pending review. A page loads in the role's default
   language and switches to a different saved choice a moment later.
 - **The alert sound needs one click on the queue page.** Browsers block sound on a page
   nobody has clicked, and the chime is triggered by an arriving report, not a click. After

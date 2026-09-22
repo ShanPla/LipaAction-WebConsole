@@ -79,12 +79,16 @@ export async function getBarangayClusters(
   for (const [clusterId, group] of groups) {
     if (group.length < 2) continue; // not actually a duplicate group
 
-    // Ordering only: an unscored member ranks below every tier when picking
-    // the cluster's headline status. Its own badge still says Not scored.
-    const highestPriority = group.reduce((worst, r) => {
-      const p = r.priority_name ?? "Low";
+    // The cluster's headline status is the highest tier any member was
+    // scored. Unscored members don't count towards it, and a cluster with no
+    // scored member has none: it used to start from Low and read [Standard]
+    // over reports nobody had scored, a tier by default.
+    const highestPriority = group.reduce<string | null>((worst, r) => {
+      const p = r.priority_name;
+      if (p === null) return worst;
+      if (worst === null) return p;
       return (PRIORITY_ORDER[p] ?? 0) > (PRIORITY_ORDER[worst] ?? 0) ? p : worst;
-    }, "Low");
+    }, null);
 
     const members: ClusterMemberDetail[] = group.map((r, idx) => ({
       reportId: r.id,
@@ -92,6 +96,7 @@ export async function getBarangayClusters(
       priority: r.priority_name,
       relationship: idx === 0 ? "Primary" : "Related",
       timestamp: timeAgo(r.created_at),
+      submittedAt: r.created_at,
       reporter: {
         name: reporterLabel(r.identity_withheld),
         identityWithheld: r.identity_withheld,
@@ -104,7 +109,7 @@ export async function getBarangayClusters(
       id: clusterId,
       category: categoryLabel(group[0].category),
       memberCount: group.length,
-      status: statusFromPriority(highestPriority),
+      status: highestPriority === null ? null : statusFromPriority(highestPriority),
       // No radiusMeters — see the "Known simplification" note above.
       centroidLabel: barangayName,
       members,
