@@ -191,11 +191,19 @@ export function LoginForm() {
               placeholder="you@lipa.gov.ph"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              aria-invalid={status === "error"}
+              aria-describedby={status === "error" ? "email-error" : undefined}
               className="mb-3 w-full rounded-md border border-ink-100 bg-ink-50 px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-brand-500 focus:outline-none"
             />
 
+            {/* An alert, so a screen reader announces it: a plain paragraph
+                appeared silently, and an official who can't see the screen
+                heard nothing after a failed attempt (found testing a wrong
+                code on 2026-09-22). */}
             {status === "error" && (
-              <p className="mb-3 text-xs text-priority-critical">{errorMessage}</p>
+              <p id="email-error" role="alert" className="mb-3 text-xs text-priority-critical">
+                {errorMessage}
+              </p>
             )}
 
             <Button
@@ -242,11 +250,15 @@ export function LoginForm() {
               placeholder="Enter the code from your email"
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+              aria-invalid={status === "error"}
+              aria-describedby={status === "error" ? "code-error" : undefined}
               className="mb-3 w-full rounded-md border border-ink-100 bg-ink-50 px-3 py-2 text-center text-lg tracking-widest text-ink-900 placeholder:text-sm placeholder:tracking-normal placeholder:text-ink-500 focus:border-brand-500 focus:outline-none"
             />
 
             {status === "error" && (
-              <p className="mb-3 text-xs text-priority-critical">{errorMessage}</p>
+              <p id="code-error" role="alert" className="mb-3 text-xs text-priority-critical">
+                {errorMessage}
+              </p>
             )}
 
             <Button
