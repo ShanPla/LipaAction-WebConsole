@@ -46,6 +46,36 @@ const TIER0_SLA_MS = 5 * 60_000;
 // a five-minute window.
 const SLA_CHECK_MS = 15_000;
 
+// Everything the page shows as needing action: pending (kept in step with
+// PENDING_STATUSES in queue.ts) and validated-awaiting-routing. The loader
+// fetches both lists uncapped, so the set the catch-up compares is exact.
+const ACTIONABLE_STATUSES = ["pending_priority", "prioritized", "validated"];
+const CATCH_UP_LIMIT = 1000;
+
+// Relative ages ([5m ago]) and the median wait are computed on the server,
+// so data this old gets refreshed on a catch-up even when nothing changed.
+const STALE_AGES_MS = 60_000;
+
+function signatureOf(rows: { id: string; status: string }[]): string {
+  return rows
+    .map((r) => `${r.id}:${r.status}`)
+    .sort()
+    .join("|");
+}
+
+// What the page is showing, in the shape the catch-up query returns. null
+// when the page's own data can't be trusted for a comparison.
+function actionableSignature(data: QueueData): string | null {
+  if (data.loadFailed || data.validatedUnavailable) return null;
+  const { emergency, standard, validated } = data.queueByTab;
+  return signatureOf(
+    [...emergency, ...standard, ...validated.filter((r) => r.details.status === "validated")].map((r) => ({
+      id: r.id,
+      status: r.details.status,
+    }))
+  );
+}
+
 export function QueueClient({
   official,
   queueData,
@@ -105,6 +135,15 @@ export function QueueClient({
   useEffect(() => {
     prefsRef.current = prefs;
   });
+
+  // The latest data and when it reached this component, for the catch-up
+  // check below — a long-lived callback that must not be rebuilt per refresh.
+  const queueDataRef = useRef(queueData);
+  const dataArrivedAt = useRef(0);
+  useEffect(() => {
+    queueDataRef.current = queueData;
+    dataArrivedAt.current = Date.now();
+  }, [queueData]);
 
   // The chime needs one click or key press on this page before the browser
   // lets it play (see chime.ts). After a reload there hasn't been one, so the
@@ -172,22 +211,54 @@ export function QueueClient({
     tryRefresh();
   }, [tryRefresh]);
 
+  /**
+   * Catches up after a gap the Realtime channel can't cover — a (re)subscribe,
+   * the tab coming back, the network returning — without refreshing when
+   * nothing changed. router.refresh() on Next 14 empties the router's whole
+   * client cache, so refreshing on every subscribe made every other page load
+   * again behind its skeleton after each visit here. Instead one small query
+   * compares the reports this page shows as needing action (id and status)
+   * with the database, and only a difference refreshes. When the check can't
+   * answer, or the data on screen is over a minute old, it refreshes anyway.
+   */
+  const catchUp = useCallback(async () => {
+    const rendered = actionableSignature(queueDataRef.current);
+    if (rendered === null || Date.now() - dataArrivedAt.current > STALE_AGES_MS) {
+      requestRefresh();
+      return;
+    }
+    try {
+      const { data, error } = await createClient()
+        .from("incident_reports")
+        .select("id, status")
+        .eq("incident_barangay_id", official.barangayId)
+        .in("status", ACTIONABLE_STATUSES)
+        .limit(CATCH_UP_LIMIT);
+      if (error || !data || data.length >= CATCH_UP_LIMIT || signatureOf(data) !== rendered) {
+        requestRefresh();
+      }
+    } catch {
+      requestRefresh();
+    }
+  }, [requestRefresh, official.barangayId]);
+
   // Flushes a held refresh once it's clear, and catches up after the gaps a
   // Realtime channel can't see: the tab hidden or the laptop asleep (events
   // missed while suspended are not replayed), and the network coming back.
   useEffect(() => {
     const flush = window.setInterval(tryRefresh, 1000);
     const onVisible = () => {
-      if (document.visibilityState === "visible") requestRefresh();
+      if (document.visibilityState === "visible") void catchUp();
     };
-    window.addEventListener("online", requestRefresh);
+    const onOnline = () => void catchUp();
+    window.addEventListener("online", onOnline);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       window.clearInterval(flush);
-      window.removeEventListener("online", requestRefresh);
+      window.removeEventListener("online", onOnline);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [tryRefresh, requestRefresh]);
+  }, [tryRefresh, catchUp]);
 
   // Emergencies already chimed for, so the Realtime event and the next
   // refresh's arrival check don't both sound for the same report.
@@ -250,8 +321,9 @@ export function QueueClient({
           // Catch up on every (re)subscribe. Changes made between the server
           // render and the first subscribe, or during a reconnect gap, are
           // never replayed as events — without this the footer said [Live]
-          // over a queue that could be missing a report indefinitely.
-          requestRefresh();
+          // over a queue that could be missing a report indefinitely. The
+          // check refreshes only if something actually changed (see catchUp).
+          void catchUp();
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
           // Any failure state falls back to polling below rather than going
           // silent — the page must never look live when it isn't.
@@ -264,7 +336,7 @@ export function QueueClient({
       window.clearTimeout(debounce);
       void supabase.removeChannel(channel);
     };
-  }, [requestRefresh, official.barangayId]);
+  }, [requestRefresh, catchUp, official.barangayId]);
 
   // Polling, only while the channel isn't delivering.
   useEffect(() => {
