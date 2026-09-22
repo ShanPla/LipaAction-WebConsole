@@ -56,9 +56,31 @@ const CATCH_UP_LIMIT = 1000;
 // so data this old gets refreshed on a catch-up even when nothing changed.
 const STALE_AGES_MS = 60_000;
 
+// Agency progress arrives on this clock rather than live — see the agency
+// progress check in the component.
+const AGENCY_PROGRESS_CHECK_MS = 60_000;
+const AGENCY_PROGRESS_LIMIT = 1000;
+
 function signatureOf(rows: { id: string; status: string }[]): string {
   return rows
     .map((r) => `${r.id}:${r.status}`)
+    .sort()
+    .join("|");
+}
+
+// Where each agency stands on each report, without naming the agency: the
+// page holds agency names and the query returns ids, and a new, closed or
+// acknowledged row changes this string either way.
+function progressSignature(
+  rows: {
+    reportId: string;
+    acknowledgedAt: string | null;
+    resolvedAt: string | null;
+    resolutionOutcome: string | null;
+  }[]
+): string {
+  return rows
+    .map((r) => `${r.reportId}:${r.acknowledgedAt ? 1 : 0}${r.resolvedAt ? 1 : 0}:${r.resolutionOutcome ?? "-"}`)
     .sort()
     .join("|");
 }
@@ -259,6 +281,66 @@ export function QueueClient({
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [tryRefresh, catchUp]);
+
+  /**
+   * Agency progress (an acknowledgement, a resolution, an out-of-scope
+   * return) is written to agency_routing, and only incident_reports is in
+   * the Realtime publication. So an agency acting on a routed report sent
+   * this page nothing: the row kept reading [awaiting acknowledgement] until
+   * something else refreshed it, while an official watched it on screen.
+   * About once a minute while the queue is on screen, this compares the
+   * routing the page shows with the database and refreshes only on a
+   * difference, for the same router-cache reason as catchUp. A check that
+   * fails waits for the next one: refreshing on an error would repeat every
+   * minute for as long as the error lasted.
+   */
+  useEffect(() => {
+    let inFlight = false;
+    async function checkAgencyProgress() {
+      if (inFlight || document.visibilityState !== "visible") return;
+      const data = queueDataRef.current;
+      if (data.loadFailed || data.validatedUnavailable) return;
+      const shown = data.queueByTab.validated;
+      if (shown.length === 0) return;
+      inFlight = true;
+      try {
+        const { data: rows, error } = await createClient()
+          .from("agency_routing")
+          .select("incident_report_id, acknowledged_at, resolved_at, resolution_outcome")
+          .in(
+            "incident_report_id",
+            shown.map((r) => r.id)
+          )
+          .limit(AGENCY_PROGRESS_LIMIT);
+        if (error || !rows || rows.length >= AGENCY_PROGRESS_LIMIT) return;
+        const rendered = progressSignature(
+          shown.flatMap((r) =>
+            r.details.routing.map((a) => ({
+              reportId: r.id,
+              acknowledgedAt: a.acknowledgedAt,
+              resolvedAt: a.resolvedAt,
+              resolutionOutcome: a.resolutionOutcome,
+            }))
+          )
+        );
+        const current = progressSignature(
+          rows.map((row) => ({
+            reportId: row.incident_report_id,
+            acknowledgedAt: row.acknowledged_at,
+            resolvedAt: row.resolved_at,
+            resolutionOutcome: row.resolution_outcome,
+          }))
+        );
+        if (current !== rendered) requestRefresh();
+      } catch {
+        // The next check runs in a minute.
+      } finally {
+        inFlight = false;
+      }
+    }
+    const id = window.setInterval(() => void checkAgencyProgress(), AGENCY_PROGRESS_CHECK_MS);
+    return () => window.clearInterval(id);
+  }, [requestRefresh]);
 
   // Emergencies already chimed for, so the Realtime event and the next
   // refresh's arrival check don't both sound for the same report.
