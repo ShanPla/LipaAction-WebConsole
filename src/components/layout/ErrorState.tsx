@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, buttonClassName } from "@/components/ui/Button";
 
 /**
@@ -25,11 +26,27 @@ export function ErrorState({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const router = useRouter();
+  const [retrying, startRetry] = useTransition();
+
   useEffect(() => {
     // Server-side throws are already logged by the host; this covers the
     // client half so a browser-only failure isn't invisible.
     console.error(`[${pageName}]`, error);
   }, [pageName, error]);
+
+  // reset() on its own only re-renders what the browser already holds, and
+  // after a server-side throw that is the failed render: Try again sent no
+  // request and put the same error back, even once the cause had cleared.
+  // refresh() asks the server for the page again, and reset() in the same
+  // transition swaps this screen out only when the new render arrives. If
+  // the server is still failing, this screen comes back with a new reference.
+  function retry() {
+    startRetry(() => {
+      router.refresh();
+      reset();
+    });
+  }
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-ink-50 px-4">
@@ -41,8 +58,8 @@ export function ErrorState({
         </p>
 
         <div className="flex justify-center gap-2">
-          <Button variant="primary" size="sm" onClick={reset}>
-            Try again
+          <Button variant="primary" size="sm" onClick={retry} disabled={retrying}>
+            {retrying ? "Trying again…" : "Try again"}
           </Button>
           <Link href="/queue" className={buttonClassName("secondary", "sm")}>
             Back to Queue
