@@ -8,6 +8,7 @@ import { playChime, primeChime } from "@/lib/chime";
 import { usePreferences } from "@/lib/preferences";
 import { useT } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
+import { medianAgeMinutes } from "@/lib/utils";
 import { KpiHeader } from "@/components/queue/KpiHeader";
 import { ClusterCard } from "@/components/queue/ClusterCard";
 import { QueueTabs, queuePanelDomId, queueTabDomId } from "@/components/queue/QueueTabs";
@@ -52,9 +53,17 @@ const SLA_CHECK_MS = 15_000;
 const ACTIONABLE_STATUSES = ["pending_priority", "prioritized", "validated"];
 const CATCH_UP_LIMIT = 1000;
 
-// Relative ages ([5m ago]) and the median wait are computed on the server,
-// so data this old gets refreshed on a catch-up even when nothing changed.
-const STALE_AGES_MS = 60_000;
+// The catch-up compares only the reports needing action. The rest of the
+// page (the routed half of Recent validated, the Validated today count) can
+// lag it, so data this old gets refreshed on a catch-up even when nothing it
+// compares has changed.
+const STALE_DATA_MS = 60_000;
+
+// How often the ages on screen ([5m ago], Median wait) are worked out again.
+// They are computed here from each report's exact submission time rather
+// than taken from the server, because a live queue with nothing changing
+// doesn't fetch, and server-formatted ages froze at the last fetch.
+const AGE_TICK_MS = 30_000;
 
 // Agency progress arrives on this clock rather than live — see the agency
 // progress check in the component.
@@ -213,6 +222,15 @@ export function QueueClient({
   const pointerOverList = useRef(false);
   const [updateWaiting, setUpdateWaiting] = useState(false);
 
+  // The page's own clock for ages (see AGE_TICK_MS). null until mounted, so
+  // the first render uses the server's strings and matches its HTML.
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    setNow(Date.now());
+    const id = window.setInterval(() => setNow(Date.now()), AGE_TICK_MS);
+    return () => window.clearInterval(id);
+  }, []);
+
   const tryRefresh = useCallback(() => {
     if (!refreshPending.current) return;
     const held =
@@ -245,7 +263,7 @@ export function QueueClient({
    */
   const catchUp = useCallback(async () => {
     const rendered = actionableSignature(queueDataRef.current);
-    if (rendered === null || Date.now() - dataArrivedAt.current > STALE_AGES_MS) {
+    if (rendered === null || Date.now() - dataArrivedAt.current > STALE_DATA_MS) {
       requestRefresh();
       return;
     }
@@ -563,6 +581,7 @@ export function QueueClient({
         report={report}
         resolvedAs={isReviewable(report.details.status) ? resolved[report.id] : undefined}
         justArrived={arrivedIds.has(report.id)}
+        now={now}
         onResolved={(verdict) => setResolved((prev) => ({ ...prev, [report.id]: verdict }))}
         onOpenDetails={() => setSelected(report)}
       />
@@ -592,7 +611,23 @@ export function QueueClient({
       }}
     >
       {queueData.loadFailed && <DataUnavailableBanner what={t("banner.what.queue")} />}
-      <KpiHeader summary={queueData.kpiSummary} />
+      <KpiHeader
+        summary={
+          now === null
+            ? queueData.kpiSummary
+            : {
+                ...queueData.kpiSummary,
+                // Pending is exactly these two tabs; Flagged duplicates holds
+                // members of them, not extra reports.
+                medianMinutes: medianAgeMinutes(
+                  [...queueData.queueByTab.emergency, ...queueData.queueByTab.standard].map(
+                    (r) => r.details.submittedAt
+                  ),
+                  now
+                ),
+              }
+        }
+      />
 
       {activeTab === "emergency" && queueData.activeCluster && (
         // Keyed on the cluster: its local [resolved] flag must not carry over

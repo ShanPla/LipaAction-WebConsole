@@ -171,6 +171,34 @@ export function formatDuration(minutes: number): string {
   const remainderHours = hours % 24;
   return remainderHours === 0 ? `${days}d` : `${days}d ${remainderHours}h`;
 }
+
+/**
+ * [5m ago] from an exact timestamp. English on purpose, like every other
+ * value formatted from report data. `now` is a parameter so the queue can
+ * re-render ages on its own clock: ages formatted on the server froze at the
+ * last fetch, and a live queue with nothing changing doesn't fetch, so a
+ * report that arrived [just now] still said so minutes later, beside a
+ * 5-minute SLA. A clock behind the database reads as [just now], not as a
+ * negative age.
+ */
+export function timeAgo(isoString: string, now: number = Date.now()): string {
+  const diffMin = Math.floor((now - new Date(isoString).getTime()) / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  return `${Math.floor(diffHr / 24)}d ago`;
+}
+
+/** Median age, in whole minutes, of the given timestamps; 0 when there are none. */
+export function medianAgeMinutes(isoStrings: string[], now: number = Date.now()): number {
+  if (isoStrings.length === 0) return 0;
+  const ages = isoStrings
+    .map((iso) => Math.floor((now - new Date(iso).getTime()) / 60000))
+    .sort((a, b) => a - b);
+  const mid = Math.floor(ages.length / 2);
+  return ages.length % 2 !== 0 ? ages[mid] : Math.round((ages[mid - 1] + ages[mid]) / 2);
+}
 // Philippine Standard Time, fixed at UTC+8 — the country observes no DST, so
 // a constant offset is exact, not an approximation.
 const MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;

@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { categoryLabel, reporterLabel, startOfManilaDay } from "@/lib/utils";
+import { categoryLabel, medianAgeMinutes, reporterLabel, startOfManilaDay, timeAgo } from "@/lib/utils";
 import type {
   AgencyRouting,
   KpiSummary,
@@ -235,7 +235,7 @@ export async function getBarangayQueue(
     // have been waiting" — same KPI tile, adjusted meaning. Revisit once
     // agency_routing's resolved_at is wired in for a true resolution-time
     // metric.
-    medianMinutes: medianAgeMinutes(pending),
+    medianMinutes: medianAgeMinutes(pending.map((r) => r.created_at)),
     // Today in Manila — see startOfManilaDay. Counted in SQL rather than from
     // the tab's rows, whose routed half is capped and would undercount a busy
     // day. Includes routed and resolved, so routing a report doesn't take it
@@ -452,22 +452,4 @@ function failedQueueData(): QueueData {
     // The whole page failed; the banner already says so.
     validatedUnavailable: false,
   };
-}
-
-function timeAgo(isoString: string): string {
-  const diffMin = Math.floor((Date.now() - new Date(isoString).getTime()) / 60000);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  return `${Math.floor(diffHr / 24)}d ago`;
-}
-
-function medianAgeMinutes(rows: RawReport[]): number {
-  if (rows.length === 0) return 0;
-  const ages = rows
-    .map((r) => Math.floor((Date.now() - new Date(r.created_at).getTime()) / 60000))
-    .sort((a, b) => a - b);
-  const mid = Math.floor(ages.length / 2);
-  return ages.length % 2 !== 0 ? ages[mid] : Math.round((ages[mid - 1] + ages[mid]) / 2);
 }

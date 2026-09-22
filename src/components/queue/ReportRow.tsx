@@ -5,7 +5,7 @@ import { ReporterChip } from "@/components/ui/ReporterChip";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ReasonPromptModal } from "@/components/ui/ReasonPromptModal";
-import { cx } from "@/lib/utils";
+import { cx, timeAgo } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
 import { useReportRouting } from "./useReportRouting";
@@ -21,12 +21,16 @@ export function ReportRow({
   // QueueClient, which is the only place that can tell a new report from one
   // that was already on screen.
   justArrived = false,
+  // QueueClient's clock, so the age keeps moving while nothing refreshes;
+  // null on the first render, which shows the server's own string.
+  now = null,
   onResolved,
   onOpenDetails,
 }: {
   report: QueueReport;
   resolvedAs?: Verdict;
   justArrived?: boolean;
+  now?: number | null;
   onResolved: (verdict: Verdict) => void;
   onOpenDetails: () => void;
 }) {
@@ -154,7 +158,7 @@ export function ReportRow({
                 <span aria-hidden>·</span>
               </>
             )}
-            <span>{report.timestamp}</span>
+            <span>{now === null ? report.timestamp : timeAgo(report.details.submittedAt, now)}</span>
             <span aria-hidden>·</span>
             <ReporterChip reporter={report.reporter} />
           </div>
