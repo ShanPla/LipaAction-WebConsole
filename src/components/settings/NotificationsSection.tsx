@@ -2,6 +2,7 @@
 
 import { useToast } from "@/components/ui/Toast";
 import { usePreferences } from "@/lib/preferences";
+import { playChime } from "@/lib/chime";
 import { useT } from "@/lib/i18n";
 import type { BarangayRole } from "@/lib/auth";
 
@@ -88,6 +89,16 @@ export function NotificationsSection({ role }: { role: BarangayRole }) {
         <div>
           <p className="text-sm text-ink-900">{t("notifications.audible")}</p>
           <p className="text-xs text-ink-500">{t("notifications.audibleBody")}</p>
+          {/* Plays the real chime. The click is itself the gesture browsers
+              require, so this also proves the speakers and the sound path
+              work without waiting for a report to arrive. */}
+          <button
+            type="button"
+            onClick={playChime}
+            className="mt-1 text-xs font-medium text-brand-700 underline-offset-2 hover:underline"
+          >
+            {t("notifications.testSound")}
+          </button>
         </div>
         <Toggle
           label={t("notifications.audible")}

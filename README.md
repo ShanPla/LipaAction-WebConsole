@@ -218,6 +218,10 @@ In each case the console shows nothing rather than an approximation.
   view, unreachable until duplicate detection is connected, is English only. The
   Tagalog wording is a first draft pending review. A page loads in the role's default
   language and switches to a different saved choice a moment later.
+- **The alert sound needs one click on the queue page.** Browsers block sound on a page
+  nobody has clicked, and the chime is triggered by an arriving report, not a click. After
+  loading or refreshing the queue, the footer asks for one click until it has had one.
+  Settings has a test-sound button.
 - **Live updates need a websocket.** On a network that blocks them, the queue says so
   in its footer and falls back to a 30-second refresh.
 

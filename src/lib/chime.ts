@@ -7,11 +7,15 @@ let context: AudioContext | null = null;
  *
  * Synthesised with the Web Audio API rather than shipped as a file: nothing
  * to host, nothing to fetch, and no dependency on the artifact/CDN rules of
- * wherever this ends up deployed. Browsers refuse to start audio before the
- * page has had a user gesture; by the time an official is on the queue they
- * have signed in, so the context can be created lazily on first use. If the
- * browser still refuses, the alert is silently skipped — a chime is a
- * courtesy, and the report is on screen regardless.
+ * wherever this ends up deployed.
+ *
+ * Browsers refuse to start audio until the page has had a user gesture, and a
+ * chime is never fired by one — it comes from a Realtime event. Signing in
+ * counts only until the page is reloaded: a queue reopened from a bookmark or
+ * refreshed has had no gesture, and its first arrival would be silent. So the
+ * queue calls primeChime() on the first click or key press, and says on screen
+ * that sound is waiting for one. If the browser still refuses, the alert is
+ * skipped — the report is on screen regardless.
  */
 export function playChime(): void {
   try {
@@ -35,6 +39,20 @@ export function playChime(): void {
     void Promise.race([settled, tooLate]).then((running) => {
       if (running) playTones(ctx);
     });
+  } catch {
+    // No audio available in this environment.
+  }
+}
+
+/**
+ * Creates and resumes the audio context inside a user gesture, so that later
+ * chimes, which no gesture triggers, are allowed to play. Call it from a
+ * click or key handler; outside one, resume() simply stays pending.
+ */
+export function primeChime(): void {
+  try {
+    if (context === null) context = new AudioContext();
+    if (context.state !== "running") void context.resume().catch(() => {});
   } catch {
     // No audio available in this environment.
   }

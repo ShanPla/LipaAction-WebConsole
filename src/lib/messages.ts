@@ -150,6 +150,10 @@ export const MESSAGES = {
   },
   "queue.footer.connecting": { en: "Connecting to live updates…", tl: "Kumokonekta sa live update…" },
   "queue.footer.dataAsOf": { en: "Data as of {time}", tl: "Datos noong {time}" },
+  "queue.footer.soundLocked": {
+    en: "Click anywhere on the page to allow the alert sound",
+    tl: "Mag-click kahit saan sa page para payagan ang tunog ng alerto",
+  },
   "queue.footer.updateWaiting": {
     en: "Update waiting — it appears when you’re done here",
     tl: "May naghihintay na update — lalabas ito kapag tapos ka na rito",
@@ -652,6 +656,7 @@ export const MESSAGES = {
     en: "Plays a short chime when a new fast-triage report arrives while the Queue is open.",
     tl: "Tumutunog nang maikli kapag may dumating na bagong ulat sa mabilisang triage habang bukas ang Pila.",
   },
+  "notifications.testSound": { en: "Play test sound", tl: "Patugtugin ang pansubok na tunog" },
   "notifications.sla": { en: "SLA breach browser notification", tl: "Abiso sa browser kapag lumampas sa SLA" },
   "notifications.slaBody": {
     en:

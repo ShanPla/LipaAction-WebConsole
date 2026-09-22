@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { DataUnavailableBanner } from "@/components/layout/DataUnavailableBanner";
-import { playChime } from "@/lib/chime";
+import { playChime, primeChime } from "@/lib/chime";
 import { usePreferences } from "@/lib/preferences";
 import { useT } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
@@ -105,6 +105,27 @@ export function QueueClient({
   useEffect(() => {
     prefsRef.current = prefs;
   });
+
+  // The chime needs one click or key press on this page before the browser
+  // lets it play (see chime.ts). After a reload there hasn't been one, so the
+  // footer says so until the first gesture, which also unlocks the audio.
+  // Browsers without navigator.userActivation get the unlock but no notice.
+  const [soundLocked, setSoundLocked] = useState(false);
+  useEffect(() => {
+    const activation = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } })
+      .userActivation;
+    if (activation && !activation.hasBeenActive) setSoundLocked(true);
+    function unlock() {
+      primeChime();
+      setSoundLocked(false);
+    }
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
 
   // ---------------------------------------------------------------------
   // Refresh scheduling.
@@ -501,6 +522,7 @@ export function QueueClient({
         {freshness === "connecting" && t("queue.footer.connecting")}
         {receivedAt && ` · ${t("queue.footer.dataAsOf", { time: formatClock(receivedAt) })}`}
         {updateWaiting && ` · ${t("queue.footer.updateWaiting")}`}
+        {prefs.audibleAlertNewEmergency && soundLocked && ` · ${t("queue.footer.soundLocked")}`}
       </p>
 
       {selected && selectedReport && (
