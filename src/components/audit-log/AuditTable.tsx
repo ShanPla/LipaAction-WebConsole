@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/Badge";
 import { cx, initials } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
+import { Icon } from "@/components/ui/Icon";
 import type { AuditLogEntry } from "@/types";
 
 const actionToneMap: Record<AuditLogEntry["actionType"], "neutral" | "brand" | "warning"> = {
@@ -27,7 +28,7 @@ export function AuditTable({ entries }: { entries: AuditLogEntry[] }) {
   return (
     <div className="overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
       <div className="flex items-center gap-2 border-b border-ink-100 bg-brand-50 px-4 py-2 text-xs text-brand-700">
-        <span aria-hidden>🔒</span>
+        <Icon name="lock" className="h-3.5 w-3.5" />
         {t("audit.readOnly")}
       </div>
       <div className="overflow-x-auto">
@@ -57,7 +58,7 @@ export function AuditTable({ entries }: { entries: AuditLogEntry[] }) {
                     aria-hidden
                     className="flex h-6 w-6 items-center justify-center rounded-full bg-ink-100 text-[10px] font-semibold text-ink-700"
                   >
-                    {entry.actorName === "System" ? "⚙" : initials(entry.actorName)}
+                    {entry.actorName === "System" ? <Icon name="system" className="h-3.5 w-3.5" /> : initials(entry.actorName)}
                   </span>
                   <div className="leading-tight">
                     <p className="text-xs font-medium text-ink-900">{entry.actorName}</p>

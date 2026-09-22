@@ -1,4 +1,5 @@
 import { ProfileMenu } from "./ProfileMenu";
+import { Icon } from "@/components/ui/Icon";
 import { cx } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { usePreferences, type InterfaceLanguage } from "@/lib/preferences";
@@ -85,9 +86,7 @@ export function TopBar({
           aria-label={t("shell.openMenu")}
           className="rounded-md p-1.5 text-ink-700 hover:bg-ink-100 lg:hidden"
         >
-          <span aria-hidden className="text-lg leading-none">
-            ☰
-          </span>
+          <Icon name="menu" className="h-5 w-5" />
         </button>
         <nav className="flex min-w-0 items-center gap-1.5 truncate text-sm text-ink-500" aria-label={t("shell.breadcrumb")}>
           {breadcrumb.map((crumb, i) => (
@@ -104,7 +103,7 @@ export function TopBar({
       <div className="flex items-center gap-3">
         {search && (
           <label className="hidden items-center gap-2 rounded-md border border-ink-100 bg-ink-50 px-2.5 py-1.5 text-xs text-ink-500 md:flex">
-            <span aria-hidden>🔍</span>
+            <Icon name="search" className="h-3.5 w-3.5" />
             <span className="sr-only">{search.label}</span>
             <input
               type="search"

@@ -4,22 +4,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cx, displayName, initials } from "@/lib/utils";
 import { useT, type MessageKey } from "@/lib/i18n";
+import { Icon, type IconName } from "@/components/ui/Icon";
 import type { OfficialProfile } from "@/lib/auth";
 
-type NavItem = { href: string; label: MessageKey; icon: string };
+type NavItem = { href: string; label: MessageKey; icon: IconName };
 
 const primaryNav: NavItem[] = [
-  { href: "/queue", label: "nav.queue", icon: "▤" },
-  { href: "/cluster-explorer", label: "nav.clusterExplorer", icon: "◎" },
+  { href: "/queue", label: "nav.queue", icon: "queue" },
+  { href: "/cluster-explorer", label: "nav.clusterExplorer", icon: "clusters" },
 ];
 
 const secondaryNav: NavItem[] = [
-  { href: "/validation-history", label: "nav.validationHistory", icon: "✓" },
-  { href: "/reports", label: "nav.reports", icon: "▦" },
-  { href: "/audit-log", label: "nav.auditLog", icon: "≣" },
+  { href: "/validation-history", label: "nav.validationHistory", icon: "history" },
+  { href: "/reports", label: "nav.reports", icon: "reports" },
+  { href: "/audit-log", label: "nav.auditLog", icon: "audit" },
 ];
 
-const bottomNav: NavItem[] = [{ href: "/settings", label: "nav.settings", icon: "⚙" }];
+const bottomNav: NavItem[] = [{ href: "/settings", label: "nav.settings", icon: "settings" }];
 
 function NavLink({
   href,
@@ -30,7 +31,7 @@ function NavLink({
 }: {
   href: string;
   label: MessageKey;
-  icon: string;
+  icon: IconName;
   active: boolean;
   onNavigate?: () => void;
 }) {
@@ -47,9 +48,7 @@ function NavLink({
           : "text-ink-700 hover:bg-ink-100"
       )}
     >
-      <span className="w-4 text-center text-[13px]" aria-hidden>
-        {icon}
-      </span>
+      <Icon name={icon} />
       {t(label)}
     </Link>
   );

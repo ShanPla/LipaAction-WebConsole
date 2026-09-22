@@ -7,6 +7,7 @@ import { useT, type Translate } from "@/lib/i18n";
 import { useToast } from "@/components/ui/Toast";
 import { PriorityBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ReporterChip } from "@/components/ui/ReporterChip";
 import { ReasonPromptModal } from "@/components/ui/ReasonPromptModal";
@@ -141,7 +142,7 @@ export function ReportDetailPanel({
             <p className="truncate font-mono text-xs text-ink-500">{report.id}</p>
           </div>
           <Button variant="ghost" size="sm" onClick={closeUnlessWriting} aria-label={t("common.close")}>
-            ✕
+            <Icon name="close" />
           </Button>
         </header>
 

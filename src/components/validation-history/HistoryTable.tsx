@@ -2,6 +2,7 @@ import { PriorityBadge, Badge } from "@/components/ui/Badge";
 import { ReporterChip } from "@/components/ui/ReporterChip";
 import { cx } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
+import { Icon } from "@/components/ui/Icon";
 import type { ValidationRecord } from "@/types";
 
 export function HistoryTable({
@@ -62,6 +63,9 @@ export function HistoryTable({
               </td>
               <td className="px-4 py-3 align-top">
                 <Badge tone={record.verdict === "Confirmed" ? "success" : "warning"}>
+                  {/* The icon repeats the word, so the verdict is never
+                      carried by the badge colour alone. */}
+                  <Icon name={record.verdict === "Confirmed" ? "check" : "close"} className="mr-1 h-3 w-3" />
                   {t(record.verdict === "Confirmed" ? "history.verdict.confirmed" : "history.verdict.rejected")}
                 </Badge>
                 {/* Rejection reason (incident_reports.review_reason). Only

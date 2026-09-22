@@ -432,8 +432,8 @@ export const MESSAGES = {
   "history.col.official": { en: "Validating official", tl: "Opisyal na nag-validate" },
   "history.tier.emergency": { en: "Emergency", tl: "Emergency" },
   "history.tier.other_reports": { en: "Standard intake", tl: "Karaniwang ulat" },
-  "history.verdict.confirmed": { en: "✓ Confirmed", tl: "✓ Kumpirmado" },
-  "history.verdict.rejected": { en: "✕ Rejected", tl: "✕ Tinanggihan" },
+  "history.verdict.confirmed": { en: "Confirmed", tl: "Kumpirmado" },
+  "history.verdict.rejected": { en: "Rejected", tl: "Tinanggihan" },
   "history.trust": { en: "({delta} trust)", tl: "({delta} tiwala)" },
   "history.footer.filtered": {
     en: "Showing {shown} of {total} loaded records",
