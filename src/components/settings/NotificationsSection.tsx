@@ -1,10 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { usePreferences } from "@/lib/preferences";
 import { playChime } from "@/lib/chime";
 import { useT } from "@/lib/i18n";
 import type { BarangayRole } from "@/lib/auth";
+
+// How long the browser's permission question may go unanswered before the
+// page says where it went. Long enough that an ordinary popup has been
+// answered or is plainly on screen.
+const QUIET_PROMPT_HINT_MS = 3000;
 
 function Toggle({
   label,
@@ -56,6 +62,11 @@ export function NotificationsSection({ role }: { role: BarangayRole }) {
   const { prefs, update, hydrated } = usePreferences(role);
   const { showToast } = useToast();
   const t = useT();
+  // Set while the browser's permission question is unanswered, so a second
+  // click can't send a second question over the first.
+  const [asking, setAsking] = useState(false);
+  // Set once that question has gone QUIET_PROMPT_HINT_MS without an answer.
+  const [quietPrompt, setQuietPrompt] = useState(false);
 
   // Turning the browser notification on is what asks for permission. Doing
   // it here, on the click, is the only place a browser will honour the
@@ -71,10 +82,32 @@ export function NotificationsSection({ role }: { role: BarangayRole }) {
       showToast(t("notifications.unsupported"), "danger");
       return;
     }
-    const permission =
-      Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+    let permission: NotificationPermission = Notification.permission;
     if (permission !== "granted") {
+      // Edge asks quietly by default, as Chrome does for sites it judges
+      // unwanted: a bell icon in the address bar, no popup, and the question
+      // stays unanswered until the official finds the bell. Tested in Edge on
+      // 2026-09-22, the page showed nothing meanwhile, so the switch looked
+      // broken. After a few seconds without an answer, say where it went.
+      setAsking(true);
+      const hint = window.setTimeout(() => setQuietPrompt(true), QUIET_PROMPT_HINT_MS);
+      try {
+        permission = await Notification.requestPermission();
+      } finally {
+        window.clearTimeout(hint);
+        setQuietPrompt(false);
+        setAsking(false);
+      }
+    }
+    if (permission === "denied") {
       showToast(t("notifications.blocked"), "danger");
+      return;
+    }
+    if (permission !== "granted") {
+      // Dismissed, not refused: the browser will ask again next time, so
+      // [blocked in your browser settings] would send the official looking
+      // for a setting that was never changed.
+      showToast(t("notifications.notAllowed"), "info");
       return;
     }
     update({ slaBreachBrowserNotification: true });
@@ -112,11 +145,16 @@ export function NotificationsSection({ role }: { role: BarangayRole }) {
         <div>
           <p className="text-sm text-ink-900">{t("notifications.sla")}</p>
           <p className="text-xs text-ink-500">{t("notifications.slaBody")}</p>
+          {/* Always rendered, empty until needed: a live region added to the
+              page together with its text is often not announced. */}
+          <p role="status" className={quietPrompt ? "mt-1 text-xs font-medium text-ink-700" : undefined}>
+            {quietPrompt ? t("notifications.quietPrompt") : null}
+          </p>
         </div>
         <Toggle
           label={t("notifications.sla")}
           checked={prefs.slaBreachBrowserNotification}
-          disabled={!hydrated}
+          disabled={!hydrated || asking}
           onChange={handleBrowserNotificationToggle}
         />
       </div>

@@ -678,6 +678,14 @@ export const MESSAGES = {
     en: "Notifications are blocked for this site in your browser settings",
     tl: "Naka-block ang mga abiso para sa site na ito sa settings ng iyong browser",
   },
+  "notifications.quietPrompt": {
+    en: "Waiting for your browser. If no prompt appeared, click the bell icon in the address bar and choose Allow.",
+    tl: "Hinihintay ang iyong browser. Kung walang lumabas na tanong, i-click ang icon ng kampana sa address bar at piliin ang Allow.",
+  },
+  "notifications.notAllowed": {
+    en: "Notifications weren't allowed, so the switch stays off. Turn it on again to be asked again.",
+    tl: "Hindi pinayagan ang mga abiso, kaya nananatiling naka-off ang switch. I-on itong muli para tanungin ka ulit.",
+  },
 } satisfies Record<string, Entry>;
 
 export type MessageKey = keyof typeof MESSAGES;
