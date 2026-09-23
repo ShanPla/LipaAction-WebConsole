@@ -431,53 +431,75 @@ export function QueueClient({
       debounce = window.setTimeout(requestRefresh, REALTIME_DEBOUNCE_MS);
     }
 
-    const channel = supabase
-      .channel(`queue:${official.barangayId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "incident_reports",
-          filter: `incident_barangay_id=eq.${official.barangayId}`,
-        },
-        (payload) => {
-          if (disposed) return;
-          // The chime fires from the event itself, not from the refresh it
-          // triggers: a refresh can be held for as long as a drawer is open,
-          // and an official busy in a drawer is exactly who needs to hear a
-          // new emergency arrive.
-          if (payload.eventType === "INSERT") {
-            const row = payload.new as { id?: unknown; entry_tier?: unknown };
-            if (row.entry_tier === "emergency" && typeof row.id === "string" && !chimedIds.current.has(row.id)) {
-              chimedIds.current.add(row.id);
-              if (prefsRef.current.audibleAlertNewEmergency) playChime();
-            }
-          }
-          onChange();
-        }
-      )
-      .subscribe((status) => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    // The join message carries whichever token the Realtime client holds at
+    // the moment subscribe() builds it, and supabase-js fetches the session
+    // token asynchronously. On a fresh page the socket can open first, so the
+    // join goes out as the anon role: RLS then shows this channel nothing,
+    // while the server still answers SUBSCRIBED and the footer reads [Live].
+    // The token pushed afterwards doesn't repair a join still in flight.
+    // Reported by the backend owner as issue #1 (2026-09-23). So the token is
+    // fetched first and the join is built with it. setAuth() with no argument
+    // asks supabase-js for the session token, so refresh keeps working; it
+    // falls back to the anon key rather than throwing when there is none.
+    void supabase.realtime
+      .setAuth()
+      .catch(() => undefined)
+      .then(() => {
         if (disposed) return;
-        if (status === "SUBSCRIBED") {
-          setFreshness("live");
-          // Catch up on every (re)subscribe. Changes made between the server
-          // render and the first subscribe, or during a reconnect gap, are
-          // never replayed as events — without this the footer said [Live]
-          // over a queue that could be missing a report indefinitely. The
-          // check refreshes only if something actually changed (see catchUp).
-          void catchUp();
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-          // Any failure state falls back to polling below rather than going
-          // silent — the page must never look live when it isn't.
-          setFreshness("polling");
-        }
+        channel = subscribeQueue();
       });
+
+    function subscribeQueue() {
+      return supabase
+        .channel(`queue:${official.barangayId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "incident_reports",
+            filter: `incident_barangay_id=eq.${official.barangayId}`,
+          },
+          (payload) => {
+            if (disposed) return;
+            // The chime fires from the event itself, not from the refresh it
+            // triggers: a refresh can be held for as long as a drawer is open,
+            // and an official busy in a drawer is exactly who needs to hear a
+            // new emergency arrive.
+            if (payload.eventType === "INSERT") {
+              const row = payload.new as { id?: unknown; entry_tier?: unknown };
+              if (row.entry_tier === "emergency" && typeof row.id === "string" && !chimedIds.current.has(row.id)) {
+                chimedIds.current.add(row.id);
+                if (prefsRef.current.audibleAlertNewEmergency) playChime();
+              }
+            }
+            onChange();
+          }
+        )
+        .subscribe((status) => {
+          if (disposed) return;
+          if (status === "SUBSCRIBED") {
+            setFreshness("live");
+            // Catch up on every (re)subscribe. Changes made between the server
+            // render and the first subscribe, or during a reconnect gap, are
+            // never replayed as events — without this the footer said [Live]
+            // over a queue that could be missing a report indefinitely. The
+            // check refreshes only if something actually changed (see catchUp).
+            void catchUp();
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+            // Any failure state falls back to polling below rather than going
+            // silent — the page must never look live when it isn't.
+            setFreshness("polling");
+          }
+        });
+    }
 
     return () => {
       disposed = true;
       window.clearTimeout(debounce);
-      void supabase.removeChannel(channel);
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [requestRefresh, catchUp, official.barangayId, channelEpoch]);
 
