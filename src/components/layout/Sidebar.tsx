@@ -42,7 +42,7 @@ function NavLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cx(
-        "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+        "flex min-h-11 items-center gap-2.5 rounded-md px-3 text-sm font-medium transition-colors",
         active
           ? "bg-brand-100 text-brand-700"
           : "text-ink-700 hover:bg-ink-100"

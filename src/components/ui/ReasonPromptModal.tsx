@@ -87,7 +87,7 @@ export function ReasonPromptModal({
               <label
                 key={option}
                 className={cx(
-                  "flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-2 text-xs transition-colors",
+                  "flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 text-xs transition-colors",
                   code === option
                     ? "border-brand-500 bg-brand-50 font-medium text-brand-700"
                     : "border-ink-100 text-ink-700 hover:bg-ink-50"
@@ -100,7 +100,7 @@ export function ReasonPromptModal({
                   checked={code === option}
                   onChange={() => setCode(option)}
                   autoFocus={index === 0}
-                  className="accent-brand-500"
+                  className="h-4 w-4 accent-brand-500"
                 />
                 {t(`rejectReason.${option}`)}
               </label>

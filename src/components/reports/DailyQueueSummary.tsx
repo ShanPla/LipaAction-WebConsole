@@ -84,7 +84,7 @@ export function DailyQueueSummary({
               defaultValue={date}
               max={today}
               onChange={(e) => handleDateChange(e.target.value)}
-              className="rounded-md border border-ink-100 bg-white px-2 py-1.5 text-xs text-ink-900 focus:border-brand-500 focus:outline-none"
+              className="min-h-11 rounded-md border border-ink-100 bg-white px-3 text-sm text-ink-900 focus:border-brand-500 focus:outline-none"
             />
           </label>
           {date !== today && (

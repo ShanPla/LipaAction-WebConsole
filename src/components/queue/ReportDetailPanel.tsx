@@ -141,7 +141,7 @@ export function ReportDetailPanel({
             </p>
             <p className="truncate font-mono text-xs text-ink-500">{report.id}</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={closeUnlessWriting} aria-label={t("common.close")}>
+          <Button variant="ghost" size="sm" className="min-w-11" onClick={closeUnlessWriting} aria-label={t("common.close")}>
             <Icon name="close" />
           </Button>
         </header>

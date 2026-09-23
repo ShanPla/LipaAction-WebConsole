@@ -193,7 +193,7 @@ export function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
               aria-invalid={status === "error"}
               aria-describedby={status === "error" ? "email-error" : undefined}
-              className="mb-3 w-full rounded-md border border-ink-100 bg-ink-50 px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-brand-500 focus:outline-none"
+              className="mb-3 min-h-11 w-full rounded-md border border-ink-100 bg-ink-50 px-3 text-sm text-ink-900 placeholder:text-ink-500 focus:border-brand-500 focus:outline-none"
             />
 
             {/* An alert, so a screen reader announces it: a plain paragraph
@@ -252,7 +252,7 @@ export function LoginForm() {
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
               aria-invalid={status === "error"}
               aria-describedby={status === "error" ? "code-error" : undefined}
-              className="mb-3 w-full rounded-md border border-ink-100 bg-ink-50 px-3 py-2 text-center text-lg tracking-widest text-ink-900 placeholder:text-sm placeholder:tracking-normal placeholder:text-ink-500 focus:border-brand-500 focus:outline-none"
+              className="mb-3 min-h-11 w-full rounded-md border border-ink-100 bg-ink-50 px-3 text-center text-lg tracking-widest text-ink-900 placeholder:text-sm placeholder:tracking-normal placeholder:text-ink-500 focus:border-brand-500 focus:outline-none"
             />
 
             {status === "error" && (
@@ -274,7 +274,7 @@ export function LoginForm() {
             <button
               type="button"
               onClick={handleResend}
-              className="mt-4 block w-full text-center text-xs font-medium text-brand-600 hover:underline"
+              className="mt-2 flex min-h-11 w-full items-center justify-center text-xs font-medium text-brand-600 hover:underline"
             >
               Use a different email or resend code
             </button>

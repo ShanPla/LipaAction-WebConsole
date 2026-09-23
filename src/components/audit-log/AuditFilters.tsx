@@ -48,7 +48,7 @@ export function AuditFilters({
             aria-pressed={active === id}
             onClick={() => onChange(id)}
             className={cx(
-              "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+              "inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium transition-colors",
               active === id
                 ? "bg-brand-500 text-white"
                 : "bg-white text-ink-700 border border-ink-100 hover:bg-ink-50"

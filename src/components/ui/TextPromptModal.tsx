@@ -81,7 +81,7 @@ export function TextPromptModal({
           value={value}
           maxLength={maxLength}
           onChange={(e) => setValue(e.target.value)}
-          className="mb-4 w-full rounded-md border border-ink-100 bg-ink-50 px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-brand-500 focus:outline-none"
+          className="mb-4 min-h-11 w-full rounded-md border border-ink-100 bg-ink-50 px-3 text-sm text-ink-900 placeholder:text-ink-500 focus:border-brand-500 focus:outline-none"
         />
 
         <div className="flex justify-end gap-2">

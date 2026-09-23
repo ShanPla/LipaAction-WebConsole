@@ -14,8 +14,11 @@ const variantStyles: Record<string, string> = {
 };
 
 const sizeStyles: Record<string, string> = {
-  sm: "text-xs px-2.5 py-1.5",
-  md: "text-sm px-3.5 py-2",
+  // Both sizes are at least 44px tall: the manuscript (NFR-03, Batas
+  // Pambansa 344) asks for 44 by 44 targets on every surface. sm keeps the
+  // smaller type and tighter sides; only the height is the same.
+  sm: "min-h-11 text-xs px-3",
+  md: "min-h-11 text-sm px-4",
 };
 
 /**

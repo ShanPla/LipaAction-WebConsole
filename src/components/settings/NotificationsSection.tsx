@@ -31,22 +31,27 @@ function Toggle({
       aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60 ${
-        checked ? "bg-brand-500" : "bg-ink-300"
-      }`}
+      className="flex h-11 w-[68px] shrink-0 items-center justify-center rounded-full disabled:opacity-60"
     >
-      {/* left-0 is load-bearing. An absolutely positioned child with no
-          horizontal offset sits at its static position, and inside a
-          <button> — which centres its content — that is the middle of the
-          track. The knob started off-centre and, switched on, slid past the
-          right edge. Anchored at the left, the two translations give an even
-          2px inset: 44px track − 20px knob − 2px = 22px. */}
+      {/* The button is the target, 44px tall and wider than the track, so
+          the switch keeps its 44 by 24 look while the thing you press is a
+          full-size target (NFR-03). The track is this span. */}
       <span
         aria-hidden
-        className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform motion-reduce:transition-none ${
-          checked ? "translate-x-[22px]" : "translate-x-0.5"
+        className={`relative block h-6 w-11 rounded-full transition-colors ${
+          checked ? "bg-brand-500" : "bg-ink-300"
         }`}
-      />
+      >
+        {/* left-0 is load-bearing. An absolutely positioned child with no
+            horizontal offset sits at its static position; anchored at the
+            left, the two translations give an even 2px inset: 44px track
+            minus 20px knob minus 2px = 22px. */}
+        <span
+          className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform motion-reduce:transition-none ${
+            checked ? "translate-x-[22px]" : "translate-x-0.5"
+          }`}
+        />
+      </span>
     </button>
   );
 }
@@ -128,7 +133,7 @@ export function NotificationsSection({ role }: { role: BarangayRole }) {
           <button
             type="button"
             onClick={playChime}
-            className="mt-1 text-xs font-medium text-brand-700 underline-offset-2 hover:underline"
+            className="mt-1 inline-flex min-h-11 items-center text-xs font-medium text-brand-700 underline-offset-2 hover:underline"
           >
             {t("notifications.testSound")}
           </button>

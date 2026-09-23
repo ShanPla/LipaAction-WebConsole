@@ -18,7 +18,7 @@ export default function NotAuthorizedPage() {
         <form action={signOut}>
           <button
             type="submit"
-            className="text-xs font-medium text-brand-600 hover:underline"
+            className="inline-flex min-h-11 items-center text-xs font-medium text-brand-600 hover:underline"
           >
             Sign out and use a different account
           </button>

@@ -29,7 +29,7 @@ export function SettingsNav({
             key={section.id}
             onClick={() => onChange(section.id)}
             className={cx(
-              "rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
+              "flex min-h-11 items-center rounded-md px-3 text-left text-sm font-medium transition-colors",
               active === section.id
                 ? "bg-brand-100 text-brand-700"
                 : "text-ink-700 hover:bg-ink-100"
@@ -42,7 +42,7 @@ export function SettingsNav({
         <form action={signOut}>
           <button
             type="submit"
-            className="w-full rounded-md px-3 py-2 text-left text-sm font-medium text-priority-critical hover:bg-priority-criticalBg"
+            className="flex min-h-11 w-full items-center rounded-md px-3 text-left text-sm font-medium text-priority-critical hover:bg-priority-criticalBg"
           >
             {t("shell.signOut")}
           </button>

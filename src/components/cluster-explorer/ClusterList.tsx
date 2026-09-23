@@ -44,7 +44,7 @@ export function ClusterList({
               key={cluster.id}
               onClick={() => onSelect(cluster.id)}
               className={cx(
-                "flex w-full flex-col items-start gap-0.5 border-b border-ink-100 px-3 py-2.5 text-left transition-colors last:border-0",
+                "flex min-h-11 w-full flex-col items-start justify-center gap-0.5 border-b border-ink-100 px-3 py-2.5 text-left transition-colors last:border-0",
                 active ? "bg-brand-50" : "hover:bg-ink-50"
               )}
             >

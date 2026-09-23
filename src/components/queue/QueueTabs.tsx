@@ -85,7 +85,7 @@ export function QueueTabs({
             onClick={() => onChange(tab.id)}
             onKeyDown={(event) => onKeyDown(event, index)}
             className={cx(
-              "relative flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors",
+              "relative flex min-h-11 items-center gap-1.5 px-3 text-sm font-medium transition-colors",
               active ? "text-brand-700" : "text-ink-500 hover:text-ink-900"
             )}
           >

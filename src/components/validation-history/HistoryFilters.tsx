@@ -70,7 +70,7 @@ export function HistoryFilters({
             onClick={() => onRangeChange(opt.id)}
             aria-pressed={range === opt.id}
             className={cx(
-              "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+              "inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium transition-colors",
               range === opt.id
                 ? "bg-brand-500 text-white"
                 : "bg-white text-ink-700 border border-ink-100 hover:bg-ink-50"
@@ -84,7 +84,7 @@ export function HistoryFilters({
           aria-label={t("history.filterOutcome")}
           value={outcome}
           onChange={(e) => onOutcomeChange(e.target.value as OutcomeFilter)}
-          className="rounded-full border border-ink-100 bg-white px-3 py-1.5 text-xs font-medium text-ink-700"
+          className="min-h-11 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
         >
           {outcomeOptions.map((opt) => (
             <option key={opt.id} value={opt.id}>
@@ -100,7 +100,7 @@ export function HistoryFilters({
             aria-label={t("history.filterOfficial")}
             value={official}
             onChange={(e) => onOfficialChange(e.target.value)}
-            className="rounded-full border border-ink-100 bg-white px-3 py-1.5 text-xs font-medium text-ink-700"
+            className="min-h-11 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
           >
             <option value="all">{t("history.allOfficials")}</option>
             {officialOptions.map((name) => (

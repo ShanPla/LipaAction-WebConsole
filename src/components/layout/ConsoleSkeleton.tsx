@@ -22,7 +22,7 @@ export function ConsoleSkeleton() {
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center justify-between border-b border-ink-100 bg-white px-4 py-3 sm:px-6">
+        <div className="flex min-h-[65px] items-center justify-between border-b border-ink-100 bg-white px-4 py-2 sm:px-6">
           <div className="h-5 w-40 animate-pulse rounded bg-ink-100" />
           <div className="h-8 w-8 animate-pulse rounded-full bg-ink-100" />
         </div>

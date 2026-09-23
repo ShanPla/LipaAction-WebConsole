@@ -28,7 +28,7 @@ function SegmentedControl<T extends string>({
           disabled={disabled}
           onClick={() => onChange(opt.value)}
           className={cx(
-            "rounded px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60",
+            "min-h-11 rounded px-4 text-sm font-medium transition-colors disabled:opacity-60",
             value === opt.value ? "bg-white text-brand-700 shadow-panel" : "text-ink-500"
           )}
         >

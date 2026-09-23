@@ -85,7 +85,7 @@ function ToastItem({ toast, dismiss }: { toast: Toast; dismiss: (id: number) => 
         type="button"
         aria-label="Dismiss"
         onClick={() => dismiss(toast.id)}
-        className="-mr-1 -mt-0.5 rounded p-0.5 opacity-80 hover:opacity-100"
+        className="-my-2.5 -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded opacity-80 hover:opacity-100"
       >
         <Icon name="close" className="h-3.5 w-3.5" />
       </button>

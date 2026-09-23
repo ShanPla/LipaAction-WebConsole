@@ -48,7 +48,7 @@ function LanguageSwitch({ role }: { role: BarangayRole }) {
             disabled={!hydrated}
             onClick={() => update({ interfaceLanguage: option.value })}
             className={cx(
-              "h-7 rounded px-2 text-xs font-semibold transition-colors disabled:opacity-60",
+              "h-11 min-w-11 rounded px-2.5 text-xs font-semibold transition-colors disabled:opacity-60",
               active ? "bg-white text-brand-700 shadow-panel" : "text-ink-500 hover:text-ink-900"
             )}
           >
@@ -78,13 +78,13 @@ export function TopBar({
   const t = useT();
 
   return (
-    <header className="flex items-center justify-between gap-3 border-b border-ink-100 bg-white px-4 py-3 sm:px-6">
+    <header className="flex items-center justify-between gap-3 border-b border-ink-100 bg-white px-4 py-2 sm:px-6">
       <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"
           onClick={onMenuClick}
           aria-label={t("shell.openMenu")}
-          className="rounded-md p-1.5 text-ink-700 hover:bg-ink-100 lg:hidden"
+          className="flex h-11 w-11 items-center justify-center rounded-md text-ink-700 hover:bg-ink-100 lg:hidden"
         >
           <Icon name="menu" className="h-5 w-5" />
         </button>
@@ -102,7 +102,7 @@ export function TopBar({
 
       <div className="flex items-center gap-3">
         {search && (
-          <label className="hidden items-center gap-2 rounded-md border border-ink-100 bg-ink-50 px-2.5 py-1.5 text-xs text-ink-500 md:flex">
+          <label className="hidden items-center gap-2 rounded-md border border-ink-100 bg-ink-50 px-3 text-xs text-ink-500 md:flex">
             <Icon name="search" className="h-3.5 w-3.5" />
             <span className="sr-only">{search.label}</span>
             <input
@@ -111,7 +111,7 @@ export function TopBar({
               placeholder={search.placeholder}
               value={search.value}
               onChange={(e) => search.onChange(e.target.value)}
-              className="w-56 bg-transparent text-xs text-ink-700 placeholder:text-ink-500 focus:outline-none"
+              className="min-h-11 w-56 bg-transparent text-sm text-ink-700 placeholder:text-ink-500 focus:outline-none"
             />
           </label>
         )}
