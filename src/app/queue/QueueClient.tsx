@@ -65,6 +65,37 @@ const STALE_DATA_MS = 60_000;
 const AGENCY_PROGRESS_CHECK_MS = 60_000;
 const AGENCY_PROGRESS_LIMIT = 1000;
 
+// Tier 0 breaches this tab has already announced. Kept outside the component
+// and in sessionStorage, because the ref it used to live in was rebuilt on
+// every mount: an official moving between pages was told about the same
+// overdue report again on each return, six times over one night. Reading and
+// writing are wrapped because a private window can refuse storage, where the
+// set in memory still covers this page's life.
+const SLA_NOTIFIED_KEY = "lipaaction.console.slaNotified.v1";
+let announced: Set<string> | null = null;
+
+function announcedBreaches(): Set<string> {
+  if (announced === null) {
+    try {
+      const raw = window.sessionStorage.getItem(SLA_NOTIFIED_KEY);
+      announced = new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    } catch {
+      announced = new Set();
+    }
+  }
+  return announced;
+}
+
+function rememberBreach(reportId: string): void {
+  const ids = announcedBreaches();
+  ids.add(reportId);
+  try {
+    window.sessionStorage.setItem(SLA_NOTIFIED_KEY, JSON.stringify([...ids]));
+  } catch {
+    // Storage refused; the set in memory still stops a repeat on this page.
+  }
+}
+
 function signatureOf(rows: { id: string; status: string }[]): string {
   return rows
     .map((r) => `${r.id}:${r.status}`)
@@ -272,15 +303,38 @@ export function QueueClient({
     }
   }, [requestRefresh, official.barangayId]);
 
+  // Which mode the footer reports: live, connecting, or the polling
+  // fallback. The channel below sets it; it is declared here because the
+  // handlers just below read it.
+  const [freshness, setFreshness] = useState<Freshness>("connecting");
+  // Bumped to build a fresh channel. A dropped channel is retried by
+  // supabase-js on a backoff, but a hidden tab's timers are slowed to a
+  // crawl: left overnight on 2026-09-23 the footer sat on [Live updates
+  // unavailable] for long stretches and only recovered when a page change
+  // remounted this component. Coming back to the page rebuilds it instead.
+  const [channelEpoch, setChannelEpoch] = useState(0);
+  const freshnessRef = useRef(freshness);
+  useEffect(() => {
+    freshnessRef.current = freshness;
+  });
+  const reviveChannelIfStalled = useCallback(() => {
+    if (freshnessRef.current !== "live") setChannelEpoch((epoch) => epoch + 1);
+  }, []);
+
   // Flushes a held refresh once it's clear, and catches up after the gaps a
   // Realtime channel can't see: the tab hidden or the laptop asleep (events
   // missed while suspended are not replayed), and the network coming back.
   useEffect(() => {
     const flush = window.setInterval(tryRefresh, 1000);
     const onVisible = () => {
-      if (document.visibilityState === "visible") void catchUp();
+      if (document.visibilityState !== "visible") return;
+      void catchUp();
+      reviveChannelIfStalled();
     };
-    const onOnline = () => void catchUp();
+    const onOnline = () => {
+      void catchUp();
+      reviveChannelIfStalled();
+    };
     window.addEventListener("online", onOnline);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
@@ -288,7 +342,7 @@ export function QueueClient({
       window.removeEventListener("online", onOnline);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [tryRefresh, catchUp]);
+  }, [tryRefresh, catchUp, reviveChannelIfStalled]);
 
   /**
    * Agency progress (an acknowledgement, a resolution, an out-of-scope
@@ -365,7 +419,6 @@ export function QueueClient({
   // each event asks for a refresh, which re-runs the server component and
   // streams new props in; React state here (active tab, search, resolved
   // marks) survives it.
-  const [freshness, setFreshness] = useState<Freshness>("connecting");
   useEffect(() => {
     const supabase = createClient();
     let debounce: number | undefined;
@@ -426,7 +479,7 @@ export function QueueClient({
       window.clearTimeout(debounce);
       void supabase.removeChannel(channel);
     };
-  }, [requestRefresh, catchUp, official.barangayId]);
+  }, [requestRefresh, catchUp, official.barangayId, channelEpoch]);
 
   // Polling, only while the channel isn't delivering.
   useEffect(() => {
@@ -497,7 +550,6 @@ export function QueueClient({
   // queue with no activity never changes — so a report that arrived under
   // five minutes old was never checked again and the alert never came. The
   // latest list is read through a ref so the timer isn't rebuilt per refresh.
-  const notifiedBreachIds = useRef(new Set<string>());
   const slaSource = useRef({ emergency: queueData.queueByTab.emergency, resolved });
   useEffect(() => {
     slaSource.current = { emergency: queueData.queueByTab.emergency, resolved };
@@ -526,9 +578,9 @@ export function QueueClient({
       if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
       const now = Date.now();
       for (const report of slaSource.current.emergency) {
-        if (slaSource.current.resolved[report.id] || notifiedBreachIds.current.has(report.id)) continue;
+        if (slaSource.current.resolved[report.id] || announcedBreaches().has(report.id)) continue;
         if (now - new Date(report.details.submittedAt).getTime() < TIER0_SLA_MS) continue;
-        notifiedBreachIds.current.add(report.id);
+        rememberBreach(report.id);
         notifyBreach(report);
       }
     }
