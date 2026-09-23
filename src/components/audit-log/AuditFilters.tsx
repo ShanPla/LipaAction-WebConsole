@@ -1,52 +1,64 @@
 "use client";
 
-import { useState } from "react";
 import { cx } from "@/lib/utils";
 import { useT, type MessageKey } from "@/lib/i18n";
 
-const filterOptions: MessageKey[] = [
-  "history.range.today",
-  "history.range.7d",
-  "audit.filter.stateChanges",
-  "audit.filter.pii",
-  "audit.filter.allActors",
-];
+/** Which actions a chip keeps. Empty means every action. */
+export const AUDIT_FILTERS = {
+  all: [],
+  decisions: ["report_validated", "report_rejected"],
+  routings: ["report_routed_manual"],
+  openings: ["report_viewed"],
+} as const;
+
+export type AuditFilterId = keyof typeof AUDIT_FILTERS;
+
+const LABELS: Record<AuditFilterId, MessageKey> = {
+  all: "audit.filter.all",
+  decisions: "audit.filter.decisions",
+  routings: "audit.filter.routings",
+  openings: "audit.filter.openings",
+};
 
 /**
- * Filter chips only. The [Export CSV] button that sat beside them fired a
- * success toast claiming N events had been exported while writing no file —
- * and the N was a fixture count. Removed rather than wired: there are no
- * real rows on this page to export until barangay roles get a read path to
- * audit_logs, and that is a data-protection decision pending elsewhere.
- * Validation History has the working export to copy from when this unblocks.
+ * Real filters now, over the events already loaded — the read function has
+ * no action argument, and asking for one later would mean dropping and
+ * recreating a live function, so the page filters its own window and the
+ * note beside the chips says that is what it does.
  *
- * The chips keep their highlight state so the layout reads as intended in
- * the mockups; they filter nothing, and the notice above the table says so.
+ * These chips replace mockup ones that highlighted and filtered nothing, and
+ * an [Export CSV] button that claimed to export fixture rows.
  */
-export function AuditFilters() {
-  const [active, setActive] = useState<MessageKey>("history.range.7d");
+export function AuditFilters({
+  active,
+  onChange,
+}: {
+  active: AuditFilterId;
+  onChange: (id: AuditFilterId) => void;
+}) {
   const t = useT();
 
   return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        {filterOptions.map((opt) => (
+        {(Object.keys(AUDIT_FILTERS) as AuditFilterId[]).map((id) => (
           <button
-            key={opt}
+            key={id}
             type="button"
-            aria-pressed={active === opt}
-            onClick={() => setActive(opt)}
+            aria-pressed={active === id}
+            onClick={() => onChange(id)}
             className={cx(
               "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-              active === opt
+              active === id
                 ? "bg-brand-500 text-white"
                 : "bg-white text-ink-700 border border-ink-100 hover:bg-ink-50"
             )}
           >
-            {t(opt)}
+            {t(LABELS[id])}
           </button>
         ))}
       </div>
+      <p className="text-xs text-ink-500">{t("audit.filterNote")}</p>
     </div>
   );
 }

@@ -166,31 +166,30 @@ export interface ValidationSummary {
   identityWithheld: number;
 }
 
-export type AuditActionType =
-  | "Validate"
-  | "Reassign"
-  | "Cluster action"
-  | "Export"
-  | "Login"
-  | "Dispatch"
-  | "Recall";
-
+/**
+ * One row of the barangay's access trail, exactly as
+ * `barangay_audit_log` returns it (plus the category, resolved separately).
+ *
+ * `action` and `actorRole` are free text on purpose: the function returns
+ * the action as text and the role as text rather than the app_role enum, so
+ * a value this console doesn't know renders as itself. No official is named
+ * — the function excludes actor_id — so the mockup's per-row actor name and
+ * its [Unique actors] tile are not buildable and are gone.
+ */
 export interface AuditLogEntry {
   id: string;
+  action: string;
+  actorRole: string;
   timestamp: string;
-  actorName: string;
-  actorRole: "Brgy. Secretary" | "Brgy. Captain" | "System" | "Cluster admin";
-  actionType: AuditActionType;
-  affectedEntity: string;
-  beforeAfterDiff: string; // monospace before -> after summary
-  isPiiAccess?: boolean;
+  reportId: string | null;
+  category: string | null;
 }
 
 export interface AuditSummary {
   totalEvents: number;
-  stateChangingActions: number;
-  piiAccessEvents: number;
-  uniqueActors: number;
+  decisions: number;
+  routings: number;
+  openings: number;
 }
 
 export type SettingsSectionId =

@@ -2,7 +2,6 @@ import {
   BarChart3,
   Check,
   ClipboardCheck,
-  Cpu,
   FileText,
   Inbox,
   Layers,
@@ -26,8 +25,7 @@ export type IconName =
   | "history"
   | "reports"
   | "audit"
-  | "settings"
-  | "system";
+  | "settings";
 
 /**
  * The console's icons, from Lucide (lucide-react, ISC licence).
@@ -49,7 +47,6 @@ const ICONS: Record<IconName, LucideIcon> = {
   reports: BarChart3,
   audit: FileText, // the written trail
   settings: SlidersHorizontal,
-  system: Cpu, // an entry the system made, not a person
 };
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {

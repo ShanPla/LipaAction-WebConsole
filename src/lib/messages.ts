@@ -88,6 +88,7 @@ export const MESSAGES = {
   "banner.what.history": { en: "Validation History", tl: "Kasaysayan ng Pag-validate" },
   "banner.what.clusters": { en: "Cluster Explorer", tl: "Mga Kumpol ng Ulat" },
   "banner.what.reports": { en: "The daily summary", tl: "buod ng araw" },
+  "banner.what.audit": { en: "The audit log", tl: "talaan ng audit" },
 
   // --- Queue page -----------------------------------------------------------
   "queue.tabsLabel": { en: "Queue sections", tl: "Mga seksyon ng pila" },
@@ -551,47 +552,74 @@ export const MESSAGES = {
   },
 
   // --- Audit Log (sample page) ----------------------------------------------
-  "audit.noticeTitle": { en: "Sample data.", tl: "Sample na datos." },
-  "audit.noticeBody": {
+  "audit.notice": {
     en:
-      "The audit trail is being recorded, but barangay accounts cannot read it back yet — " +
-      "what the barangay desk may see is a data-protection decision still pending. The rows " +
-      "below show the intended layout only. · Sample lang ang datos na ito.",
+      "Recorded by the system when a report is opened, validated, rejected or routed. " +
+      "It names roles, never officials: the trail this console can read leaves out who " +
+      "did it, and the reporter's identity is never in it. · Talaan ng paggamit.",
     tl:
-      "Itinatala ang audit trail, pero hindi pa ito mababasa ng mga account ng barangay — " +
-      "nakabinbin pa ang desisyon sa data privacy kung ano ang maaaring makita ng desk ng " +
-      "barangay. Ipinapakita lamang ng mga hilera sa ibaba ang nakaplanong layout.",
+      "Itinatala ng sistema kapag binuksan, na-validate, tinanggihan o naipasa ang isang " +
+      "ulat. Tungkulin ang ipinapakita, hindi ang pangalan ng opisyal, at wala rito ang " +
+      "pagkakakilanlan ng nag-ulat.",
   },
   "audit.footer": {
-    en: "Showing {count} sample events. Filters and counts above are not live.",
-    tl: "Ipinapakita ang {count} sample na pangyayari. Hindi live ang mga filter at bilang sa itaas.",
+    en: "Showing the newest {count} events of at most {limit}. The filters above apply to these.",
+    tl: "Ipinapakita ang pinakabagong {count} pangyayari, hanggang {limit}. Sa mga ito lang tumutukoy ang mga filter sa itaas.",
   },
-  "audit.tile.total": { en: "Total events", tl: "Kabuuang pangyayari" },
-  "audit.tile.stateChanging": { en: "State-changing actions", tl: "Mga aksyong nagbago ng estado" },
-  "audit.tile.pii": { en: "PII-access events", tl: "Mga pag-access sa PII" },
-  "audit.tile.actors": { en: "Unique actors", tl: "Natatanging aktor" },
-  "audit.filter.stateChanges": { en: "State changes only", tl: "Pagbabago ng estado lang" },
-  "audit.filter.pii": { en: "PII access", tl: "Pag-access sa PII" },
-  "audit.filter.allActors": { en: "All actors", tl: "Lahat ng aktor" },
-  "audit.empty.title": { en: "No audit events in this range", tl: "Walang audit na pangyayari sa saklaw na ito" },
+  "audit.footerFiltered": {
+    en: "Showing {shown} of the newest {count} events. The filter applies to these, not to the whole trail.",
+    tl: "Ipinapakita ang {shown} sa pinakabagong {count} pangyayari. Sa mga ito tumutukoy ang filter, hindi sa buong talaan.",
+  },
+  "audit.tile.total": { en: "Events shown", tl: "Mga pangyayaring ipinapakita" },
+  "audit.tile.decisions": { en: "Decisions", tl: "Mga pasya" },
+  "audit.tile.routings": { en: "Routings", tl: "Mga pagpapasa" },
+  "audit.tile.openings": { en: "Report openings", tl: "Pagbukas ng ulat" },
+  "audit.filter.all": { en: "All events", tl: "Lahat ng pangyayari" },
+  "audit.filter.decisions": { en: "Decisions", tl: "Mga pasya" },
+  "audit.filter.routings": { en: "Routings", tl: "Mga pagpapasa" },
+  "audit.filter.openings": { en: "Report openings", tl: "Pagbukas ng ulat" },
+  "audit.filterNote": {
+    en: "Filters the events loaded below",
+    tl: "Sinasala ang mga pangyayaring naka-load sa ibaba",
+  },
+  "audit.empty.title": { en: "No audit events yet", tl: "Wala pang audit na pangyayari" },
   "audit.empty.body": {
-    en: "Try widening the date filter, or switch to “All actors” above.",
-    tl: "Palawakin ang filter ng petsa, o piliin ang “Lahat ng aktor” sa itaas.",
+    en: "Opening, validating, rejecting or routing a report writes one here.",
+    tl: "Ang pagbukas, pag-validate, pagtanggi o pagpapasa ng ulat ay nagdaragdag dito.",
+  },
+  "audit.empty.filtered": {
+    en: "No events of this kind among the ones loaded.",
+    tl: "Walang ganitong pangyayari sa mga naka-load.",
+  },
+  "audit.refusal.noRole": {
+    en: "This account has no barangay role, so there is no trail to show for it.",
+    tl: "Walang tungkulin sa barangay ang account na ito, kaya walang talaang maipapakita.",
+  },
+  "audit.refusal.noBarangay": {
+    en:
+      "This account isn't assigned to a barangay yet, so there is no trail to show. Tell the " +
+      "pilot support desk.",
+    tl:
+      "Wala pang nakatalagang barangay ang account na ito, kaya walang talaang maipapakita. " +
+      "Ipaalam sa pilot support desk.",
   },
   "audit.readOnly": {
-    en: "Read-only audit trail — every category and assignment write appends an immutable row.",
-    tl:
-      "Audit trail na pambasa lamang — bawat pagbabago sa kategorya at pagtatalaga ay " +
-      "nagdaragdag ng hilerang hindi na mababago.",
+    en: "Read-only. Every entry is appended by the system; nothing here can be edited or removed.",
+    tl: "Pambasa lamang. Idinaragdag ng sistema ang bawat tala; wala ritong maaaring baguhin o burahin.",
   },
   "audit.caption": {
-    en: "Sample audit events, for layout only",
-    tl: "Sample na audit na pangyayari, para sa layout lamang",
+    en: "Audit events for this barangay's reports, newest first",
+    tl: "Mga audit na pangyayari sa mga ulat ng barangay na ito, pinakabago muna",
   },
-  "audit.col.actor": { en: "Actor", tl: "Aktor" },
   "audit.col.action": { en: "Action", tl: "Aksyon" },
-  "audit.col.entity": { en: "Affected entity", tl: "Apektadong rekord" },
-  "audit.col.diff": { en: "Before to after", tl: "Bago at pagkatapos" },
+  "audit.col.role": { en: "Role", tl: "Tungkulin" },
+  "audit.col.report": { en: "Report", tl: "Ulat" },
+  "audit.action.report_viewed": { en: "Report opened", tl: "Binuksan ang ulat" },
+  "audit.action.report_validated": { en: "Validated", tl: "Na-validate" },
+  "audit.action.report_rejected": { en: "Rejected", tl: "Tinanggihan" },
+  "audit.action.report_routed_manual": { en: "Routed to agencies", tl: "Naipasa sa mga ahensya" },
+  "audit.reportGone": { en: "Report no longer in the database", tl: "Wala na sa database ang ulat" },
+  "role.municipal_admin": { en: "Municipal Admin", tl: "Municipal Admin" },
 
   // --- Settings -------------------------------------------------------------
   "settings.nav.profile": { en: "Profile", tl: "Profile" },

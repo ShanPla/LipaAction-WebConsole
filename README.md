@@ -94,7 +94,7 @@ official's browser is set.
 | **Validation History** | Live. Reviewed reports (validated or rejected) with the reviewing official, timestamp, rejection category and note, and outcome filters. Exports the visible rows to CSV. |
 | **Reports** | Live. The thesis's Daily Queue Summary: the reports submitted on a chosen day (today by default), by category, counted by where each stands now — awaiting review, validated, or rejected — with a CSV export. The thesis's second barangay report, the weekly false-report rate per reporter, is listed as unavailable: it needs each reporter's identity and sanction history, which the console never reads. |
 | **Settings** | Profile is live (name, role, barangay, email, phone); the display name is editable. Language and alert preferences are saved in the browser on the current device. The interface language switches the console between English and Tagalog — the same choice as the EN/TL switch at the top right of every page; the alert preferences drive the Queue page's chime and browser notification. Senior barangay administrators default to Tagalog, as the thesis specifies. The bilingual-emphasis setting is recorded but does not yet change any screen, and says so. |
-| **Audit Log** | Placeholder data, labelled as such on the page. The console writes to the audit trail (validations, rejections, and report views), but no barangay role can read it back: which columns the barangay desk may see is a data-protection decision pending with the adviser, and read access will be granted through a function that exposes only those columns, not through a table policy. |
+| **Audit Log** | Live. The barangay's own access trail: every report opening, validation, rejection and routing on its reports, newest first, filterable by kind. Read access comes through a database function that returns only the safe columns, not a table policy, so no official is named and the reporter is never in it — each row shows the time, the action, the role that did it, and the report. It loads the newest 500 events and says so. |
 
 All report data is scoped to the signed-in official's own barangay by Row Level
 Security in the database. The application does not, and cannot, widen that scope.
@@ -148,7 +148,6 @@ src/
     supabase/                 Server and browser Supabase clients
     data/                     Server-only data access, one module per live page
     utils.ts
-  data/                       Remaining placeholder fixtures (Audit Log, preferences)
   types/                      Shared TypeScript interfaces
 ```
 
@@ -161,16 +160,16 @@ and is marked `server-only`.
 These are gaps in the data available to the console, not unfinished interface work.
 In each case the console shows nothing rather than an approximation.
 
-- **Audit Log** is on placeholder data, and the page says so. Read access for barangay
-  roles is waiting on a decision about which audit columns the desk may see; it is a
-  data-protection question rather than an engineering one.
+- **The Audit Log shows roles, not officials, and the newest 500 events.** The read
+  function deliberately withholds who acted and whom the report concerned, so the page
+  cannot name an official; its filters narrow the events already loaded rather than the
+  whole trail, and the page says so.
 - **Access-log coverage is incomplete.** See the Privacy section: list rows and the CSV
   export are not individually logged, and live updates deliver full report rows to the
   browser because Supabase cannot filter that feed by column.
-- **Report views are logged but cannot be read back here.** Opening a report records
-  the access, and the console reports it on screen if that recording fails. Which
-  audit fields a barangay desk may see is the data-protection decision above, so there
-  is no who-viewed-this panel.
+- **There is no who-viewed-this panel on a report.** Openings are recorded and appear
+  in the Audit Log, but the read function returns no actor identity, so the console can
+  say a report was opened by a role, never by whom.
 - **Cluster data.** The duplicate-detection service does not yet write cluster
   assignments back to reports, so the Cluster Explorer and the queue's Flagged
   duplicates tab are empty against live data. There is also no dedicated clusters
