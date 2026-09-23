@@ -90,7 +90,7 @@ export function Sidebar({
         </div>
 
         <div>
-          <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-300">
+          <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
             {t("nav.records")}
           </p>
           <div className="flex flex-col gap-0.5">
@@ -106,7 +106,7 @@ export function Sidebar({
         </div>
 
         <div>
-          <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-300">
+          <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
             {t("nav.account")}
           </p>
           <div className="flex flex-col gap-0.5">

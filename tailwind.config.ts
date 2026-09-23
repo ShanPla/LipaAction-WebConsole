@@ -19,13 +19,19 @@ const config: Config = {
           900: "#173525",
         },
         priority: {
+          // Text colours. Each must reach 4.5:1 on its own *Bg tint and on
+          // white, because the same token colours notes on plain rows (WCAG
+          // 2.2 AA 1.4.3, which the manuscript commits to). Measured 2026-09-24:
+          // critical 4.74 / 5.52, high 5.12 / 5.74, medium 5.19 / 5.74,
+          // low 5.15 / 5.86. The high, medium and low values were 3.16, 2.69
+          // and 4.05 on their tints before that.
           critical: "#c0362c", // Critical badge red
           criticalBg: "#fbeae9",
-          high: "#c9722b", // High badge orange
+          high: "#9c5314", // High badge orange
           highBg: "#fdf0e3",
-          medium: "#b8901f", // Medium badge amber
+          medium: "#7f620f", // Medium badge amber
           mediumBg: "#fbf3dd",
-          low: "#4d7c8a", // Low badge slate-teal
+          low: "#3f6b78", // Low badge slate-teal
           lowBg: "#e9f2f4",
         },
         ink: {

@@ -95,7 +95,7 @@ export function QueueTabs({
             <span
               className={cx(
                 "rounded-full px-1.5 py-0.5 text-[11px] font-semibold",
-                active ? "bg-brand-100 text-brand-700" : "bg-ink-100 text-ink-500"
+                active ? "bg-brand-100 text-brand-700" : "bg-ink-100 text-ink-700"
               )}
             >
               {tab.count}
