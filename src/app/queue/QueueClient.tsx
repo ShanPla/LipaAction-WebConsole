@@ -432,6 +432,7 @@ export function QueueClient({
     }
 
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let agencyChannel: ReturnType<typeof supabase.channel> | null = null;
 
     // The join message carries whichever token the Realtime client holds at
     // the moment subscribe() builds it, and supabase-js fetches the session
@@ -449,7 +450,25 @@ export function QueueClient({
       .then(() => {
         if (disposed) return;
         channel = subscribeQueue();
+        agencyChannel = subscribeAgencyProgress();
       });
+
+    // Agency progress (acknowledged, resolved, returned) lives on
+    // agency_routing, which joins the Realtime publication with the backend's
+    // migration #70. A channel of its own, so nothing about it can touch the
+    // queue channel or the footer: until #70 is on prod it simply receives
+    // nothing, and the once-a-minute progress check above keeps covering it.
+    // agency_routing has no barangay column to filter on, so row-level
+    // security (ar_select_barangay) is what scopes the events to this desk.
+    function subscribeAgencyProgress() {
+      return supabase
+        .channel(`agency-progress:${official.barangayId}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "agency_routing" }, () => {
+          if (disposed) return;
+          onChange();
+        })
+        .subscribe();
+    }
 
     function subscribeQueue() {
       return supabase
@@ -500,6 +519,7 @@ export function QueueClient({
       disposed = true;
       window.clearTimeout(debounce);
       if (channel) void supabase.removeChannel(channel);
+      if (agencyChannel) void supabase.removeChannel(agencyChannel);
     };
   }, [requestRefresh, catchUp, official.barangayId, channelEpoch]);
 
