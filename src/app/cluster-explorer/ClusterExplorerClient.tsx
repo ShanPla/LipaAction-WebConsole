@@ -8,6 +8,7 @@ import { MapPanel } from "@/components/cluster-explorer/MapPanel";
 import { DataUnavailableBanner } from "@/components/layout/DataUnavailableBanner";
 import { useLang, useT } from "@/lib/i18n";
 import { useNow } from "@/lib/useNow";
+import { DUPLICATE_WRITEBACK_LIVE } from "@/lib/features";
 import type { OfficialProfile } from "@/lib/auth";
 // Type-only import from a server-only module — erased at compile time.
 import type { ClusterData } from "@/lib/data/clusters";
@@ -36,18 +37,23 @@ export function ClusterExplorerClient({
         // here is current, and [not connected yet] would misstate an outage.
         !loadFailed && (
           <div className="flex h-[calc(100vh-6.5rem)] items-center justify-center rounded-card border border-ink-100 bg-white px-4 shadow-panel">
-            {/* The previous copy — [No duplicate clusters right now] — read
-                as a finding. It was a wiring gap: the backend's duplicate
-                flagger computes clusters but never writes them back, so
-                this page is empty no matter what is filed. The backend
-                owner asked for that to be stated on screen (2026-09-17).
-                When cluster write-back ships this copy becomes false and
-                must change; nothing here can detect that on its own. */}
+            {/* An earlier copy — [No duplicate clusters right now] — read as a
+                finding. It was a wiring gap: the backend's duplicate flagger
+                computed clusters but never wrote them back, so this page was
+                empty no matter what was filed, and the backend owner asked for
+                that to be stated on screen (2026-09-17). Nothing here can
+                detect the day write-back goes live, so DUPLICATE_WRITEBACK_LIVE
+                is switched by hand, and the copy then describes the grouping. */}
             <div className="max-w-md text-center">
-              <p className="text-sm font-medium text-ink-700">{t("clusters.emptyTitle")}</p>
-              <p className="mt-1 text-xs text-ink-500">{t("clusters.emptyBody")}</p>
-              {/* The English screen keeps the mockup Tagalog line under it. */}
-              {lang === "en" && (
+              <p className="text-sm font-medium text-ink-700">
+                {t(DUPLICATE_WRITEBACK_LIVE ? "clusters.emptyTitleLive" : "clusters.emptyTitle")}
+              </p>
+              <p className="mt-1 text-xs text-ink-500">
+                {t(DUPLICATE_WRITEBACK_LIVE ? "clusters.emptyBodyLive" : "clusters.emptyBody")}
+              </p>
+              {/* The English screen keeps the mockup Tagalog line under it,
+                  while it is still true. */}
+              {lang === "en" && !DUPLICATE_WRITEBACK_LIVE && (
                 <p className="mt-2 text-xs text-ink-500">
                   Hindi pa nakakonekta ang pagtukoy ng duplicate.
                 </p>

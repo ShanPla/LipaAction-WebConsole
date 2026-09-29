@@ -178,6 +178,21 @@ export const MESSAGES = {
       "lokasyon, mula sa iisang barangay, at naipadala sa loob ng 72 oras ng isa't isa ang " +
       "maaaring pagsamahin.",
   },
+  // Shown instead of the two above once DUPLICATE_WRITEBACK_LIVE is on.
+  "queue.dup.titleLive": {
+    en: "No flagged duplicates right now",
+    tl: "Walang naka-flag na doble sa ngayon",
+  },
+  "queue.dup.bodyLive": {
+    en:
+      "Pending reports the system groups as the same incident show here, so they can be " +
+      "reviewed together: same category and barangay, filed within 72 hours of each other, " +
+      "and close together when they carry a location.",
+    tl:
+      "Lumalabas dito ang mga nakabinbing ulat na pinagsama ng sistema bilang iisang " +
+      "insidente, para masuri nang sabay: parehong kategorya at barangay, naipadala sa loob " +
+      "ng 72 oras ng isa't isa, at magkalapit kung may lokasyon.",
+  },
   "queue.sla.title": {
     en: "Tier 0 report past its 5-minute window",
     tl: "Lumampas na sa 5 minuto ang isang Tier 0 na ulat",
@@ -213,6 +228,7 @@ export const MESSAGES = {
     tl: "Ibinalik ng {agency}{more} — labas sa saklaw",
   },
   "row.returnedChip": { en: "Returned by agencies", tl: "Ibinalik ng mga ahensya" },
+  "row.autoRouted": { en: "Auto-routed", tl: "Awtomatikong naipasa" },
   "row.returnedUnavailable": {
     en: "Couldn't load the agency list — refresh",
     tl: "Hindi na-load ang listahan ng ahensya — i-refresh",
@@ -331,7 +347,10 @@ export const MESSAGES = {
   "drawer.close": { en: "Close report details", tl: "Isara ang detalye ng ulat" },
   "drawer.tier.emergency": { en: "Emergency fast-triage", tl: "Emergency (mabilisang triage)" },
   "drawer.tier.other_reports": { en: "Standard intake", tl: "Karaniwang ulat" },
-  "drawer.discreet": { en: "Discreet reporting requested", tl: "Humiling ng discreet na pag-uulat" },
+  "drawer.discreetBanner": {
+    en: "Discreet report: do not call or text the reporter.",
+    tl: "Discreet na ulat: huwag tawagan o i-text ang nag-ulat.",
+  },
   "drawer.noDescription": { en: "No description provided.", tl: "Walang ibinigay na paglalarawan." },
   "drawer.notProvided": { en: "Not provided", tl: "Hindi ibinigay" },
   "drawer.section.reporterSaid": { en: "What the reporter said", tl: "Sinabi ng nag-ulat" },
@@ -374,6 +393,10 @@ export const MESSAGES = {
     tl: "Ibinalik ito ng lahat ng ahensyang pinagpasahan bilang labas sa saklaw. Pumili ng ibang ahensya, o asikasuhin ito sa barangay.",
   },
   "drawer.returnedEarlier": { en: "Returned earlier", tl: "Ibinalik noon" },
+  "drawer.autoRouted": {
+    en: "Routed automatically, without a review here.",
+    tl: "Awtomatikong naipasa, nang walang pagsusuri dito.",
+  },
   "drawer.returnedPending": {
     en: "Every agency it was routed to sent it back as out of scope, so it needs a review here. After validation, choose another agency for it.",
     tl: "Ibinalik ito ng lahat ng ahensyang pinagpasahan bilang labas sa saklaw, kaya kailangan itong suriin dito. Pagkatapos ma-validate, pumili ng ibang ahensya para rito.",
@@ -592,6 +615,24 @@ export const MESSAGES = {
       "nakatago ang pagkakakilanlan, at ang mga ulat lang mula sa iisang barangay, na " +
       "naipadala sa loob ng 72 oras ng isa't isa, ang pinaghahambing.",
   },
+  // Shown instead of the two above once DUPLICATE_WRITEBACK_LIVE is on.
+  "clusters.emptyTitleLive": {
+    en: "No duplicate groups right now",
+    tl: "Walang pangkat ng dobleng ulat sa ngayon",
+  },
+  "clusters.emptyBodyLive": {
+    en:
+      "Pending reports that look like the same incident are grouped here automatically: " +
+      "same category and barangay, filed within 72 hours of each other, and close together " +
+      "when they carry a location. Reports without a location are grouped by category and " +
+      "barangay alone. The grouping is the system's and can't be changed from this console.",
+    tl:
+      "Awtomatikong pinagsasama-sama rito ang mga nakabinbing ulat na mukhang iisang " +
+      "insidente: parehong kategorya at barangay, naipadala sa loob ng 72 oras ng isa't isa, " +
+      "at magkalapit kung may lokasyon. Ang mga ulat na walang lokasyon ay pinagsasama ayon sa " +
+      "kategorya at barangay lamang. Ang sistema ang nagpapangkat, at hindi ito mababago mula " +
+      "sa console na ito.",
+  },
 
   // --- Audit Log (sample page) ----------------------------------------------
   "audit.notice": {
@@ -660,8 +701,14 @@ export const MESSAGES = {
   "audit.action.report_validated": { en: "Validated", tl: "Na-validate" },
   "audit.action.report_rejected": { en: "Rejected", tl: "Tinanggihan" },
   "audit.action.report_routed_manual": { en: "Routed to agencies", tl: "Naipasa sa mga ahensya" },
+  "audit.action.report_auto_routed": { en: "Routed automatically", tl: "Awtomatikong naipasa" },
+  "audit.action.routing_in_progress": { en: "In progress at an agency", tl: "Inaasikaso ng ahensya" },
+  "audit.action.report_resolved_by_agencies": { en: "Resolved by agencies", tl: "Nalutas ng mga ahensya" },
+  "audit.action.report_returned_to_barangay": { en: "Returned to barangay", tl: "Ibinalik sa barangay" },
   "audit.reportGone": { en: "Report no longer in the database", tl: "Wala na sa database ang ulat" },
   "role.municipal_admin": { en: "Municipal Admin", tl: "Municipal Admin" },
+  "role.agency_user": { en: "Agency staff", tl: "Kawani ng ahensya" },
+  "role.agency_supervisor": { en: "Agency supervisor", tl: "Superbisor ng ahensya" },
 
   // --- Settings -------------------------------------------------------------
   "settings.nav.profile": { en: "Profile", tl: "Profile" },

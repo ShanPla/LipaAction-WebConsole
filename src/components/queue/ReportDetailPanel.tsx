@@ -19,6 +19,7 @@ import { AgencyPickerModal } from "./AgencyPickerModal";
 import {
   agencyProgressLabel,
   everyAgencyReturned,
+  isAutoRouted,
   isReturnedToBarangay,
   rerouteCopy,
   routeConfirmCopy,
@@ -151,14 +152,22 @@ export function ReportDetailPanel({
         </header>
 
         <div className="flex-1 px-5 py-4">
+          {/* First thing in the drawer, above everything the official reads
+              before acting: discreet reporting is always on for domestic
+              violence, where a call or a text can reach the wrong person. The
+              backend owner asked for this wording (2026-09-29). */}
+          {d.discreetReporting && (
+            <p
+              role="note"
+              className="mb-4 flex items-start gap-2 rounded-md border border-priority-medium/30 bg-priority-mediumBg px-3 py-2 text-sm font-semibold text-priority-medium"
+            >
+              <Icon name="no-contact" className="mt-0.5" />
+              {t("drawer.discreetBanner")}
+            </p>
+          )}
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <PriorityBadge priority={report.priority} />
             <span className="text-xs text-ink-500">{t(`drawer.tier.${d.entryTier}`)}</span>
-            {d.discreetReporting && (
-              <span className="rounded-full bg-priority-mediumBg px-2 py-0.5 text-[11px] font-semibold text-priority-medium">
-                {t("drawer.discreet")}
-              </span>
-            )}
           </div>
 
           <p className="mb-5 whitespace-pre-wrap text-sm text-ink-900">
@@ -387,6 +396,7 @@ function RoutingSection({ state }: { state: ReturnType<typeof routingState> }) {
       const { current, earlier } = splitRouting(state.routing);
       return (
         <div>
+          {isAutoRouted(state) && <p className="mb-2 text-xs text-ink-500">{t("drawer.autoRouted")}</p>}
           <AgencyList rows={current} />
           <EarlierList rows={earlier} />
         </div>

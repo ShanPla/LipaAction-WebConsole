@@ -13,6 +13,7 @@ import { AgencyPickerModal } from "./AgencyPickerModal";
 import {
   downstreamSummary,
   everyAgencyReturned,
+  isAutoRouted,
   rerouteCopy,
   returnedSummary,
   routeConfirmCopy,
@@ -179,10 +180,21 @@ export function ReportRow({
                 {t("row.returnedChip")}
               </span>
             )}
+            {/* Routed with no review at the desk. Without the mark it would
+                sit among the desk's own routings as if someone here had
+                validated it. */}
+            {isAutoRouted(state) && (
+              <span
+                title={t("drawer.autoRouted")}
+                className="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-semibold text-ink-700"
+              >
+                {t("row.autoRouted")}
+              </span>
+            )}
             {/* Visible before the decision, not only inside the drawer. */}
             {report.details.discreetReporting && (
               <span
-                title={t("drawer.discreet")}
+                title={t("drawer.discreetBanner")}
                 className="rounded-full bg-priority-mediumBg px-2 py-0.5 text-[11px] font-semibold text-priority-medium"
               >
                 {t("row.discreet")}

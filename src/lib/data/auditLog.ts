@@ -126,7 +126,11 @@ function summarise(entries: AuditLogEntry[]): AuditSummary {
     totalEvents: entries.length,
     decisions: entries.filter((e) => e.action === "report_validated" || e.action === "report_rejected")
       .length,
-    routings: entries.filter((e) => e.action === "report_routed_manual").length,
+    // An automatic routing counts as a routing, as the Routings chip in
+    // AuditFilters does (it can't be imported from there: that is a client
+    // module and this one is server-only).
+    routings: entries.filter((e) => e.action === "report_routed_manual" || e.action === "report_auto_routed")
+      .length,
     openings: entries.filter((e) => e.action === "report_viewed").length,
   };
 }

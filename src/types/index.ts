@@ -34,6 +34,9 @@ export interface ReporterInfo {
 export interface AgencyRouting {
   agencyName: string;
   isPrimary: boolean;
+  // Sent by the backend's automatic routing rather than by a desk official.
+  // A desk can only ever insert false (ar_insert_barangay requires it).
+  autoRouted: boolean;
   routedAt: string | null;
   acknowledgedAt: string | null;
   resolvedAt: string | null;

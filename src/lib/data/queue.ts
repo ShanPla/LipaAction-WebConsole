@@ -32,6 +32,14 @@ const VALIDATED_OR_LATER = ["validated", ...DOWNSTREAM_STATUSES];
 // could see.
 const RECENT_ROUTED_LIMIT = 20;
 
+// How the routed half is picked: the newest agency_routing rows, then the
+// reports behind them. A report has one row per agency (two or three is
+// usual), so this many rows covers the last 20 routings with room for reports
+// that turn out to be validated again. The candidates are capped too, since
+// they go into one PostgREST in.() list.
+const RECENT_ROUTING_ROWS = 120;
+const RECENT_ROUTED_CANDIDATES = 60;
+
 const REPORT_COLUMNS =
   "id, category, description, priority_name, status, entry_tier, identity_withheld, created_at, cluster_id, reviewed_at, severity_self_rating, safety_net_confirmation, anyone_hurt, is_ongoing, has_photo, has_video, discreet_reporting, priority_class, priority_score, confidence_band";
 
@@ -65,6 +73,7 @@ interface RawRouting {
   incident_report_id: string;
   agency_id: string;
   is_primary: boolean;
+  auto_routed: boolean | null;
   routed_at: string | null;
   acknowledged_at: string | null;
   resolved_at: string | null;
@@ -122,10 +131,10 @@ export async function getBarangayQueue(
   // report the barangay had ever filed and partition by status in JS — fine
   // at one report, thousands of rows per page load after a year in service.
   // Pending and awaiting-routing are to-do lists and stay uncapped (their
-  // size is the backlog itself); recently routed is capped in SQL; today's
-  // count is a HEAD request that returns no rows at all.
+  // size is the backlog itself); recently routed is capped; today's count is
+  // a HEAD request that returns no rows at all.
   const dayStart = startOfManilaDay().toISOString();
-  const [pendingRes, awaitingRes, routedRes, todayRes] = await Promise.all([
+  const [pendingRes, awaitingRes, recentRes, todayRes] = await Promise.all([
     supabase
       .from("incident_reports")
       .select(REPORT_COLUMNS)
@@ -146,13 +155,18 @@ export async function getBarangayQueue(
       // nullsFirst: false — pre-cutover rows have no reviewed_at and would
       // otherwise float to the top of a newest-first list.
       .order("reviewed_at", { ascending: false, nullsFirst: false }),
+    // The routed half is picked by routing time, from the newest
+    // agency_routing rows. incident_reports has no routing time of its own,
+    // and ordering it by review time sank two kinds of report below the cap:
+    // one routed long after it was validated, and one routed automatically,
+    // which is never reviewed at all. created_at is when the row was written,
+    // which is when that agency was sent the report. agency_routing has no
+    // barangay column; row-level security (ar_select_barangay) scopes it.
     supabase
-      .from("incident_reports")
-      .select(REPORT_COLUMNS)
-      .eq("incident_barangay_id", barangayId)
-      .in("status", DOWNSTREAM_STATUSES)
-      .order("reviewed_at", { ascending: false, nullsFirst: false })
-      .limit(RECENT_ROUTED_LIMIT),
+      .from("agency_routing")
+      .select("incident_report_id, created_at")
+      .order("created_at", { ascending: false, nullsFirst: false })
+      .limit(RECENT_ROUTING_ROWS),
     // Pre-cutover rows (reviewed_at IS NULL) fall out of a >= comparison on
     // their own, which is the intended exclusion: there's no knowing what
     // day they were handled.
@@ -176,14 +190,20 @@ export async function getBarangayQueue(
     console.error("[queue] pending load failed", pendingRes.status, pendingRes.error?.code, pendingRes.error?.message);
     return failedQueueData();
   }
-  for (const [part, res] of [["awaiting-routing", awaitingRes], ["recently-routed", routedRes], ["validated-today", todayRes]] as const) {
+  for (const [part, res] of [["awaiting-routing", awaitingRes], ["recent-routings", recentRes], ["validated-today", todayRes]] as const) {
     if (res.error) console.error(`[queue] ${part} failed`, res.status, res.error.code, res.error.message);
   }
 
   const pending = pendingRes.data as RawReport[];
   const awaiting = (awaitingRes.error ? [] : awaitingRes.data ?? []) as RawReport[];
-  const routed = (routedRes.error ? [] : routedRes.data ?? []) as RawReport[];
-  const validatedUnavailable = Boolean(awaitingRes.error || routedRes.error);
+  const { routed, failed: routedFailed } = recentRes.error
+    ? { routed: [], failed: true }
+    : await loadRecentlyRouted(
+        supabase,
+        barangayId,
+        (recentRes.data ?? []) as { incident_report_id: string }[]
+      );
+  const validatedUnavailable = Boolean(awaitingRes.error) || routedFailed;
 
   const routingExtras = await loadRouting(supabase, pending, awaiting, routed);
 
@@ -265,6 +285,46 @@ export async function getBarangayQueue(
 }
 
 /**
+ * The routed half of Recent validated: the reports behind the newest
+ * agency_routing rows, newest routing first, capped at RECENT_ROUTED_LIMIT.
+ * Only routed and resolved reports are kept — one that every agency sent back
+ * is validated again and belongs to the awaiting half. A routed report the
+ * desk can see no agency row for can't be found this way; routing always
+ * writes one, so none is expected.
+ *
+ * failed is true when the reports couldn't be read, so the tab can say its
+ * list is incomplete rather than show a partial one as the whole.
+ */
+async function loadRecentlyRouted(
+  supabase: ReturnType<typeof createClient>,
+  barangayId: string,
+  rows: { incident_report_id: string }[]
+): Promise<{ routed: RawReport[]; failed: boolean }> {
+  // The rows arrive newest first; a report's first row is its latest routing.
+  const rank = new Map<string, number>();
+  for (const row of rows) {
+    if (!rank.has(row.incident_report_id)) rank.set(row.incident_report_id, rank.size);
+  }
+  const ids = [...rank.keys()].slice(0, RECENT_ROUTED_CANDIDATES);
+  if (ids.length === 0) return { routed: [], failed: false };
+
+  const { data, error, status } = await supabase
+    .from("incident_reports")
+    .select(REPORT_COLUMNS)
+    .eq("incident_barangay_id", barangayId)
+    .in("id", ids)
+    .in("status", DOWNSTREAM_STATUSES);
+  if (error) {
+    console.error("[queue] recently-routed failed", status, error.code, error.message);
+    return { routed: [], failed: true };
+  }
+  const routed = ((data ?? []) as RawReport[])
+    .sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0))
+    .slice(0, RECENT_ROUTED_LIMIT);
+  return { routed, failed: false };
+}
+
+/**
  * Everything the Recent validated tab says about routing, loaded after the
  * reports themselves because it needs their ids and categories.
  *
@@ -318,7 +378,7 @@ async function loadRouting(
       ? supabase
           .from("agency_routing")
           .select(
-            "incident_report_id, agency_id, is_primary, routed_at, acknowledged_at, resolved_at, resolution_outcome"
+            "incident_report_id, agency_id, is_primary, auto_routed, routed_at, acknowledged_at, resolved_at, resolution_outcome"
           )
           .in("incident_report_id", reportIds)
       : Promise.resolve({ data: [] as RawRouting[], error: null }),
@@ -369,6 +429,7 @@ async function loadRouting(
     list.push({
       agencyName: nameOf(row.agency_id),
       isPrimary: row.is_primary,
+      autoRouted: Boolean(row.auto_routed),
       routedAt: row.routed_at,
       acknowledgedAt: row.acknowledged_at,
       resolvedAt: row.resolved_at,

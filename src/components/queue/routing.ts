@@ -202,6 +202,16 @@ export function returnedSummary(
 }
 
 /**
+ * True when a routed report's latest routing was the backend's automatic one,
+ * sent without a review at the desk. Only the latest routing counts: once the
+ * desk routes a returned report elsewhere, the routing is the desk's,
+ * whatever came before.
+ */
+export function isAutoRouted(state: RoutingState): boolean {
+  return state.kind === "downstream" && splitRouting(state.routing).current.some((r) => r.autoRouted);
+}
+
+/**
  * True when every agency closed a routed report as out of scope. Before the
  * backend's handback is live, such a report stays 'routed', and only the
  * returned state (status 'validated') can be sent to another agency — so

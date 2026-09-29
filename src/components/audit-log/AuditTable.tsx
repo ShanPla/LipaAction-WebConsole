@@ -5,14 +5,23 @@ import { useT, type MessageKey } from "@/lib/i18n";
 import { Icon } from "@/components/ui/Icon";
 import type { AuditLogEntry } from "@/types";
 
-// The four actions this function can return. Anything else renders as the
-// raw action text rather than disappearing: the column is text by contract,
-// not an enum, so a new backend action must still be readable here.
+// The actions this function can return. Anything else renders as the raw
+// action text rather than disappearing: the column is text by contract, not
+// an enum, so a new backend action must still be readable here.
+//
+// The last four are the backend's agency and automatic events (the backend
+// owner's UAT plan, 2026-09-29). They reach this page only once his
+// allow-list change to barangay_audit_log is live; the labels are ready
+// before that so they never show as raw text.
 const ACTION_LABELS: Record<string, MessageKey> = {
   report_viewed: "audit.action.report_viewed",
   report_validated: "audit.action.report_validated",
   report_rejected: "audit.action.report_rejected",
   report_routed_manual: "audit.action.report_routed_manual",
+  report_auto_routed: "audit.action.report_auto_routed",
+  routing_in_progress: "audit.action.routing_in_progress",
+  report_resolved_by_agencies: "audit.action.report_resolved_by_agencies",
+  report_returned_to_barangay: "audit.action.report_returned_to_barangay",
 };
 
 const ACTION_TONES: Record<string, "neutral" | "brand" | "warning"> = {
@@ -20,15 +29,24 @@ const ACTION_TONES: Record<string, "neutral" | "brand" | "warning"> = {
   report_validated: "brand",
   report_rejected: "warning",
   report_routed_manual: "brand",
+  report_auto_routed: "brand",
+  routing_in_progress: "neutral",
+  report_resolved_by_agencies: "brand",
+  report_returned_to_barangay: "warning",
 };
 
-// Same rule for roles: the four that can appear get a label, an unknown one
-// shows as itself.
+// Same rule for roles: the known ones get a label, an unknown one shows as
+// itself, and a missing one as a dash. The agency roles are there for the
+// agency events above, in case they carry the role of the agency user whose
+// action set them off; what the system-written rows carry is still to be
+// confirmed with the backend owner.
 const ROLE_LABELS: Record<string, MessageKey> = {
   barangay_official: "role.barangay_official",
   barangay_admin: "role.barangay_admin",
   senior_barangay_admin: "role.senior_barangay_admin",
   municipal_admin: "role.municipal_admin",
+  agency_user: "role.agency_user",
+  agency_supervisor: "role.agency_supervisor",
 };
 
 export function AuditTable({

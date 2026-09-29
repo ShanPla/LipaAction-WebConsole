@@ -8,6 +8,7 @@ import { playChime, primeChime } from "@/lib/chime";
 import { usePreferences } from "@/lib/preferences";
 import { useT } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
+import { DUPLICATE_WRITEBACK_LIVE } from "@/lib/features";
 import { medianAgeMinutes } from "@/lib/utils";
 import { useNow } from "@/lib/useNow";
 import { KpiHeader } from "@/components/queue/KpiHeader";
@@ -788,7 +789,7 @@ export function QueueClient({
       >
         {rows.length === 0 ? (
           activeTab === "duplicates" && !isFiltered && !queueData.loadFailed ? (
-            <DuplicatesNotConnected />
+            <DuplicatesEmpty />
           ) : (
             <p className="px-4 py-10 text-center text-sm text-ink-500">
               {isFiltered
@@ -856,21 +857,23 @@ export function QueueClient({
 }
 
 /**
- * The Flagged duplicates tab's empty state, which must not read as [no
- * duplicates found]. Nothing groups reports into clusters yet: the backend's
- * duplicate flagger computes clusters but does not write them back, so this
- * tab is empty regardless of what has been filed. The backend owner asked for
- * it to say so on screen (2026-09-17).
- *
- * When cluster write-back ships, this copy becomes false and must change —
- * nothing here can detect that on its own.
+ * The Flagged duplicates tab's empty state. Until the backend writes clusters
+ * back onto reports, it must not read as [no duplicates found]: the tab is
+ * empty whatever has been filed, and the backend owner asked for that to be
+ * said on screen (2026-09-17). Once write-back is live (DUPLICATE_WRITEBACK_LIVE)
+ * an empty tab does mean nothing is grouped, and the copy says how grouping
+ * works instead, including for reports without a location, which the backend
+ * groups by category and barangay.
  */
-function DuplicatesNotConnected() {
+function DuplicatesEmpty() {
   const t = useT();
+  const live = DUPLICATE_WRITEBACK_LIVE;
   return (
     <div className="px-4 py-10 text-center">
-      <p className="text-sm font-medium text-ink-700">{t("queue.dup.title")}</p>
-      <p className="mx-auto mt-1 max-w-md text-xs text-ink-500">{t("queue.dup.body")}</p>
+      <p className="text-sm font-medium text-ink-700">{t(live ? "queue.dup.titleLive" : "queue.dup.title")}</p>
+      <p className="mx-auto mt-1 max-w-md text-xs text-ink-500">
+        {t(live ? "queue.dup.bodyLive" : "queue.dup.body")}
+      </p>
     </div>
   );
 }

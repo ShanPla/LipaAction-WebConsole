@@ -7,6 +7,7 @@ import {
   Layers,
   Lock,
   Menu,
+  PhoneOff,
   Search,
   SlidersHorizontal,
   X,
@@ -25,7 +26,8 @@ export type IconName =
   | "history"
   | "reports"
   | "audit"
-  | "settings";
+  | "settings"
+  | "no-contact";
 
 /**
  * The console's icons, from Lucide (lucide-react, ISC licence).
@@ -47,6 +49,7 @@ const ICONS: Record<IconName, LucideIcon> = {
   reports: BarChart3,
   audit: FileText, // the written trail
   settings: SlidersHorizontal,
+  "no-contact": PhoneOff, // a discreet report: don't call or text the reporter
 };
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {

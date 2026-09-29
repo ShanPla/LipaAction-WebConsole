@@ -3,11 +3,16 @@
 import { cx } from "@/lib/utils";
 import { useT, type MessageKey } from "@/lib/i18n";
 
-/** Which actions a chip keeps. Empty means every action. */
+/**
+ * Which actions a chip keeps. Empty means every action. An automatic routing
+ * is a routing, so it counts with the desk's own once the backend lets it
+ * through; the agency events are under All only. Kept in step with the
+ * summary counts in src/lib/data/auditLog.ts.
+ */
 export const AUDIT_FILTERS = {
   all: [],
   decisions: ["report_validated", "report_rejected"],
-  routings: ["report_routed_manual"],
+  routings: ["report_routed_manual", "report_auto_routed"],
   openings: ["report_viewed"],
 } as const;
 
