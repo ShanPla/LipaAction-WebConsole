@@ -15,11 +15,15 @@ import { useDismissOnEscape } from "@/components/ui/useDismissOnEscape";
 import { useFocusTrap } from "@/components/ui/useFocusTrap";
 import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
 import { useReportRouting } from "./useReportRouting";
+import { AgencyPickerModal } from "./AgencyPickerModal";
 import {
   agencyProgressLabel,
+  everyAgencyReturned,
   isReturnedToBarangay,
+  rerouteCopy,
   routeConfirmCopy,
   routingState,
+  splitRouting,
   type RoutingState,
 } from "./routing";
 import type { AgencyRouting, QueueReport, RoutingPlanEntry } from "@/types";
@@ -220,7 +224,7 @@ export function ReportDetailPanel({
               <p className="mb-1.5 mt-5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
                 {t("drawer.section.routing")}
               </p>
-              <RoutingPreview plan={d.routingPlan} />
+              <RoutingPreview plan={d.routingPlan} routing={d.routing} />
             </>
           )}
 
@@ -257,6 +261,15 @@ export function ReportDetailPanel({
             >
               {t(routeState.kind === "ready" ? "routing.routeToAgency" : "routing.finish")}
             </Button>
+          ) : routeState.kind === "returned" && routeState.options && routeState.options.length > 0 ? (
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={routing.isPending}
+              onClick={routing.openConfirm}
+            >
+              {t("routing.routeElsewhere")}
+            </Button>
           ) : (
             <p className="text-xs text-ink-500">{footerNote(routeState, t)}</p>
           )}
@@ -281,6 +294,19 @@ export function ReportDetailPanel({
           onConfirm={routing.route}
         />
       )}
+
+      {routing.isConfirming &&
+        routeState.kind === "returned" &&
+        routeState.options &&
+        routeState.options.length > 0 && (
+          <AgencyPickerModal
+            {...rerouteCopy(report, routeState, t)}
+            options={routeState.options}
+            busy={routing.isPending}
+            onCancel={routing.cancelConfirm}
+            onConfirm={routing.reroute}
+          />
+        )}
     </div>
   );
 }
@@ -291,6 +317,10 @@ function footerNote(state: RoutingState, t: Translate): string {
       return t("drawer.footer.noMapping");
     case "unavailable":
       return t("drawer.footer.unavailable");
+    case "returned":
+      // Shown only when there is no button: the agency list didn't load, or
+      // every agency has already had the report.
+      return t(state.options === null ? "drawer.footer.optionsUnavailable" : "drawer.footer.noOtherAgency");
     case "downstream":
       // Every agency sent it back as out of scope: it is the barangay's
       // again, and saying the agencies own it would be false.
@@ -305,22 +335,43 @@ function footerNote(state: RoutingState, t: Translate): string {
  * After: each agency and how far it has got, read from agency_routing's
  * timestamps (there is no status column there). The desk can't change any
  * of it — agency roles do.
+ *
+ * Agencies that sent the report back before it was routed elsewhere are
+ * listed apart, under [Returned earlier], so the agencies holding it now
+ * aren't read as the ones that returned it.
  */
 function RoutingSection({ state }: { state: ReturnType<typeof routingState> }) {
   const t = useT();
   switch (state.kind) {
     case "ready":
       return <PlanList plan={state.plan} lead={t("drawer.plan.willRoute")} />;
-    case "incomplete":
+    case "incomplete": {
+      const { current, earlier } = splitRouting(state.routing);
       return (
         <div>
           <p className="mb-2 text-xs text-priority-medium">
             {t("drawer.incomplete")}
           </p>
-          <AgencyList rows={state.routing} />
-          {state.plan && <PlanList plan={state.plan} lead={t("drawer.plan.finishing")} />}
+          <AgencyList rows={current} />
+          <EarlierList rows={earlier} />
+          {/* Not after a re-route: the mapping names the agencies that sent
+              it back, and finishing doesn't send it to them again. */}
+          {state.plan && earlier.length === 0 && (
+            <PlanList plan={state.plan} lead={t("drawer.plan.finishing")} />
+          )}
         </div>
       );
+    }
+    case "returned": {
+      const { current, earlier } = splitRouting(state.routing);
+      return (
+        <div>
+          <p className="mb-2 text-xs text-priority-medium">{t("drawer.returned")}</p>
+          <AgencyList rows={current} />
+          <EarlierList rows={earlier} />
+        </div>
+      );
+    }
     case "no-mapping":
       return (
         <p className="text-sm text-ink-700">{t("drawer.noMapping")}</p>
@@ -329,12 +380,18 @@ function RoutingSection({ state }: { state: ReturnType<typeof routingState> }) {
       return (
         <p className="text-sm text-ink-500">{t("drawer.unavailable")}</p>
       );
-    case "downstream":
-      return state.routing.length > 0 ? (
-        <AgencyList rows={state.routing} />
-      ) : (
-        <p className="text-sm text-ink-500">{t("drawer.downstreamMissing")}</p>
+    case "downstream": {
+      if (state.routing.length === 0) {
+        return <p className="text-sm text-ink-500">{t("drawer.downstreamMissing")}</p>;
+      }
+      const { current, earlier } = splitRouting(state.routing);
+      return (
+        <div>
+          <AgencyList rows={current} />
+          <EarlierList rows={earlier} />
+        </div>
       );
+    }
     case "none":
       return null;
   }
@@ -345,9 +402,24 @@ function RoutingSection({ state }: { state: ReturnType<typeof routingState> }) {
  * same category mapping routeReport uses — the paper's [you're confirming,
  * not choosing] (p.186). Nothing is sent from here: an official still
  * validates, then routes with its own confirmation.
+ *
+ * The exception is a report back for review after an automatic routing that
+ * every agency sent back. Its mapping names exactly the agencies that
+ * returned it, so there is nothing to preview: the drawer lists them, and
+ * says the next agency is chosen after validation.
  */
-function RoutingPreview({ plan }: { plan: RoutingPlanEntry[] | null }) {
+function RoutingPreview({ plan, routing }: { plan: RoutingPlanEntry[] | null; routing: AgencyRouting[] }) {
   const t = useT();
+  if (everyAgencyReturned(routing)) {
+    const { current, earlier } = splitRouting(routing);
+    return (
+      <div>
+        <p className="mb-2 text-xs text-priority-medium">{t("drawer.returnedPending")}</p>
+        <AgencyList rows={current} />
+        <EarlierList rows={earlier} />
+      </div>
+    );
+  }
   if (plan === null) return <p className="text-sm text-ink-500">{t("drawer.unavailable")}</p>;
   if (plan.length === 0) return <p className="text-sm text-ink-700">{t("drawer.preview.noMapping")}</p>;
   return <PlanList plan={plan} lead={t("drawer.preview.willRoute")} />;
@@ -392,6 +464,17 @@ function AgencyList({ rows }: { rows: AgencyRouting[] }) {
           </p>
         </div>
       ))}
+    </div>
+  );
+}
+
+function EarlierList({ rows }: { rows: AgencyRouting[] }) {
+  const t = useT();
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-3">
+      <p className="mb-1 text-xs text-ink-500">{t("drawer.returnedEarlier")}:</p>
+      <AgencyList rows={rows} />
     </div>
   );
 }

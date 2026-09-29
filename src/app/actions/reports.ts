@@ -181,6 +181,26 @@ export interface RouteResult {
 }
 
 const ROUTE_FAILED = "Something went wrong. Nothing new was routed — try again.";
+const NOT_IN_BARANGAY = "That report isn't in your barangay, or no longer exists.";
+const ALREADY_ROUTED = "Already routed — another official may have routed it first.";
+const ONLY_VALIDATED = "Only validated reports can be routed.";
+
+/** One agency_routing row, as far as deciding what routing may still do. */
+interface HeldRow {
+  agency_id: string;
+  resolved_at: string | null;
+  resolution_outcome: string | null;
+}
+
+/**
+ * Whether every agency the report went to closed it as out of scope — the
+ * report the backend's handback returns to the barangay. The same rule as
+ * everyAgencyReturned in src/components/queue/routing.ts, which decides the
+ * [returned] state on screen; the two must agree.
+ */
+function everyAgencyReturned(rows: HeldRow[]): boolean {
+  return rows.length > 0 && rows.every((r) => r.resolved_at !== null && r.resolution_outcome === "out-of-scope");
+}
 
 /**
  * Hands a validated report to the agencies its category maps to.
@@ -236,15 +256,15 @@ export async function routeReport(reportId: string): Promise<RouteResult> {
     return { success: false, message: ROUTE_FAILED };
   }
   if (!report) {
-    return { success: false, message: "That report isn't in your barangay, or no longer exists." };
+    return { success: false, message: NOT_IN_BARANGAY };
   }
   if (report.status === "routed" || report.status === "resolved") {
     revalidatePath("/queue");
-    return { success: false, message: "Already routed — another official may have routed it first." };
+    return { success: false, message: ALREADY_ROUTED };
   }
   if (report.status !== "validated") {
     // rejected is terminal; pending hasn't been reviewed. Neither routes.
-    return { success: false, message: "Only validated reports can be routed." };
+    return { success: false, message: ONLY_VALIDATED };
   }
 
   // b.
@@ -279,9 +299,136 @@ export async function routeReport(reportId: string): Promise<RouteResult> {
   // c. Only the agencies not already routed. A second click, a retry after
   // a partial run, or another official routing at the same moment must not
   // produce a second row per agency.
-  const existing = await routedAgencyIds(supabase, reportId);
-  if (existing === null) return { success: false, message: ROUTE_FAILED };
+  const rows = await routingRows(supabase, reportId);
+  if (rows === null) return { success: false, message: ROUTE_FAILED };
 
+  // A report every agency sent back is 'validated' again with its rows still
+  // there. Routing it by its mapping would find every mapped agency present,
+  // insert nothing, log a routing, and mark it routed with nobody holding it
+  // — so it is refused before anything is written, and the official chooses
+  // other agencies instead (rerouteReport). The queue shows it as returned
+  // once it refreshes.
+  if (everyAgencyReturned(rows)) {
+    revalidatePath("/queue");
+    return {
+      success: false,
+      message: "Every agency sent this report back as out of scope. Choose another agency for it instead.",
+    };
+  }
+
+  return sendAndRecord(supabase, reportId, plan, new Set(rows.map((row) => row.agency_id)));
+}
+
+/**
+ * Sends a returned report to agencies an official chooses: a report every
+ * agency it went to closed as out of scope, which the backend's handback puts
+ * back to 'validated' (agreed with the backend owner 2026-09-29, live with
+ * their next database push). Until then a returned report stays 'routed' and
+ * never reaches this action.
+ *
+ * The category mapping is exactly who sent it back, so the agencies come from
+ * the official — and ar_insert_barangay doesn't limit which agency a barangay
+ * may route to. The choice is therefore proven here: every id must name an
+ * agency that exists, and none may already hold the report. The first one
+ * chosen leads (is_primary).
+ *
+ * From the insert on it is routeReport's contract, shared through
+ * sendAndRecord: auto_routed = false, the audit row before the status, and
+ * the same recovery. A run that stops after the insert leaves the report
+ * 'validated' with an agency holding it open, which the queue shows as
+ * [Routing incomplete]; routeReport finishes it from there.
+ */
+export async function rerouteReport(reportId: string, agencyIds: string[]): Promise<RouteResult> {
+  if (
+    !isUuid(reportId) ||
+    !Array.isArray(agencyIds) ||
+    agencyIds.length === 0 ||
+    agencyIds.length > MAX_BULK ||
+    !agencyIds.every(isUuid)
+  ) {
+    return { success: false, message: INVALID_REQUEST };
+  }
+  // De-duplicated in the order chosen, so the first stays the lead.
+  const chosen = [...new Set(agencyIds.map((id) => id.toLowerCase()))];
+
+  const supabase = createClient();
+
+  // a. As in routeReport: the session check only decides how to read an
+  // empty result.
+  const [session, reportRes] = await Promise.all([
+    sessionState(supabase),
+    supabase.from("incident_reports").select("id, status").eq("id", reportId).maybeSingle(),
+  ]);
+
+  if (session !== "active") {
+    return { success: false, message: SESSION_MESSAGE[session] };
+  }
+
+  const { data: report, error: reportError } = reportRes;
+  if (reportError) {
+    console.error("[rerouteReport] read failed", reportError.code, reportError.message);
+    return { success: false, message: ROUTE_FAILED };
+  }
+  if (!report) {
+    return { success: false, message: NOT_IN_BARANGAY };
+  }
+  if (report.status === "routed" || report.status === "resolved") {
+    revalidatePath("/queue");
+    return { success: false, message: ALREADY_ROUTED };
+  }
+  if (report.status !== "validated") {
+    return { success: false, message: ONLY_VALIDATED };
+  }
+
+  // Who holds it now, and whether the chosen agencies exist.
+  const [rows, agenciesRes] = await Promise.all([
+    routingRows(supabase, reportId),
+    supabase.from("agencies").select("id").in("id", chosen),
+  ]);
+  if (rows === null) return { success: false, message: ROUTE_FAILED };
+  if (agenciesRes.error) {
+    console.error("[rerouteReport] agencies read failed", agenciesRes.error.code, agenciesRes.error.message);
+    return { success: false, message: ROUTE_FAILED };
+  }
+
+  // Only a returned report goes to an agency of the official's choosing.
+  // Anything else means the report changed after the picker opened.
+  if (!everyAgencyReturned(rows)) {
+    revalidatePath("/queue");
+    return {
+      success: false,
+      message:
+        rows.length === 0
+          ? "This report hasn't been routed yet. Use Route to agency."
+          : "An agency already holds this report — another official may have routed it. Refresh to see where it stands.",
+    };
+  }
+
+  const known = new Set(((agenciesRes.data ?? []) as { id: string }[]).map((a) => a.id.toLowerCase()));
+  if (!chosen.every((agencyId) => known.has(agencyId))) {
+    return { success: false, message: "One of the chosen agencies wasn't found. Refresh, then choose again." };
+  }
+  const held = new Set(rows.map((row) => row.agency_id.toLowerCase()));
+  if (chosen.some((agencyId) => held.has(agencyId))) {
+    return { success: false, message: "One of the chosen agencies already sent this report back. Choose another." };
+  }
+
+  const plan = new Map(chosen.map((agencyId, index): [string, boolean] => [agencyId, index === 0]));
+  return sendAndRecord(supabase, reportId, plan, held);
+}
+
+/**
+ * Steps c to e, shared by routeReport and rerouteReport: send the report to
+ * every agency in plan that doesn't hold it yet, record the routing, then
+ * mark it routed. plan maps each agency to whether it leads (is_primary);
+ * existing is who holds the report already.
+ */
+async function sendAndRecord(
+  supabase: ReturnType<typeof createClient>,
+  reportId: string,
+  plan: Map<string, boolean>,
+  existing: Set<string>
+): Promise<RouteResult> {
   const missing = [...plan.keys()].filter((agencyId) => !existing.has(agencyId));
   if (missing.length > 0) {
     const rows = missing.map((agencyId) => routingRow(reportId, agencyId, plan.get(agencyId) ?? false));
@@ -315,8 +462,8 @@ export async function routeReport(reportId: string): Promise<RouteResult> {
   }
 
   // From here the agencies can already see the report. Every failure below
-  // leaves it 'validated' with routing rows, which the queue shows as
-  // [Routing incomplete] with a button that runs this action again.
+  // leaves it 'validated' with an agency holding it, which the queue shows
+  // as [Routing incomplete] with a button that runs routeReport to finish.
   const incomplete = (what: string) => {
     revalidatePath("/queue");
     return {
@@ -345,6 +492,18 @@ export async function routeReport(reportId: string): Promise<RouteResult> {
     .eq("status", "validated")
     .select("id");
 
+  if (statusError?.code === "23514") {
+    // The backend's guard (agreed 2026-09-29): a report can't become
+    // 'routed' while no agency holds it open. Every agency closed its part
+    // between the read above and this update, so there is nothing to finish
+    // — [Finish routing] would only meet the guard again.
+    console.error("[routeReport] status refused by a check", statusError.code, statusError.message);
+    revalidatePath("/queue");
+    return {
+      success: false,
+      message: "No agency still holds this report, so it can't be marked as routed. Refresh to see where it stands.",
+    };
+  }
   if (statusError) {
     console.error("[routeReport] status update failed", statusError.code, statusError.message);
     return incomplete("its status couldn't be updated");
@@ -376,20 +535,29 @@ function routingRow(reportId: string, agencyId: string, isPrimary: boolean) {
   return { incident_report_id: reportId, agency_id: agencyId, is_primary: isPrimary, auto_routed: false };
 }
 
-/** The agencies that already hold this report, or null if the read failed. */
-async function routedAgencyIds(
+/** The agencies that hold this report and how far each got, or null if the read failed. */
+async function routingRows(
   supabase: ReturnType<typeof createClient>,
   reportId: string
-): Promise<Set<string> | null> {
+): Promise<HeldRow[] | null> {
   const { data, error } = await supabase
     .from("agency_routing")
-    .select("agency_id")
+    .select("agency_id, resolved_at, resolution_outcome")
     .eq("incident_report_id", reportId);
   if (error) {
     console.error("[routeReport] existing read failed", error.code, error.message);
     return null;
   }
-  return new Set((data ?? []).map((row) => row.agency_id as string));
+  return (data ?? []) as HeldRow[];
+}
+
+/** The agencies that already hold this report, or null if the read failed. */
+async function routedAgencyIds(
+  supabase: ReturnType<typeof createClient>,
+  reportId: string
+): Promise<Set<string> | null> {
+  const rows = await routingRows(supabase, reportId);
+  return rows === null ? null : new Set(rows.map((row) => row.agency_id));
 }
 
 /**

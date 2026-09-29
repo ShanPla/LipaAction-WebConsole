@@ -9,7 +9,15 @@ import { cx, timeAgo } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
 import { useReportRouting } from "./useReportRouting";
-import { downstreamSummary, routeConfirmCopy, routingState } from "./routing";
+import { AgencyPickerModal } from "./AgencyPickerModal";
+import {
+  downstreamSummary,
+  everyAgencyReturned,
+  rerouteCopy,
+  returnedSummary,
+  routeConfirmCopy,
+  routingState,
+} from "./routing";
 import type { QueueReport } from "@/types";
 
 export function ReportRow({
@@ -83,6 +91,30 @@ export function ReportRow({
             </Button>
           </>
         );
+      case "returned":
+        // Every agency sent it back. The next agency is the official's
+        // choice, so the button opens the picker rather than a confirmation.
+        return (
+          <>
+            <span className="max-w-[14rem] text-right text-xs font-medium text-priority-medium">
+              {returnedSummary(state, t)}
+            </span>
+            {state.options === null ? (
+              <span className="max-w-[10rem] text-right text-xs text-ink-500">{t("row.returnedUnavailable")}</span>
+            ) : (
+              state.options.length > 0 && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={routing.isPending}
+                  onClick={routing.openConfirm}
+                >
+                  {t("routing.routeElsewhere")}
+                </Button>
+              )
+            )}
+          </>
+        );
       case "no-mapping":
         return (
           <span className="max-w-[14rem] text-right text-xs font-medium text-priority-medium">
@@ -139,6 +171,14 @@ export function ReportRow({
               </span>
             )}
             <PriorityBadge priority={report.priority} score={report.details.priorityScore} />
+            {/* Back in the queue after an automatic routing that every agency
+                sent back: its age and score would otherwise make it look like
+                any other report waiting for a first look. */}
+            {isReviewable(report.details.status) && everyAgencyReturned(report.details.routing) && (
+              <span className="rounded-full bg-priority-mediumBg px-2 py-0.5 text-[11px] font-semibold text-priority-medium">
+                {t("row.returnedChip")}
+              </span>
+            )}
             {/* Visible before the decision, not only inside the drawer. */}
             {report.details.discreetReporting && (
               <span
@@ -208,6 +248,16 @@ export function ReportRow({
           busy={routing.isPending}
           onCancel={routing.cancelConfirm}
           onConfirm={routing.route}
+        />
+      )}
+
+      {routing.isConfirming && state.kind === "returned" && state.options && state.options.length > 0 && (
+        <AgencyPickerModal
+          {...rerouteCopy(report, state, t)}
+          options={state.options}
+          busy={routing.isPending}
+          onCancel={routing.cancelConfirm}
+          onConfirm={routing.reroute}
         />
       )}
     </>

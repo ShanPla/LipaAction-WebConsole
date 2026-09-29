@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useToast } from "@/components/ui/Toast";
-import { routeReport } from "@/app/actions/reports";
+import { rerouteReport, routeReport, type RouteResult } from "@/app/actions/reports";
 import { callAction } from "@/lib/callAction";
 import { useT } from "@/lib/i18n";
 import { agencyCount } from "./routing";
@@ -15,6 +15,10 @@ import { agencyCount } from "./routing";
  * No local [routed] mark is kept. routeReport revalidates /queue, so the
  * report comes back with its new status and agency rows in the same
  * response — the server's answer is the only one shown.
+ *
+ * isConfirming opens whichever step the report's routing state calls for:
+ * the plain confirmation for a first or unfinished routing, the agency
+ * picker for a report every agency sent back.
  */
 export function useReportRouting(reportId: string) {
   const { showToast } = useToast();
@@ -22,9 +26,9 @@ export function useReportRouting(reportId: string) {
   const [isPending, startTransition] = useTransition();
   const [isConfirming, setIsConfirming] = useState(false);
 
-  function route() {
+  function run(action: () => Promise<RouteResult>) {
     startTransition(async () => {
-      const result = await callAction(() => routeReport(reportId));
+      const result = await callAction(action);
       setIsConfirming(false);
       if (result === null) {
         // Routing is irreversible: never guess which way it went. The queue's
@@ -46,6 +50,7 @@ export function useReportRouting(reportId: string) {
     isConfirming,
     openConfirm: () => setIsConfirming(true),
     cancelConfirm: () => setIsConfirming(false),
-    route,
+    route: () => run(() => routeReport(reportId)),
+    reroute: (agencyIds: string[]) => run(() => rerouteReport(reportId, agencyIds)),
   };
 }

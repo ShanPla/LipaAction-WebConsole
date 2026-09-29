@@ -208,6 +208,15 @@ export const MESSAGES = {
     en: "Couldn't load routing options — refresh",
     tl: "Hindi na-load ang mga opsyon sa pagpasa — i-refresh",
   },
+  "row.returned": {
+    en: "Returned by {agency}{more} — out of scope",
+    tl: "Ibinalik ng {agency}{more} — labas sa saklaw",
+  },
+  "row.returnedChip": { en: "Returned by agencies", tl: "Ibinalik ng mga ahensya" },
+  "row.returnedUnavailable": {
+    en: "Couldn't load the agency list — refresh",
+    tl: "Hindi na-load ang listahan ng ahensya — i-refresh",
+  },
   "review.validate": { en: "Validate", tl: "I-validate" },
   "review.reject": { en: "Reject", tl: "Tanggihan" },
   "review.rejectTitle": { en: "Reject {id}?", tl: "Tanggihan ang {id}?" },
@@ -242,6 +251,7 @@ export const MESSAGES = {
   "rejectReason.other": { en: REJECT_REASON_LABELS.other, tl: "Iba pa" },
   "routing.routeToAgency": { en: "Route to agency", tl: "Ipasa sa ahensya" },
   "routing.finish": { en: "Finish routing", tl: "Tapusin ang pagpasa" },
+  "routing.routeElsewhere": { en: "Route to another agency", tl: "Ipasa sa ibang ahensya" },
   "routing.lead": { en: "(lead)", tl: "(pangunahin)" },
   "routing.agencyCountOne": { en: "1 agency", tl: "1 ahensya" },
   "routing.agencyCount": { en: "{count} agencies", tl: "{count} ahensya" },
@@ -301,6 +311,21 @@ export const MESSAGES = {
   "routing.routeConfirm": { en: "Route to {agencies}", tl: "Ipasa sa {agencies}" },
   "routing.routedToast": { en: "{id} routed to {agencies}", tl: "Naipasa ang {id} sa {agencies}" },
   "routing.failed": { en: "Couldn't route this report", tl: "Hindi naipasa ang ulat na ito" },
+  "reroute.title": { en: "Route {id} to another agency", tl: "Ipasa ang {id} sa ibang ahensya" },
+  "reroute.description": {
+    en:
+      "{names} sent it back as out of scope. Choose who should handle it instead. " +
+      "Routing can't be undone from this console.",
+    tl:
+      "Ibinalik ito ng {names} bilang labas sa saklaw. Piliin kung sino ang hahawak nito. " +
+      "Hindi na ito mababawi mula sa console na ito.",
+  },
+  "reroute.legend": { en: "Agencies", tl: "Mga ahensya" },
+  "reroute.leadHint": {
+    en: "The first agency you choose leads. Agencies that already had this report aren't listed.",
+    tl: "Ang unang ahensyang pipiliin mo ang mangunguna. Hindi nakalista ang mga ahensyang nagkaroon na ng ulat na ito.",
+  },
+  "reroute.chooseFirst": { en: "Choose an agency", tl: "Pumili ng ahensya" },
 
   // --- Report detail drawer -------------------------------------------------
   "drawer.close": { en: "Close report details", tl: "Isara ang detalye ng ulat" },
@@ -344,6 +369,15 @@ export const MESSAGES = {
     en: "Finishing sends it to all of",
     tl: "Kapag tinapos, ipapasa ito sa lahat ng sumusunod",
   },
+  "drawer.returned": {
+    en: "Every agency it was routed to sent it back as out of scope. Choose another agency, or handle it at the barangay.",
+    tl: "Ibinalik ito ng lahat ng ahensyang pinagpasahan bilang labas sa saklaw. Pumili ng ibang ahensya, o asikasuhin ito sa barangay.",
+  },
+  "drawer.returnedEarlier": { en: "Returned earlier", tl: "Ibinalik noon" },
+  "drawer.returnedPending": {
+    en: "Every agency it was routed to sent it back as out of scope, so it needs a review here. After validation, choose another agency for it.",
+    tl: "Ibinalik ito ng lahat ng ahensyang pinagpasahan bilang labas sa saklaw, kaya kailangan itong suriin dito. Pagkatapos ma-validate, pumili ng ibang ahensya para rito.",
+  },
   "drawer.incomplete": {
     en: "A routing attempt stopped part-way. These agencies already have it:",
     tl: "Huminto sa kalagitnaan ang isang pagtatangkang ipasa ito. Mayroon na nito ang mga ahensyang ito:",
@@ -373,8 +407,16 @@ export const MESSAGES = {
     tl: "Nasa mga ahensya na ito — sila ang nag-a-update ng progreso, hindi ang desk na ito.",
   },
   "drawer.footer.returned": {
-    en: "Returned by the agencies as out of scope — handle it at the barangay. Re-routing isn't available from this console.",
-    tl: "Ibinalik ng mga ahensya bilang labas sa saklaw — asikasuhin ito sa barangay. Hindi pa ito maipapasa muli mula sa console na ito.",
+    en: "Returned by the agencies as out of scope — handle it at the barangay. This report can't be sent to another agency from here.",
+    tl: "Ibinalik ng mga ahensya bilang labas sa saklaw — asikasuhin ito sa barangay. Hindi maipapasa ang ulat na ito sa ibang ahensya mula rito.",
+  },
+  "drawer.footer.optionsUnavailable": {
+    en: "Couldn't load the agency list. Refresh to try again.",
+    tl: "Hindi na-load ang listahan ng ahensya. I-refresh para subukang muli.",
+  },
+  "drawer.footer.noOtherAgency": {
+    en: "Every agency has already had this report — handle it at the barangay.",
+    tl: "Nagkaroon na ng ulat na ito ang lahat ng ahensya — asikasuhin ito sa barangay.",
   },
   "drawer.footer.reviewed": {
     en: "Already reviewed — no further action available here.",

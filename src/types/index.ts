@@ -47,6 +47,16 @@ export interface RoutingPlanEntry {
 }
 
 /**
+ * An agency an official may choose when every agency the report went to sent
+ * it back as out of scope. The id is what rerouteReport receives; the server
+ * checks it again, since the choice arrives from the browser.
+ */
+export interface RoutingOption {
+  agencyId: string;
+  agencyName: string;
+}
+
+/**
  * The fuller picture of a report, shown in the detail drawer.
  *
  * Every field here is a real incident_reports column, except the two routing
@@ -72,9 +82,10 @@ export interface ReportDetails {
   confidenceBand: string | null;
   clusterId: string | null;
   submittedAt: string; // exact ISO timestamp, not the relative display string
-  // Agencies this report has been sent to. Empty until it is routed — and
-  // non-empty on a validated report only when a routing attempt stopped
-  // part-way, which the UI offers to finish.
+  // Agencies this report has been sent to. Empty until it is routed. On a
+  // validated report it is non-empty in two cases: a routing attempt stopped
+  // part-way, which the UI offers to finish, or every agency sent the report
+  // back as out of scope, which the UI offers to route elsewhere.
   routing: AgencyRouting[];
   // Where routing would send it, from category_agency_routing. Carried by
   // pending reports too, for the drawer's preview before a decision. [] when
@@ -82,6 +93,11 @@ export interface ReportDetails {
   // filled with a guess; null when the mapping couldn't be loaded, and on
   // routed or resolved reports, where it no longer applies.
   routingPlan: RoutingPlanEntry[] | null;
+  // The agencies that don't hold the report yet, sorted by name. Only set on
+  // a validated report that already has agency rows, the one place the picker
+  // can open; null there when the agency list couldn't be loaded, and null on
+  // every other report.
+  routingOptions: RoutingOption[] | null;
 }
 
 export interface QueueReport {

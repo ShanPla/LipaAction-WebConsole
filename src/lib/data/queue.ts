@@ -6,6 +6,7 @@ import type {
   KpiSummary,
   QueueReport,
   QueueTabId,
+  RoutingOption,
   RoutingPlanEntry,
   SituationCluster,
 } from "@/types";
@@ -82,9 +83,10 @@ interface RawMapping {
 interface RoutingExtras {
   routing: AgencyRouting[];
   routingPlan: RoutingPlanEntry[] | null;
+  routingOptions: RoutingOption[] | null;
 }
 
-const NO_ROUTING: RoutingExtras = { routing: [], routingPlan: null };
+const NO_ROUTING: RoutingExtras = { routing: [], routingPlan: null, routingOptions: null };
 
 export interface QueueData {
   kpiSummary: KpiSummary;
@@ -276,12 +278,22 @@ export async function getBarangayQueue(
  *  - the category mapping fails → routingPlan stays null on validated
  *    reports, which the UI shows as [couldn't load routing options] rather
  *    than as [no agency mapped], a claim it couldn't back up.
- *  - agency names fail → [Unnamed agency].
+ *  - agency names fail → [Unnamed agency], and a returned report gets no
+ *    list of other agencies to choose from (routingOptions null), which the
+ *    UI shows as [couldn't load the agency list] rather than as [no other
+ *    agency].
  *
  * Pending reports get the category mapping too, for the drawer's preview of
  * where a report would go once validated (the paper's [you're confirming,
  * not choosing], p.186). A preview sends nothing: routing is still its own
  * confirmed step after validation.
+ *
+ * Pending reports get their agency rows as well, for one case: a report
+ * routed automatically, before any review, that every agency then sent back
+ * as out of scope. The backend's handback returns it to 'prioritized', into
+ * the pending queue, and its rows are what show it was returned — without
+ * them the drawer would offer the very agencies that returned it as where
+ * routing will send it. Every other pending report has no rows.
  */
 async function loadRouting(
   supabase: ReturnType<typeof createClient>,
@@ -290,7 +302,7 @@ async function loadRouting(
   routed: RawReport[]
 ): Promise<Map<string, RoutingExtras>> {
   const extras = new Map<string, RoutingExtras>();
-  const reportIds = [...awaiting, ...routed].map((r) => r.id);
+  const reportIds = [...pending, ...awaiting, ...routed].map((r) => r.id);
 
   // Only well-formed category keys reach the filter. category is written by
   // the mobile app and ends up inside a PostgREST in.() list; a key is
@@ -346,7 +358,13 @@ async function loadRouting(
   const nameOf = (agencyId: string) => agencyNames.get(agencyId) ?? "Unnamed agency";
 
   const routingByReport = new Map<string, AgencyRouting[]>();
+  // Which agencies hold each report, by id: the picker must not offer an
+  // agency that already has the report, and names can repeat or be missing.
+  const heldBy = new Map<string, Set<string>>();
   for (const row of (routingRes.data ?? []) as RawRouting[]) {
+    const held = heldBy.get(row.incident_report_id) ?? new Set<string>();
+    held.add(row.agency_id);
+    heldBy.set(row.incident_report_id, held);
     const list = routingByReport.get(row.incident_report_id) ?? [];
     list.push({
       agencyName: nameOf(row.agency_id),
@@ -373,23 +391,44 @@ async function loadRouting(
     }
   }
 
-  // Nothing is routed while pending, so only the plan applies.
+  // Every agency with a name, for the picker a returned report offers. An
+  // agency without one is left out: an official can't knowingly choose
+  // [Unnamed agency].
+  const namedAgencies = ((agenciesRes.data ?? []) as { id: string; name: string | null }[])
+    .filter((a) => Boolean(a.name?.trim()))
+    .map((a) => ({ agencyId: a.id, agencyName: (a.name as string).trim() }))
+    .sort((a, b) => a.agencyName.localeCompare(b.agencyName, "en"));
+
+  // A pending report has agency rows only when the agencies handed it back
+  // after an automatic routing. The picker waits for validation, as for any
+  // returned report, so no options here.
   for (const r of pending) {
     extras.set(r.id, {
-      routing: [],
+      routing: routingByReport.get(r.id) ?? [],
       routingPlan: mappingRes.error ? null : planByCategory.get(r.category) ?? [],
+      routingOptions: null,
     });
   }
   for (const r of awaiting) {
+    const held = heldBy.get(r.id);
     extras.set(r.id, {
       routing: routingByReport.get(r.id) ?? [],
       // A category absent from a successful lookup has no mapping: []. A
       // failed lookup proves nothing either way: null.
       routingPlan: mappingRes.error ? null : planByCategory.get(r.category) ?? [],
+      // Only a validated report that agencies already hold can need another
+      // agency: routingState decides whether it does (every agency sent it
+      // back). A failed agency list is null, never [], which would claim that
+      // no other agency exists.
+      routingOptions: held
+        ? agenciesRes.error
+          ? null
+          : namedAgencies.filter((a) => !held.has(a.agencyId))
+        : null,
     });
   }
   for (const r of routed) {
-    extras.set(r.id, { routing: routingByReport.get(r.id) ?? [], routingPlan: null });
+    extras.set(r.id, { routing: routingByReport.get(r.id) ?? [], routingPlan: null, routingOptions: null });
   }
 
   return extras;
@@ -433,6 +472,7 @@ function toQueueReport(r: RawReport, extras: RoutingExtras = NO_ROUTING): QueueR
       submittedAt: r.created_at,
       routing: extras.routing,
       routingPlan: extras.routingPlan,
+      routingOptions: extras.routingOptions,
     },
   };
 }

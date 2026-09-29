@@ -16,6 +16,7 @@ import { QueueTabs, queuePanelDomId, queueTabDomId } from "@/components/queue/Qu
 import { ReportRow } from "@/components/queue/ReportRow";
 import { ReportDetailPanel } from "@/components/queue/ReportDetailPanel";
 import { isReviewable, type Verdict } from "@/components/queue/useReportReview";
+import { everyAgencyReturned } from "@/components/queue/routing";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import type { QueueReport, QueueTabId } from "@/types";
@@ -39,6 +40,49 @@ type Freshness = "connecting" | "live" | "polling";
 const ARRIVAL_HIGHLIGHT_MS = 4000;
 
 const NO_ARRIVALS: ReadonlySet<string> = new Set();
+
+// The reports the page shows, as arrival detection sees them: all of them,
+// and those in a working queue (the pending tabs; Flagged duplicates only
+// repeats pending rows).
+interface SeenReports {
+  all: ReadonlySet<string>;
+  pending: ReadonlySet<string>;
+}
+
+function seenReports(data: QueueData): SeenReports {
+  const { emergency, standard } = data.queueByTab;
+  return {
+    all: new Set(Object.values(data.queueByTab).flat().map((r) => r.id)),
+    pending: new Set([...emergency, ...standard].map((r) => r.id)),
+  };
+}
+
+// What arrived since the last fetch: a report new to the page, or one back in
+// a working queue from Recent validated. Statuses only move forward, apart
+// from the backend's handback of a report every agency returned after an
+// automatic routing, so nothing else moves into the pending tabs. Without the
+// second half, a returned report was marked only when it had fallen off the
+// capped routed list first.
+function arrivalsSince(previous: SeenReports, current: SeenReports): string[] {
+  return [...current.all].filter(
+    (id) => !previous.all.has(id) || (current.pending.has(id) && !previous.pending.has(id))
+  );
+}
+
+// The arrived emergencies that still get the chime: not already announced by
+// their Realtime INSERT, and not a returned report. The alert means a new
+// emergency, as Settings describes it; a report the agencies sent back is
+// marked on its row instead, and the SLA alert, when switched on, fires for
+// it at once, since it is long past its five minutes.
+function unannouncedEmergencies(
+  emergencies: QueueReport[],
+  arrived: readonly string[],
+  chimed: ReadonlySet<string>
+): QueueReport[] {
+  return emergencies.filter(
+    (r) => arrived.includes(r.id) && !chimed.has(r.id) && !everyAgencyReturned(r.details.routing)
+  );
+}
 
 // Fast-triage SLA from the thesis (p.102): a Tier 0 report should have a
 // decision within 5 minutes of submission.
@@ -549,19 +593,19 @@ export function QueueClient({
   // a count stays flat when one report is validated and another arrives in
   // the same refresh. A failed load is skipped entirely: its empty lists are
   // a fallback, not [everything left], and treating them as real made the
-  // next good load mark every report New and chime.
-  const seenReportIds = useRef<Set<string> | null>(null);
+  // next good load mark every report New and chime. A report back in a
+  // working queue after every agency returned it counts as arrived too (see
+  // arrivalsSince), but never chimes.
+  const seenBefore = useRef<SeenReports | null>(null);
   const [arrivedIds, setArrivedIds] = useState<ReadonlySet<string>>(NO_ARRIVALS);
   useEffect(() => {
     if (queueData.loadFailed) return;
-    const emergencies = queueData.queueByTab.emergency;
-    // Deduplicated across tabs — the duplicates tab repeats pending rows.
-    const ids = new Set(Object.values(queueData.queueByTab).flat().map((r) => r.id));
-    const previous = seenReportIds.current;
-    seenReportIds.current = ids;
+    const current = seenReports(queueData);
+    const previous = seenBefore.current;
+    seenBefore.current = current;
     if (previous === null) return;
 
-    const arrived = [...ids].filter((id) => !previous.has(id));
+    const arrived = arrivalsSince(previous, current);
     if (arrived.length === 0) return;
 
     // A later arrival replaces an earlier highlight rather than extending it.
@@ -569,7 +613,7 @@ export function QueueClient({
 
     // Chime only for emergencies the Realtime event didn't already announce
     // — this path covers arrivals seen by polling, or after a reconnect.
-    const unannounced = emergencies.filter((r) => arrived.includes(r.id) && !chimedIds.current.has(r.id));
+    const unannounced = unannouncedEmergencies(queueData.queueByTab.emergency, arrived, chimedIds.current);
     unannounced.forEach((r) => chimedIds.current.add(r.id));
     if (unannounced.length > 0 && prefsRef.current.audibleAlertNewEmergency) playChime();
   }, [queueData]);

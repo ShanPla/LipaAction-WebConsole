@@ -1,4 +1,4 @@
-import type { AgencyRouting, QueueReport, RoutingPlanEntry } from "@/types";
+import type { AgencyRouting, QueueReport, RoutingOption, RoutingPlanEntry } from "@/types";
 // Type-only: the helpers below take a Translate function rather than calling
 // a hook, so they stay plain functions the row and the drawer can share.
 import type { Translate } from "@/lib/i18n";
@@ -16,6 +16,12 @@ export type RoutingState =
   // Validated but some agencies already hold it: a previous attempt stopped
   // part-way. routeReport is idempotent, so the same action finishes it.
   | { kind: "incomplete"; routing: AgencyRouting[]; plan: RoutingPlanEntry[] | null }
+  // Validated again after every agency it went to sent it back as out of
+  // scope — the backend's handback returns such a report to the barangay.
+  // Its category mapping is exactly who returned it, so the next agency is a
+  // person's choice: options lists the agencies that don't hold it yet, and
+  // is null when the agency list couldn't be loaded.
+  | { kind: "returned"; routing: AgencyRouting[]; options: RoutingOption[] | null }
   // Validated, and the category maps to no agency (e.g. other_emergency).
   | { kind: "no-mapping" }
   // Validated, but the mapping couldn't be loaded. Not the same claim as
@@ -25,10 +31,18 @@ export type RoutingState =
   | { kind: "downstream"; status: "routed" | "resolved"; routing: AgencyRouting[] };
 
 export function routingState(report: QueueReport): RoutingState {
-  const { status, routing, routingPlan } = report.details;
+  const { status, routing, routingPlan, routingOptions } = report.details;
 
   if (status === "validated") {
-    if (routing.length > 0) return { kind: "incomplete", routing, plan: routingPlan };
+    if (routing.length > 0) {
+      // Before [incomplete]: [Finish routing] on a returned report would send
+      // it back to the agencies that just returned it, and mark it routed
+      // with nobody holding it.
+      if (everyAgencyReturned(routing)) {
+        return { kind: "returned", routing, options: routingOptions ?? null };
+      }
+      return { kind: "incomplete", routing, plan: routingPlan };
+    }
     if (routingPlan === null) return { kind: "unavailable" };
     if (routingPlan.length === 0) return { kind: "no-mapping" };
     return { kind: "ready", plan: routingPlan };
@@ -39,6 +53,42 @@ export function routingState(report: QueueReport): RoutingState {
   }
 
   return { kind: "none" };
+}
+
+/**
+ * True when every agency the report went to closed it as out of scope. The
+ * same rule decides the [returned] state here and is checked again by
+ * routeReport and rerouteReport on the server, which must agree with it.
+ */
+export function everyAgencyReturned(rows: AgencyRouting[]): boolean {
+  return rows.length > 0 && rows.every((r) => Boolean(r.resolvedAt) && r.resolutionOutcome === "out-of-scope");
+}
+
+/**
+ * Splits a report's agency rows into the latest routing and what came
+ * before it. An out-of-scope closure is history once the report was routed
+ * to some agency after it: the desk chose another agency, and [Returned by
+ * X] is no longer what the report is waiting on. Any other closure stays
+ * current, so a fix is never hidden. A row without usable timestamps is
+ * never moved to history.
+ */
+export function splitRouting(rows: AgencyRouting[]): { current: AgencyRouting[]; earlier: AgencyRouting[] } {
+  const current: AgencyRouting[] = [];
+  const earlier: AgencyRouting[] = [];
+  for (const r of rows) {
+    const closed = time(r.resolvedAt);
+    // NaN compares false either way, so an undated row stays current.
+    const superseded =
+      r.resolutionOutcome === "out-of-scope" && rows.some((other) => time(other.routedAt) > closed);
+    (superseded ? earlier : current).push(r);
+  }
+  // Can't happen with consistent timestamps (the latest routing is never
+  // superseded), but an empty current list would read as [not routed].
+  return current.length > 0 ? { current, earlier } : { current: rows, earlier: [] };
+}
+
+function time(iso: string | null): number {
+  return iso ? Date.parse(iso) : Number.NaN;
 }
 
 // resolution_outcome is a closed list on the backend, one message key per
@@ -62,6 +112,11 @@ export function agencyProgressLabel(row: AgencyRouting, t: Translate): string {
   return t("routing.progress.awaiting");
 }
 
+/** [ +2] after the lead agency's name, or nothing for a single agency. */
+function moreThan(rows: AgencyRouting[]): string {
+  return rows.length > 1 ? ` +${rows.length - 1}` : "";
+}
+
 /**
  * The one-line version for a queue row. Leads with the primary agency (the
  * loader sorts it first) and counts the rest, because a row has room for one
@@ -71,7 +126,10 @@ export function downstreamSummary(
   state: Extract<RoutingState, { kind: "downstream" }>,
   t: Translate
 ): string {
-  const { status, routing } = state;
+  const { status } = state;
+  // Only the latest routing: an agency that sent the report back before the
+  // desk routed it elsewhere is history. The drawer still lists it.
+  const routing = splitRouting(state.routing).current;
   if (routing.length === 0) {
     // Routed by a path whose rows this desk can't see, or the routing load
     // failed. The status is still true; the detail just isn't available.
@@ -79,7 +137,7 @@ export function downstreamSummary(
   }
 
   const lead = routing[0];
-  const more = routing.length > 1 ? ` +${routing.length - 1}` : "";
+  const more = moreThan(routing);
   const open = routing.filter((r) => !r.resolvedAt);
 
   // The agency that fixed it is named, whichever it was. This used to name
@@ -90,7 +148,7 @@ export function downstreamSummary(
   if (open.length === 0) {
     if (fixer) return t("routing.summary.resolvedBy", { agency: fixer.agencyName, more });
     // Every agency closed it, none with a fix.
-    if (isReturnedToBarangay(state)) {
+    if (everyAgencyReturned(routing)) {
       return t("routing.summary.returned", { agency: lead.agencyName, more });
     }
     return lead.resolutionOutcome
@@ -130,17 +188,27 @@ export function downstreamSummary(
 }
 
 /**
- * True when every agency closed the report as out of scope. The paper sends
- * such a report back to the barangay (p.224). Re-routing it elsewhere needs a
- * backend path that doesn't exist yet — the status only moves forward and the
- * desk can't touch agency_routing — so the console can only say so.
+ * The [Returned by X] line for a returned report's row: the agencies of the
+ * latest routing, which are the ones that just sent it back.
+ */
+export function returnedSummary(
+  state: Extract<RoutingState, { kind: "returned" }>,
+  t: Translate
+): string {
+  const routing = splitRouting(state.routing).current;
+  const vars = { agency: routing[0].agencyName, more: moreThan(routing) };
+  // With no other agency to offer, the barangay is the only place left.
+  return t(state.options && state.options.length === 0 ? "routing.summary.returned" : "row.returned", vars);
+}
+
+/**
+ * True when every agency closed a routed report as out of scope. Before the
+ * backend's handback is live, such a report stays 'routed', and only the
+ * returned state (status 'validated') can be sent to another agency — so
+ * for this one the console can only say it is back with the barangay.
  */
 export function isReturnedToBarangay(state: RoutingState): boolean {
-  return (
-    state.kind === "downstream" &&
-    state.routing.length > 0 &&
-    state.routing.every((r) => Boolean(r.resolvedAt) && r.resolutionOutcome === "out-of-scope")
-  );
+  return state.kind === "downstream" && everyAgencyReturned(splitRouting(state.routing).current);
 }
 
 /**
@@ -159,7 +227,7 @@ export function routeConfirmCopy(
   const agencies = agencyCount(count, t);
   // Said at the moment the report leaves the barangay. The drawer already
   // showed the flag; the confirmation used to be the one place it didn't.
-  const discreet = report.details.discreetReporting ? ` ${t("routing.discreetNote")}` : "";
+  const discreet = discreetNote(report, t);
 
   if (resuming) {
     return {
@@ -174,6 +242,29 @@ export function routeConfirmCopy(
     description: t("routing.routeDescription", { names: names ?? t("routing.mappedAgencies") }) + discreet,
     confirmLabel: t("routing.routeConfirm", { agencies }),
   };
+}
+
+/**
+ * Copy for the agency picker a returned report opens. Names who sent it back,
+ * so the official doesn't have to remember while choosing, and says routing
+ * can't be undone, like the ordinary confirmation.
+ */
+export function rerouteCopy(
+  report: QueueReport,
+  state: Extract<RoutingState, { kind: "returned" }>,
+  t: Translate
+): { title: string; description: string } {
+  const names = splitRouting(state.routing)
+    .current.map((r) => r.agencyName)
+    .join(", ");
+  return {
+    title: t("reroute.title", { id: report.id }),
+    description: t("reroute.description", { names }) + discreetNote(report, t),
+  };
+}
+
+function discreetNote(report: QueueReport, t: Translate): string {
+  return report.details.discreetReporting ? ` ${t("routing.discreetNote")}` : "";
 }
 
 /** [1 agency] / [3 agencies] — shared with the routed toast. */
