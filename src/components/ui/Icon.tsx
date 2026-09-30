@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Building2,
   Check,
   ClipboardCheck,
   FileText,
@@ -10,6 +11,7 @@ import {
   PhoneOff,
   Search,
   SlidersHorizontal,
+  Timer,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -27,7 +29,9 @@ export type IconName =
   | "reports"
   | "audit"
   | "settings"
-  | "no-contact";
+  | "no-contact"
+  | "agencies"
+  | "timer";
 
 /**
  * The console's icons, from Lucide (lucide-react, ISC licence).
@@ -50,6 +54,8 @@ const ICONS: Record<IconName, LucideIcon> = {
   audit: FileText, // the written trail
   settings: SlidersHorizontal,
   "no-contact": PhoneOff, // a discreet report: don't call or text the reporter
+  agencies: Building2, // the responder offices
+  timer: Timer, // how long agencies take
 };
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {

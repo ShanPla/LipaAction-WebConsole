@@ -7,7 +7,7 @@ submitted by residents through the LipaAction mobile app.
 
 The same console also carries a read-only city dashboard for the municipal
 administrator (**Section 3.7.5** and **Appendix A.5**): city-wide report activity per
-barangay, a city-wide report list, and each agency's response times.
+barangay, a city-wide report list, each agency's response times, and the agency list.
 
 This is a working implementation against the project's shared Supabase backend — not
 a static mockup. Sign-in is real, report data is real, and validating or rejecting a
@@ -103,6 +103,7 @@ official's browser is set.
 | **City overview** (`/city`) | Live, read-only, for the municipal administrator. City-wide tiles (reports today, the 7-day daily average, reports awaiting review, Critical ones among them, and emergencies waiting more than five minutes), then one row per barangay: its last 7 days as daily bars, today's count, what awaits review now however old, and how many of the week's reports were validated or rejected. No decision or routing controls. |
 | **City reports** (`/city/reports`) | Live, read-only. Every report filed in the city in the last 30 days, newest first, filterable by barangay and by stage (awaiting review, validated but not routed, with agencies, rejected). Each row shows its time, barangay, category, priority with score, status, and the agencies holding it with the lead agency's progress. The list shows no description; the detail drawer shows the resident's account, the triage reading and each agency's progress, has no decision or routing controls, and records every opening in the access log, as the queue's drawer does. |
 | **Agency response** (`/city/response-times`) | Live, read-only. The thesis's per-agency response time view: for every routing in the last 30 days, per agency, how many reports it was sent, how many await acknowledgement, how many it is working on now, the median time to acknowledge and from acknowledgement to resolution (with the 95th percentile once an agency has 20 timings), and how many it resolved or returned out of scope. |
+| **Agencies** (`/city/agencies`) | Live, read-only. Every agency configured in the system, with its code and tier, and the report categories routing sends to it, lead categories marked. Adding agencies or changing where a category goes is not done here. |
 | **Audit Log** | Live. The barangay's own access trail: every report opening, validation, rejection and routing on its reports, newest first, filterable by kind. Read access comes through a database function that returns only the safe columns, not a table policy, so no official is named and the reporter is never in it — each row shows the time, the action, the role that did it, and the report. It loads the newest 500 events and says so. |
 
 All report data on the barangay pages is scoped to the signed-in official's own
@@ -252,10 +253,11 @@ In each case the console shows nothing rather than an approximation.
   loading or refreshing the queue, the footer asks for one click until it has had one.
   Settings has a test-sound button.
 - **The city dashboard covers two of the thesis's six city views.** The city-wide
-  overview and per-agency response time are built, plus a city-wide report list. Not built: the live incident map,
+  overview and per-agency response time are built, plus a city-wide report list and a read-only agency list. Not built: the live incident map,
   the false-route rate (defined over automatically routed reports; automatic routing is
   off), cross-barangay verification quality (Tier 1 verification has no backend),
-  recalibration controls, agency management, identity reveal, and multi-factor sign-in.
+  recalibration controls, agency management (adding, elevating or editing agencies), identity reveal, and
+  multi-factor sign-in.
   Response times are measured from when a barangay routed the report, since nothing
   routes automatically.
 - **Live updates need a websocket.** On a network that blocks them, the queue says so

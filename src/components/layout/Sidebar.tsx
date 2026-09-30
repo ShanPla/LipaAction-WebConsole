@@ -27,7 +27,8 @@ const bottomNav: NavItem[] = [{ href: "/settings", label: "nav.settings", icon: 
 const cityNav: NavItem[] = [
   { href: "/city", label: "nav.cityOverview", icon: "reports" },
   { href: "/city/reports", label: "nav.cityReports", icon: "queue" },
-  { href: "/city/response-times", label: "nav.cityResponse", icon: "history" },
+  { href: "/city/response-times", label: "nav.cityResponse", icon: "timer" },
+  { href: "/city/agencies", label: "nav.cityAgencies", icon: "agencies" },
 ];
 
 type NavGroup = { heading?: MessageKey; items: NavItem[] };
