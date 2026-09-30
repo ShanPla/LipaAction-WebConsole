@@ -12,6 +12,13 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "sw
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 import { ToastProvider } from "@/components/ui/Toast";
 
+// Every page renders per request, the static ones (/, /not-authorized, the
+// 404) included. The Content-Security-Policy's nonce is new on each request
+// and Next.js can only stamp it on a page's scripts while rendering it; a page
+// prerendered at build time would carry no nonce, and the browser would
+// refuse to run its scripts. Most pages were per-request already.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "LipaAction — Barangay Web Console",
   // Said [Static UI mockup] until 2026-09 — false since the console went

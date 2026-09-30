@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE_OPTIONS } from "@/lib/supabase/cookieOptions";
+import { contentSecurityPolicy, newNonce } from "@/lib/contentSecurityPolicy";
 
 // Refreshes the Supabase auth session cookie on each request (the @supabase/ssr
 // SSR pattern). This does NOT gate routes by itself — actual "is this user allowed
@@ -8,13 +9,25 @@ import { SESSION_COOKIE_OPTIONS } from "@/lib/supabase/cookieOptions";
 // same as the real dashboards app does. This just keeps the session alive so those
 // server-side checks have a valid session to read in the first place.
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
-
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // A fresh nonce for this response. Set on the REQUEST headers, before any
+  // NextResponse.next({ request }) below, because that is where Next.js
+  // reads it to stamp its own scripts; set on the response too, where the
+  // browser enforces it. Both must be the same string.
+  const csp = contentSecurityPolicy(newNonce(), url);
+  request.headers.set("Content-Security-Policy", csp);
+  const withPolicy = (res: NextResponse) => {
+    res.headers.set("Content-Security-Policy", csp);
+    return res;
+  };
+
+  let response = NextResponse.next({ request });
+
   // If env is missing, no-op rather than 500ing every route — createClient() in
   // lib/supabase/server.ts raises a clear error instead when it's actually used.
-  if (!url || !anonKey) return response;
+  if (!url || !anonKey) return withPolicy(response);
 
   const supabase = createServerClient(url, anonKey, {
     cookieOptions: SESSION_COOKIE_OPTIONS,
@@ -42,7 +55,7 @@ export async function middleware(request: NextRequest) {
   // getUser() is what actually refreshes the token and rewrites the cookies.
   await supabase.auth.getUser();
 
-  return response;
+  return withPolicy(response);
 }
 
 export const config = {

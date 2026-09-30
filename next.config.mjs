@@ -8,9 +8,8 @@
  * decisions should refuse to be framed at all — and stop the browser from
  * second-guessing content types or leaking full URLs to other origins.
  *
- * Deliberately NO Content-Security-Policy yet: Next's App Router injects
- * inline scripts, so a CSP needs per-request nonces threaded through
- * middleware. Worth doing, but as its own tested change, not bundled here.
+ * The Content-Security-Policy is not here: it carries a new nonce on every
+ * request, so middleware.ts sets it (src/lib/contentSecurityPolicy.ts).
  * Vercel already sends Strict-Transport-Security (the thesis's HSTS
  * requirement), so it isn't repeated.
  */
