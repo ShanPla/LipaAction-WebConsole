@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect } from "react";
 import { usePreferences } from "@/lib/preferences";
 import { MESSAGES, type Lang, type MessageKey } from "@/lib/messages";
 // Type-only: auth.ts is server-only, and a type import is erased.
-import type { BarangayRole } from "@/lib/auth";
+import type { ConsoleRole } from "@/lib/auth";
 
 export type { Lang, MessageKey };
 
@@ -40,7 +40,7 @@ const LanguageContext = createContext<Lang>("en");
  * Outside a provider — the login page, error pages, toasts — text stays in
  * English.
  */
-export function LanguageProvider({ role, children }: { role: BarangayRole; children: React.ReactNode }) {
+export function LanguageProvider({ role, children }: { role: ConsoleRole; children: React.ReactNode }) {
   const { prefs } = usePreferences(role);
   const lang = prefs.interfaceLanguage;
 

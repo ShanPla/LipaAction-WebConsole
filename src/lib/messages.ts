@@ -843,6 +843,94 @@ export const MESSAGES = {
     en: "Notifications weren't allowed, so the switch stays off. Turn it on again to be asked again.",
     tl: "Hindi pinayagan ang mga abiso, kaya nananatiling naka-off ang switch. I-on itong muli para tanungin ka ulit.",
   },
+
+  // --- City dashboard (municipal_admin) --------------------------------------
+  "shell.cityConsoleName": { en: "City console", tl: "Console ng Lungsod" },
+  "city.scope": { en: "Lipa City", tl: "Lungsod ng Lipa" },
+  "nav.cityOverview": { en: "Overview", tl: "Pangkalahatang-tanaw" },
+  "nav.cityResponse": { en: "Agency response", tl: "Tugon ng ahensya" },
+  "banner.what.cityOverview": { en: "The city overview", tl: "pangkalahatang-tanaw ng lungsod" },
+  "banner.what.cityResponse": { en: "Agency response times", tl: "oras ng tugon ng ahensya" },
+  "city.readOnly": {
+    en: "Read-only. Decisions and routing stay with each barangay. No reporter is named on these pages.",
+    tl: "Pagtingin lamang. Nasa bawat barangay pa rin ang pagpapasya at pag-route. Walang nag-ulat na pinangangalanan sa mga pahinang ito.",
+  },
+  "city.overview.title": { en: "City-wide activity", tl: "Aktibidad sa buong lungsod" },
+  "city.overview.intro": {
+    en: "Reports from every barangay over the last 7 days, and what is waiting for a decision right now.",
+    tl: "Mga ulat mula sa bawat barangay sa nakaraang 7 araw, at ang naghihintay ng pasya ngayon.",
+  },
+  "city.tile.today": { en: "Reports today", tl: "Mga ulat ngayong araw" },
+  "city.tile.average": { en: "Daily average, 7 days", tl: "Karaniwan bawat araw, 7 araw" },
+  "city.tile.awaiting": { en: "Awaiting review", tl: "Naghihintay ng pagsusuri" },
+  "city.tile.critical": { en: "Critical awaiting review", tl: "Critical na naghihintay" },
+  "city.tile.pastSla": { en: "Emergencies past {minutes} min", tl: "Emergency na lampas {minutes} min" },
+  "city.col.barangay": { en: "Barangay", tl: "Barangay" },
+  "city.col.daily": { en: "Last 7 days, by day", tl: "Nakaraang 7 araw, bawat araw" },
+  "city.col.week": { en: "7 days", tl: "7 araw" },
+  "city.col.today": { en: "Today", tl: "Ngayon" },
+  "city.col.awaiting": { en: "Awaiting review now", tl: "Naghihintay ngayon" },
+  "city.col.validated": { en: "Validated (7 days)", tl: "Na-validate (7 araw)" },
+  "city.col.rejected": { en: "Rejected (7 days)", tl: "Tinanggihan (7 araw)" },
+  "city.overview.caption": {
+    en: "Reports per barangay over the last 7 days",
+    tl: "Mga ulat bawat barangay sa nakaraang 7 araw",
+  },
+  "city.dayCount": { en: "{day}: {count}", tl: "{day}: {count}" },
+  "city.unnamedBarangay": { en: "Barangay name unavailable", tl: "Hindi makuha ang pangalan ng barangay" },
+  "city.noBarangay": { en: "No barangay recorded", tl: "Walang nakatalang barangay" },
+  "city.overview.empty": {
+    en: "No reports were filed in any barangay in the last 7 days, and none is waiting for a decision.",
+    tl: "Walang ulat na naisampa sa alinmang barangay sa nakaraang 7 araw, at walang naghihintay ng pasya.",
+  },
+  "city.overview.footer": {
+    en:
+      "Counted at {time}. Validated and rejected count the last 7 days' reports by where each stands now; " +
+      "awaiting review counts every undecided report, however old. A barangay with no reports in that time isn't listed.",
+    tl:
+      "Binilang noong {time}. Ang na-validate at tinanggihan ay bilang ng mga ulat sa nakaraang 7 araw ayon sa kalagayan nila ngayon; " +
+      "ang naghihintay ay bilang ng lahat ng hindi pa napagpapasyahan, gaano man katagal. Hindi nakalista ang barangay na walang ulat sa panahong iyon.",
+  },
+  "city.capped": {
+    en: "Only the first {limit} reports were counted.",
+    tl: "Ang unang {limit} na ulat lamang ang binilang.",
+  },
+  "city.response.title": { en: "Agency response times", tl: "Oras ng tugon ng ahensya" },
+  "city.response.intro": {
+    en:
+      "Every routing in the last {days} days, per agency: how long until the agency acknowledged it, " +
+      "and how long from acknowledgement to resolution.",
+    tl:
+      "Bawat pag-route sa nakaraang {days} araw, bawat ahensya: gaano katagal bago ito kinilala ng ahensya, " +
+      "at gaano katagal mula sa pagkilala hanggang sa paglutas.",
+  },
+  "city.response.caption": { en: "Response times per agency", tl: "Oras ng tugon bawat ahensya" },
+  "city.response.col.agency": { en: "Agency", tl: "Ahensya" },
+  "city.response.col.routed": { en: "Routed", tl: "Na-route" },
+  "city.response.col.awaiting": { en: "Awaiting acknowledgement", tl: "Naghihintay ng pagkilala" },
+  "city.response.col.toAck": { en: "Time to acknowledge", tl: "Oras bago kilalanin" },
+  "city.response.col.toResolve": { en: "Acknowledged to resolved", tl: "Mula pagkilala hanggang lutas" },
+  "city.response.col.resolved": { en: "Resolved", tl: "Nalutas" },
+  "city.response.col.returned": { en: "Returned out of scope", tl: "Ibinalik, labas sa saklaw" },
+  "city.response.median": { en: "median {value}", tl: "median {value}" },
+  "city.response.p95": { en: "95th {value}", tl: "ika-95 {value}" },
+  "city.response.samples": { en: "{count} timed", tl: "{count} naorasan" },
+  "city.response.noTiming": { en: "No timing yet", tl: "Wala pang oras" },
+  "city.unnamedAgency": { en: "Agency name unavailable", tl: "Hindi makuha ang pangalan ng ahensya" },
+  "city.response.empty": {
+    en: "No report was routed to an agency in the last {days} days.",
+    tl: "Walang ulat na na-route sa ahensya sa nakaraang {days} araw.",
+  },
+  "city.response.footer": {
+    en:
+      "Automatic routing is off, so each clock starts when a barangay routed the report. " +
+      "Reports returned out of scope are counted apart and kept out of the resolution time. " +
+      "The 95th percentile appears once an agency has {min} timings.",
+    tl:
+      "Naka-off ang awtomatikong pag-route, kaya nagsisimula ang bawat orasan nang i-route ng barangay ang ulat. " +
+      "Hiwalay na binibilang ang mga ibinalik bilang labas sa saklaw at hindi isinasama sa oras ng paglutas. " +
+      "Lumalabas ang ika-95 na percentile kapag may {min} nang naorasan ang ahensya.",
+  },
 } satisfies Record<string, Entry>;
 
 export type MessageKey = keyof typeof MESSAGES;

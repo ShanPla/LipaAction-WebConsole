@@ -4,11 +4,21 @@ import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
 // Keep in sync with the app_role enum in supabase/migrations. Only these three
-// roles belong on the Barangay Web Console — agency_user, agency_supervisor,
-// municipal_admin, dpo, and resident all belong on other surfaces, not this one.
+// roles belong on the barangay pages — agency_user, agency_supervisor, dpo,
+// and resident all belong on other surfaces, and municipal_admin has its own
+// gate below.
 const BARANGAY_ROLES = ["barangay_official", "barangay_admin", "senior_barangay_admin"] as const;
 
+// The city dashboard (/city). Kept apart from BARANGAY_ROLES on purpose:
+// every barangay page filters by the official's barangay_id and carries
+// decision buttons, and RLS lets municipal_admin write city-wide, so one list
+// admitting both would hand that power to every desk page. dpo is the paper's
+// read-only twin of this role (A.5) and would join this list, not the other.
+const CITY_ROLES = ["municipal_admin"] as const;
+
 export type BarangayRole = (typeof BARANGAY_ROLES)[number];
+export type CityRole = (typeof CITY_ROLES)[number];
+export type ConsoleRole = BarangayRole | CityRole;
 
 export interface OfficialProfile {
   id: string;
@@ -20,7 +30,32 @@ export interface OfficialProfile {
   phone: string | null;
 }
 
-export async function requireBarangayOfficial(): Promise<OfficialProfile> {
+// A city account has no barangay, so it carries none of the barangay fields.
+// The shell tells the two apart by `barangayName`.
+export interface CityProfile {
+  id: string;
+  fullName: string | null;
+  role: CityRole;
+  email: string | null;
+}
+
+export type ConsoleUser = OfficialProfile | CityProfile;
+
+interface ProfileRow {
+  id: string;
+  full_name: string | null;
+  role: string;
+  barangay_id: string | null;
+  phone: string | null;
+  barangays: { name: string } | { name: string }[] | null;
+}
+
+/**
+ * The signed-in user and their profiles row, shared by both gates. Redirects
+ * to /login when there is no session and to /not-authorized when there is no
+ * row; throws on an outage, which the route's error.tsx turns into a retry.
+ */
+async function readSignedInProfile(): Promise<{ email: string | null; profile: ProfileRow }> {
   const supabase = createClient();
 
   const {
@@ -63,6 +98,16 @@ export async function requireBarangayOfficial(): Promise<OfficialProfile> {
     redirect("/not-authorized");
   }
 
+  return { email: user.email ?? null, profile: profile as ProfileRow };
+}
+
+export async function requireBarangayOfficial(): Promise<OfficialProfile> {
+  const { email, profile } = await readSignedInProfile();
+
+  // Every sign-in lands on /queue, so this is also how a city account finds
+  // its own dashboard.
+  if (isCityRole(profile.role)) redirect("/city");
+
   if (!isBarangayRole(profile.role) || !profile.barangay_id) {
     redirect("/not-authorized");
   }
@@ -72,7 +117,7 @@ export async function requireBarangayOfficial(): Promise<OfficialProfile> {
   // every caller downstream just gets a plain string.
   const barangayName = Array.isArray(profile.barangays)
     ? profile.barangays[0]?.name
-    : (profile.barangays as { name: string } | null)?.name;
+    : profile.barangays?.name;
 
   return {
     id: profile.id,
@@ -80,13 +125,31 @@ export async function requireBarangayOfficial(): Promise<OfficialProfile> {
     role: profile.role,
     barangayId: profile.barangay_id,
     barangayName: barangayName ?? "Unknown barangay",
-    // user.email comes from the already-fetched auth session — no extra
-    // query needed. profile.phone is a real, already-fetchable column.
-    email: user.email ?? null,
+    // email comes from the already-fetched auth session — no extra query
+    // needed. profile.phone is a real, already-fetchable column.
+    email,
     phone: profile.phone,
   };
 }
 
+/**
+ * The gate for /city. A barangay official is sent back to their queue rather
+ * than told they have no access, since they do have a console; every other
+ * role goes to /not-authorized.
+ */
+export async function requireCityAdmin(): Promise<CityProfile> {
+  const { email, profile } = await readSignedInProfile();
+
+  if (isBarangayRole(profile.role)) redirect("/queue");
+  if (!isCityRole(profile.role)) redirect("/not-authorized");
+
+  return { id: profile.id, fullName: profile.full_name, role: profile.role, email };
+}
+
 function isBarangayRole(role: string): role is BarangayRole {
   return (BARANGAY_ROLES as readonly string[]).includes(role);
+}
+
+function isCityRole(role: string): role is CityRole {
+  return (CITY_ROLES as readonly string[]).includes(role);
 }

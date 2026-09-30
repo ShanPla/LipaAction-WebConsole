@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { cx, displayName, initials } from "@/lib/utils";
 import { useT, type MessageKey } from "@/lib/i18n";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import type { OfficialProfile } from "@/lib/auth";
+import type { ConsoleUser } from "@/lib/auth";
 
 type NavItem = { href: string; label: MessageKey; icon: IconName };
 
@@ -21,6 +21,23 @@ const secondaryNav: NavItem[] = [
 ];
 
 const bottomNav: NavItem[] = [{ href: "/settings", label: "nav.settings", icon: "settings" }];
+
+// The city dashboard's own links. None of the barangay pages appear: each is
+// gated to barangay roles and would only send a city account back here.
+const cityNav: NavItem[] = [
+  { href: "/city", label: "nav.cityOverview", icon: "reports" },
+  { href: "/city/response-times", label: "nav.cityResponse", icon: "history" },
+];
+
+type NavGroup = { heading?: MessageKey; items: NavItem[] };
+
+const BARANGAY_GROUPS: NavGroup[] = [
+  { items: primaryNav },
+  { heading: "nav.records", items: secondaryNav },
+  { heading: "nav.account", items: bottomNav },
+];
+
+const CITY_GROUPS: NavGroup[] = [{ items: cityNav }];
 
 function NavLink({
   href,
@@ -58,12 +75,14 @@ export function Sidebar({
   official,
   onNavigate,
 }: {
-  official: OfficialProfile;
+  official: ConsoleUser;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const name = displayName(official.fullName);
   const t = useT();
+  const isBarangay = "barangayName" in official;
+  const groups = isBarangay ? BARANGAY_GROUPS : CITY_GROUPS;
 
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-ink-100 bg-white">
@@ -73,53 +92,32 @@ export function Sidebar({
         </span>
         <div className="leading-tight">
           <p className="text-sm font-semibold text-ink-900">LipaAction</p>
-          <p className="text-[11px] text-ink-500">{t("shell.consoleName")}</p>
+          <p className="text-[11px] text-ink-500">
+            {t(isBarangay ? "shell.consoleName" : "shell.cityConsoleName")}
+          </p>
         </div>
       </div>
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
-        <div className="flex flex-col gap-0.5">
-          {primaryNav.map((item) => (
-            <NavLink
-              key={item.href}
-              {...item}
-              active={pathname === item.href}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </div>
-
-        <div>
-          <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-            {t("nav.records")}
-          </p>
-          <div className="flex flex-col gap-0.5">
-            {secondaryNav.map((item) => (
-              <NavLink
-                key={item.href}
-                {...item}
-                active={pathname === item.href}
-                onNavigate={onNavigate}
-              />
-            ))}
+        {groups.map((group, i) => (
+          <div key={group.heading ?? i}>
+            {group.heading && (
+              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+                {t(group.heading)}
+              </p>
+            )}
+            <div className="flex flex-col gap-0.5">
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.href}
+                  {...item}
+                  active={pathname === item.href}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-
-        <div>
-          <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-            {t("nav.account")}
-          </p>
-          <div className="flex flex-col gap-0.5">
-            {bottomNav.map((item) => (
-              <NavLink
-                key={item.href}
-                {...item}
-                active={pathname === item.href}
-                onNavigate={onNavigate}
-              />
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
 
       <div className="flex items-center gap-2.5 border-t border-ink-100 px-4 py-3">
@@ -129,7 +127,7 @@ export function Sidebar({
         <div className="min-w-0 leading-tight">
           <p className="truncate text-xs font-semibold text-ink-900">{name}</p>
           <p className="truncate text-[11px] text-ink-500">
-            {t(`role.${official.role}`)} · {official.barangayName}
+            {t(`role.${official.role}`)} · {isBarangay ? official.barangayName : t("city.scope")}
           </p>
         </div>
       </div>

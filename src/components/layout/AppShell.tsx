@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { TopBar, type TopBarSearch } from "./TopBar";
 import { useT } from "@/lib/i18n";
-import type { OfficialProfile } from "@/lib/auth";
+import type { ConsoleUser } from "@/lib/auth";
 
 export function AppShell({
   breadcrumb,
@@ -15,7 +15,9 @@ export function AppShell({
 }: {
   breadcrumb: string[];
   actions?: React.ReactNode;
-  official: OfficialProfile;
+  // A barangay official or a city account; the sidebar picks its links
+  // and the scope line from which one it is.
+  official: ConsoleUser;
   search?: TopBarSearch;
   children: React.ReactNode;
 }) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
-import type { BarangayRole } from "@/lib/auth";
+import type { ConsoleRole } from "@/lib/auth";
 
 export type InterfaceLanguage = "en" | "tl";
 export type BilingualEmphasis = "english-first" | "tagalog-first" | "english-only";
@@ -29,7 +29,7 @@ export interface ConsolePreferences {
  */
 const STORAGE_KEY = "lipaaction.console.preferences.v1";
 
-export function defaultPreferences(role: BarangayRole): ConsolePreferences {
+export function defaultPreferences(role: ConsoleRole): ConsolePreferences {
   // The paper: "The interface defaults to Tagalog for this role" (A.3, senior
   // barangay admin). The only role-specific behaviour this console can
   // currently honour — everything else role-shaped needs backend tables that
@@ -135,7 +135,7 @@ const serverReady = () => false;
  * the hydrating paint — controls should disable themselves until then so a
  * click can't land on a value that's about to be replaced.
  */
-export function usePreferences(role: BarangayRole) {
+export function usePreferences(role: ConsoleRole) {
   const current = useSyncExternalStore(subscribe, getStored, getServerStored);
   const hydrated = useSyncExternalStore(subscribe, clientReady, serverReady);
   const prefs = useMemo<ConsolePreferences>(() => ({ ...defaultPreferences(role), ...(current ?? {}) }), [role, current]);

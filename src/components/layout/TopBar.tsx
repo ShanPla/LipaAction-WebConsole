@@ -3,7 +3,7 @@ import { Icon } from "@/components/ui/Icon";
 import { cx } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { usePreferences, type InterfaceLanguage } from "@/lib/preferences";
-import type { BarangayRole, OfficialProfile } from "@/lib/auth";
+import type { ConsoleRole, ConsoleUser } from "@/lib/auth";
 
 export interface TopBarSearch {
   value: string;
@@ -26,7 +26,7 @@ const LANGUAGES: { value: InterfaceLanguage; code: string; name: string }[] = [
  * role default is on screen, and a click could land on a value about to be
  * replaced by the stored one.
  */
-function LanguageSwitch({ role }: { role: BarangayRole }) {
+function LanguageSwitch({ role }: { role: ConsoleRole }) {
   const { prefs, update, hydrated } = usePreferences(role);
   const t = useT();
 
@@ -69,7 +69,7 @@ export function TopBar({
 }: {
   breadcrumb: string[];
   actions?: React.ReactNode;
-  official: OfficialProfile;
+  official: ConsoleUser;
   // Omitted by pages that don't filter. The box used to render everywhere
   // while being wired to nothing — a permanently dead input on five pages.
   search?: TopBarSearch;

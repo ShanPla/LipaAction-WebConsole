@@ -5,13 +5,16 @@ import Link from "next/link";
 import { displayName, initials } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { signOut } from "@/app/actions/auth";
-import type { OfficialProfile } from "@/lib/auth";
+import type { ConsoleUser } from "@/lib/auth";
 
-export function ProfileMenu({ official }: { official: OfficialProfile }) {
+export function ProfileMenu({ official }: { official: ConsoleUser }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const name = displayName(official.fullName);
   const t = useT();
+  // A city account has no barangay. Settings is left out of its menu: the
+  // page is barangay-gated, and its alert switches drive the queue.
+  const isBarangay = "barangayName" in official;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -55,20 +58,24 @@ export function ProfileMenu({ official }: { official: OfficialProfile }) {
           <div className="border-b border-ink-100 px-3.5 py-3">
             <p className="truncate text-sm font-semibold text-ink-900">{name}</p>
             <p className="truncate text-xs text-ink-500">
-              {t(`role.${official.role}`)} · {official.barangayName}
+              {t(`role.${official.role}`)} · {isBarangay ? official.barangayName : t("city.scope")}
             </p>
           </div>
 
-          <Link
-            href="/settings"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className="flex min-h-11 items-center px-3.5 text-sm text-ink-700 hover:bg-ink-100"
-          >
-            {t("nav.settings")}
-          </Link>
+          {isBarangay && (
+            <>
+              <Link
+                href="/settings"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="flex min-h-11 items-center px-3.5 text-sm text-ink-700 hover:bg-ink-100"
+              >
+                {t("nav.settings")}
+              </Link>
 
-          <div className="border-t border-ink-100" />
+              <div className="border-t border-ink-100" />
+            </>
+          )}
 
           <form action={signOut}>
             <button
