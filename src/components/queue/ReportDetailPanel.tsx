@@ -211,6 +211,9 @@ export function ReportDetailPanel({
                     : t("drawer.score", { priority: report.priority, score: d.priorityScore })
               }
             />
+            {/* Only Other-reports carry one; an empty row on every emergency
+                would say nothing. */}
+            {d.subCategory && <Row label={t("drawer.subCategory")} value={d.subCategory} />}
             <Row label={t("drawer.confidence")} value={d.confidenceBand ?? <NotProvided />} />
             <Row label={t("drawer.status")} value={statusLabel(d.status, t)} />
             {d.clusterId && (

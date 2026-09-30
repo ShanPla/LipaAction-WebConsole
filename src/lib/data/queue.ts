@@ -41,7 +41,7 @@ const RECENT_ROUTING_ROWS = 120;
 const RECENT_ROUTED_CANDIDATES = 60;
 
 const REPORT_COLUMNS =
-  "id, category, description, priority_name, status, entry_tier, identity_withheld, created_at, cluster_id, reviewed_at, severity_self_rating, safety_net_confirmation, anyone_hurt, is_ongoing, has_photo, has_video, discreet_reporting, priority_class, priority_score, confidence_band";
+  "id, category, description, priority_name, status, entry_tier, identity_withheld, created_at, cluster_id, reviewed_at, severity_self_rating, safety_net_confirmation, anyone_hurt, is_ongoing, has_photo, has_video, discreet_reporting, priority_class, priority_score, confidence_band, sub_category";
 
 interface RawReport {
   id: string;
@@ -67,6 +67,9 @@ interface RawReport {
   priority_class: number | null;
   priority_score: number | null;
   confidence_band: string | null;
+  // Other-reports only (the backend's October push); null on every
+  // emergency and on everything filed before it.
+  sub_category: string | null;
 }
 
 interface RawRouting {
@@ -531,6 +534,7 @@ function toQueueReport(r: RawReport, extras: RoutingExtras = NO_ROUTING): QueueR
       priorityClass: r.priority_class,
       priorityScore: r.priority_score,
       confidenceBand: r.confidence_band,
+      subCategory: r.sub_category ? categoryLabel(r.sub_category) : null,
       clusterId: r.cluster_id,
       submittedAt: r.created_at,
       routing: extras.routing,

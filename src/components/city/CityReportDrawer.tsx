@@ -140,6 +140,7 @@ export function CityReportDrawer({ report, onClose }: { report: CityReport; onCl
                     : t("drawer.score", { priority: report.priority, score: report.priorityScore })
               }
             />
+            {report.subCategory && <Row label={t("drawer.subCategory")} value={report.subCategory} />}
             <Row label={t("drawer.confidence")} value={report.confidenceBand ?? <NotProvided />} />
             <Row label={t("drawer.status")} value={statusLabel(report.status, t)} />
           </div>

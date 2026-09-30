@@ -87,6 +87,9 @@ export interface ReportDetails {
   priorityClass: number | null;
   priorityScore: number | null;
   confidenceBand: string | null;
+  // The finer category an Other-report carries (e.g. under Minor
+  // infrastructure), display form. null on emergencies.
+  subCategory: string | null;
   clusterId: string | null;
   submittedAt: string; // exact ISO timestamp, not the relative display string
   // Agencies this report has been sent to. Empty until it is routed. On a

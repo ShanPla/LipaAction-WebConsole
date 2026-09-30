@@ -245,8 +245,8 @@ In each case the console shows nothing rather than an approximation.
   text is never translated — it is shown exactly as the resident wrote it. Values the
   server formats (report categories, priority levels, relative times like "5m ago",
   review timestamps) and error messages returned by the server stay in English, as do
-  the sign-in and error pages and the CSV export. The Tagalog wording is a first draft
-  pending review. A page loads in the role's default
+  the sign-in and error pages and the CSV export. The Tagalog wording was reviewed by the
+  team on 2026-09-29. A page loads in the role's default
   language and switches to a different saved choice a moment later.
 - **The alert sound needs one click on the queue page.** Browsers block sound on a page
   nobody has clicked, and the chime is triggered by an arriving report, not a click. After

@@ -14,8 +14,8 @@ type Entry = { en: string; tl: string };
  * mockups' bilingual labels, Ch. 3 §3.7.3), the hint stays in the English
  * string; the Tagalog string doesn't repeat it.
  *
- * The Tagalog column is a first draft awaiting review — change wording here,
- * never in a component.
+ * The Tagalog column was reviewed on 2026-09-29 — change wording here, never
+ * in a component.
  *
  * Deliberately not in this file, so they stay as they are in both languages:
  * - Anything a resident wrote (descriptions, their answers in the drawer).
@@ -377,6 +377,7 @@ export const MESSAGES = {
   "drawer.attach.none": { en: "No photo or video", tl: "Walang larawan o video" },
   "drawer.section.triage": { en: "Triage", tl: "Triage" },
   "drawer.priority": { en: "Priority", tl: "Priyoridad" },
+  "drawer.subCategory": { en: "Sub-category", tl: "Sub-kategorya" },
   "drawer.notScoredYet": { en: "Not scored yet", tl: "Wala pang iskor" },
   "drawer.score": { en: "{priority} · score {score}", tl: "{priority} · iskor {score}" },
   "drawer.confidence": { en: "Confidence", tl: "Kumpiyansa" },

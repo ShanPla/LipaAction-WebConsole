@@ -23,6 +23,7 @@ export interface CityReport {
   // null when the name couldn't be read; the page says so.
   barangayName: string | null;
   category: string; // display label
+  subCategory: string | null; // display label; Other-reports only
   priority: ReportPriority;
   priorityScore: number | null;
   confidenceBand: string | null;
@@ -61,7 +62,7 @@ export interface CityReportsData {
 // Deliberately no user_id, reviewed_by or geom: this role can read all three
 // city-wide, and the first two lead to a person. Nothing below may add them.
 const REPORT_COLUMNS =
-  "id, incident_barangay_id, category, description, priority_name, priority_score, confidence_band, status, entry_tier, identity_withheld, discreet_reporting, severity_self_rating, anyone_hurt, is_ongoing, safety_net_confirmation, has_photo, has_video, created_at, reviewed_at";
+  "id, incident_barangay_id, category, description, priority_name, priority_score, confidence_band, status, entry_tier, identity_withheld, discreet_reporting, severity_self_rating, anyone_hurt, is_ongoing, safety_net_confirmation, has_photo, has_video, created_at, reviewed_at, sub_category";
 
 const WINDOW_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -90,6 +91,7 @@ interface RawReport {
   has_video: boolean | null;
   created_at: string;
   reviewed_at: string | null;
+  sub_category: string | null;
 }
 
 interface RawRouting {
@@ -164,6 +166,7 @@ export async function getCityReports(
       barangayId: r.incident_barangay_id,
       barangayName: r.incident_barangay_id ? names.get(r.incident_barangay_id) ?? null : null,
       category: categoryLabel(r.category),
+      subCategory: r.sub_category ? categoryLabel(r.sub_category) : null,
       priority: r.priority_name,
       priorityScore: r.priority_score,
       confidenceBand: r.confidence_band,
