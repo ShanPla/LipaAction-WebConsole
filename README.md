@@ -7,7 +7,7 @@ submitted by residents through the LipaAction mobile app.
 
 The same console also carries a read-only city dashboard for the municipal
 administrator (**Section 3.7.5** and **Appendix A.5**): city-wide report activity per
-barangay and each agency's response times.
+barangay, a city-wide report list, and each agency's response times.
 
 This is a working implementation against the project's shared Supabase backend — not
 a static mockup. Sign-in is real, report data is real, and validating or rejecting a
@@ -101,6 +101,7 @@ official's browser is set.
 | **Reports** | Live. The thesis's Daily Queue Summary: the reports submitted on a chosen day (today by default), by category, counted by where each stands now — awaiting review, validated, or rejected — with a CSV export. The thesis's second barangay report, the weekly false-report rate per reporter, is listed as unavailable: it needs each reporter's identity and sanction history, which the console never reads. |
 | **Settings** | Profile is live (name, role, barangay, email, phone); the display name is editable. Language and alert preferences are saved in the browser on the current device. The interface language switches the console between English and Tagalog — the same choice as the EN/TL switch at the top right of every page; the alert preferences drive the Queue page's chime and browser notification. Senior barangay administrators default to Tagalog, as the thesis specifies. The bilingual-emphasis setting is recorded but does not yet change any screen, and says so. |
 | **City overview** (`/city`) | Live, read-only, for the municipal administrator. City-wide tiles (reports today, the 7-day daily average, reports awaiting review, Critical ones among them, and emergencies waiting more than five minutes), then one row per barangay: its last 7 days as daily bars, today's count, what awaits review now however old, and how many of the week's reports were validated or rejected. No decision or routing controls. |
+| **City reports** (`/city/reports`) | Live, read-only. Every report filed in the city in the last 30 days, newest first, filterable by barangay and by stage (awaiting review, validated but not routed, with agencies, rejected). Each row shows its time, barangay, category, priority with score, status, and the agencies holding it with the lead agency's progress. The list shows no description; the detail drawer shows the resident's account, the triage reading and each agency's progress, has no decision or routing controls, and records every opening in the access log, as the queue's drawer does. |
 | **Agency response** (`/city/response-times`) | Live, read-only. The thesis's per-agency response time view: for every routing in the last 30 days, per agency, how many reports it was sent, how many await acknowledgement, the median time to acknowledge and from acknowledgement to resolution (with the 95th percentile once an agency has 20 timings), and how many it resolved or returned out of scope. |
 | **Audit Log** | Live. The barangay's own access trail: every report opening, validation, rejection and routing on its reports, newest first, filterable by kind. Read access comes through a database function that returns only the safe columns, not a table policy, so no official is named and the reporter is never in it — each row shows the time, the action, the role that did it, and the report. It loads the newest 500 events and says so. |
 
@@ -124,9 +125,10 @@ are logged through the backend functions that perform them. If a view can't be l
 the console says so on screen rather than failing silently.
 
 The city dashboard follows the same rule. Its role can read reporter identity in the
-database, so the dashboard's queries select only barangay, status, priority, agency and
-time columns; no page names a reporter or an official. Its counts carry no personal
-data, so viewing them writes no access record.
+database, so the dashboard's queries never select the reporter's account, the reviewing
+official or the report's location; no page names a reporter or an official. Its counts
+carry no personal data, so viewing them writes no access record; opening a report in the
+city report list is logged like any other opening.
 
 What the log does not cover yet: the queue list itself shows each report's category and
 the opening line of its description before any view is logged, and the Validation
@@ -250,7 +252,7 @@ In each case the console shows nothing rather than an approximation.
   loading or refreshing the queue, the footer asks for one click until it has had one.
   Settings has a test-sound button.
 - **The city dashboard covers two of the thesis's six city views.** The city-wide
-  overview and per-agency response time are built. Not built: the live incident map,
+  overview and per-agency response time are built, plus a city-wide report list. Not built: the live incident map,
   the false-route rate (defined over automatically routed reports; automatic routing is
   off), cross-barangay verification quality (Tier 1 verification has no backend),
   recalibration controls, agency management, identity reveal, and multi-factor sign-in.

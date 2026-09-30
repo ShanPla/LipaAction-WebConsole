@@ -26,6 +26,7 @@ const bottomNav: NavItem[] = [{ href: "/settings", label: "nav.settings", icon: 
 // gated to barangay roles and would only send a city account back here.
 const cityNav: NavItem[] = [
   { href: "/city", label: "nav.cityOverview", icon: "reports" },
+  { href: "/city/reports", label: "nav.cityReports", icon: "queue" },
   { href: "/city/response-times", label: "nav.cityResponse", icon: "history" },
 ];
 
