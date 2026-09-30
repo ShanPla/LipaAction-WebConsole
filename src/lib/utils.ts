@@ -59,6 +59,17 @@ const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 // endpoint. Stops a caller storing a megabyte of text as a reason.
 export const MAX_REASON_LENGTH = 1000;
 
+/**
+ * True when the reporter answered the safety-net question with [No, it
+ * already resolved]. The mobile app stores that as 'no_resolved' (the column
+ * allows only 'yes', 'no_resolved' and 'unsure'; confirmed by the backend
+ * owner 2026-09-29). Such a report keeps its score and is never routed
+ * automatically, so the desk marks it for review.
+ */
+export function reportsAlreadyResolved(safetyNetConfirmation: string | null): boolean {
+  return safetyNetConfirmation === "no_resolved";
+}
+
 // The longest display name accepted, for the same two places.
 export const MAX_NAME_LENGTH = 80;
 

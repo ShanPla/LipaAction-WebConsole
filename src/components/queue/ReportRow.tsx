@@ -5,7 +5,7 @@ import { ReporterChip } from "@/components/ui/ReporterChip";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ReasonPromptModal } from "@/components/ui/ReasonPromptModal";
-import { cx, timeAgo } from "@/lib/utils";
+import { cx, reportsAlreadyResolved, timeAgo } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
 import { useReportRouting } from "./useReportRouting";
@@ -172,6 +172,17 @@ export function ReportRow({
               </span>
             )}
             <PriorityBadge priority={report.priority} score={report.details.priorityScore} />
+            {/* The reporter said it already resolved (the paper's FR-04). It
+                keeps its score and is never routed automatically, so without
+                the mark it reads as an ordinary open emergency. */}
+            {isReviewable(report.details.status) && reportsAlreadyResolved(report.details.safetyNetConfirmation) && (
+              <span
+                title={t("row.alreadyResolvedTitle")}
+                className="rounded-full bg-priority-mediumBg px-2 py-0.5 text-[11px] font-semibold text-priority-medium"
+              >
+                {t("row.alreadyResolved")}
+              </span>
+            )}
             {/* Back in the queue after an automatic routing that every agency
                 sent back: its age and score would otherwise make it look like
                 any other report waiting for a first look. */}

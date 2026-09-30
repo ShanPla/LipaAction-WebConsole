@@ -229,6 +229,11 @@ export const MESSAGES = {
   },
   "row.returnedChip": { en: "Returned by agencies", tl: "Ibinalik ng mga ahensya" },
   "row.autoRouted": { en: "Auto-routed", tl: "Awtomatikong naipasa" },
+  "row.alreadyResolved": { en: "Already resolved, review", tl: "Naayos na raw, suriin" },
+  "row.alreadyResolvedTitle": {
+    en: "The reporter said it already resolved. Check before acting on it.",
+    tl: "Sinabi ng nag-ulat na naayos na ito. Suriin muna bago kumilos.",
+  },
   "row.returnedUnavailable": {
     en: "Couldn't load the agency list — refresh",
     tl: "Hindi na-load ang listahan ng ahensya — i-refresh",

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { logReportView } from "@/app/actions/audit";
 import { callAction } from "@/lib/callAction";
+import { reportsAlreadyResolved } from "@/lib/utils";
 import { useT, type Translate } from "@/lib/i18n";
 import { useToast } from "@/components/ui/Toast";
 import { PriorityBadge } from "@/components/ui/Badge";
@@ -168,6 +169,11 @@ export function ReportDetailPanel({
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <PriorityBadge priority={report.priority} />
             <span className="text-xs text-ink-500">{t(`drawer.tier.${d.entryTier}`)}</span>
+            {isReviewable(d.status) && reportsAlreadyResolved(d.safetyNetConfirmation) && (
+              <span className="rounded-full bg-priority-mediumBg px-2 py-0.5 text-[11px] font-semibold text-priority-medium">
+                {t("row.alreadyResolved")}
+              </span>
+            )}
           </div>
 
           <p className="mb-5 whitespace-pre-wrap text-sm text-ink-900">
