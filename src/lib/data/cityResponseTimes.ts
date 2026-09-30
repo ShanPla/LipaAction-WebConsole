@@ -18,6 +18,8 @@ export interface AgencyResponse {
   routed: number;
   // Neither acknowledged nor closed yet.
   awaitingAcknowledgement: number;
+  // Being worked on now: marked in progress and not closed.
+  inProgress: number;
   // Closed with any outcome except out of scope.
   resolved: number;
   // Closed as out of scope: sent back, not fixed.
@@ -41,6 +43,7 @@ interface RoutingRow {
   created_at: string;
   routed_at: string | null;
   acknowledged_at: string | null;
+  in_progress_at: string | null;
   resolved_at: string | null;
   resolution_outcome: string | null;
 }
@@ -79,7 +82,7 @@ export async function getCityResponseTimes(): Promise<CityResponseData> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("agency_routing")
-    .select("agency_id, created_at, routed_at, acknowledged_at, resolved_at, resolution_outcome")
+    .select("agency_id, created_at, routed_at, acknowledged_at, in_progress_at, resolved_at, resolution_outcome")
     .gte("created_at", since)
     .limit(ROW_LIMIT);
 
@@ -110,12 +113,16 @@ export async function getCityResponseTimes(): Promise<CityResponseData> {
     const toAcknowledge: number[] = [];
     const toResolve: number[] = [];
     let awaitingAcknowledgement = 0;
+    let inProgress = 0;
     let resolved = 0;
     let returned = 0;
 
     for (const r of group) {
       const outOfScope = r.resolution_outcome === "out-of-scope";
-      if (!r.acknowledged_at && !r.resolved_at) awaitingAcknowledgement += 1;
+      // An agency may mark a report in progress without acknowledging it
+      // first; it is being worked on, so it isn't waiting either.
+      if (!r.acknowledged_at && !r.in_progress_at && !r.resolved_at) awaitingAcknowledgement += 1;
+      if (r.in_progress_at && !r.resolved_at) inProgress += 1;
       if (r.resolved_at) {
         if (outOfScope) returned += 1;
         else resolved += 1;
@@ -133,6 +140,7 @@ export async function getCityResponseTimes(): Promise<CityResponseData> {
       name: names.get(agencyId) ?? null,
       routed: group.length,
       awaitingAcknowledgement,
+      inProgress,
       resolved,
       returned,
       toAcknowledge: summarise(toAcknowledge),

@@ -39,6 +39,10 @@ export interface AgencyRouting {
   autoRouted: boolean;
   routedAt: string | null;
   acknowledgedAt: string | null;
+  // Set by the agency when it starts work (the backend's fourth agency
+  // stage, on prod since the October push). In progress means this is set
+  // and resolvedAt isn't.
+  inProgressAt: string | null;
   resolvedAt: string | null;
   resolutionOutcome: "resolved" | "confirmed-false" | "duplicate" | "out-of-scope" | null;
 }

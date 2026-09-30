@@ -282,12 +282,17 @@ export const MESSAGES = {
   "routing.outcome.out-of-scope": { en: "out of scope", tl: "labas sa saklaw" },
   "routing.progress.closed": { en: "Closed — {outcome}", tl: "Isinara — {outcome}" },
   "routing.progress.acknowledged": { en: "Acknowledged", tl: "Kinilala na" },
+  "routing.progress.inProgress": { en: "In progress", tl: "Inaasikaso na" },
   "routing.progress.awaiting": { en: "Awaiting acknowledgement", tl: "Naghihintay ng pagkilala" },
   "routing.summary.closedBy": {
     en: "Closed by {agency}{more} — {outcome}",
     tl: "Isinara ng {agency}{more} — {outcome}",
   },
   "routing.summary.resolvedBy": { en: "Resolved by {agency}{more}", tl: "Nalutas ng {agency}{more}" },
+  "routing.summary.inProgressAt": {
+    en: "In progress at {agency}{more}",
+    tl: "Inaasikaso ng {agency}{more}",
+  },
   "routing.summary.acknowledgedBy": {
     en: "Acknowledged by {agency}{more}",
     tl: "Kinilala ng {agency}{more}",
@@ -452,6 +457,7 @@ export const MESSAGES = {
   },
   "drawer.stage.closed": { en: "closed {time}", tl: "isinara {time}" },
   "drawer.stage.acknowledged": { en: "acknowledged {time}", tl: "kinilala {time}" },
+  "drawer.stage.inProgress": { en: "in progress since {time}", tl: "inaasikaso mula {time}" },
   "drawer.stage.routed": { en: "routed {time}", tl: "naipasa {time}" },
   "drawer.sessionExpired": {
     en: "Your session expired. Sign in again.",

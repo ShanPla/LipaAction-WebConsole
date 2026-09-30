@@ -155,12 +155,13 @@ function progressSignature(
   rows: {
     reportId: string;
     acknowledgedAt: string | null;
+    inProgressAt: string | null;
     resolvedAt: string | null;
     resolutionOutcome: string | null;
   }[]
 ): string {
   return rows
-    .map((r) => `${r.reportId}:${r.acknowledgedAt ? 1 : 0}${r.resolvedAt ? 1 : 0}:${r.resolutionOutcome ?? "-"}`)
+    .map((r) => `${r.reportId}:${r.acknowledgedAt ? 1 : 0}${r.inProgressAt ? 1 : 0}${r.resolvedAt ? 1 : 0}:${r.resolutionOutcome ?? "-"}`)
     .sort()
     .join("|");
 }
@@ -413,7 +414,7 @@ export function QueueClient({
       try {
         const { data: rows, error } = await createClient()
           .from("agency_routing")
-          .select("incident_report_id, acknowledged_at, resolved_at, resolution_outcome")
+          .select("incident_report_id, acknowledged_at, in_progress_at, resolved_at, resolution_outcome")
           .in(
             "incident_report_id",
             shown.map((r) => r.id)
@@ -425,6 +426,7 @@ export function QueueClient({
             r.details.routing.map((a) => ({
               reportId: r.id,
               acknowledgedAt: a.acknowledgedAt,
+              inProgressAt: a.inProgressAt,
               resolvedAt: a.resolvedAt,
               resolutionOutcome: a.resolutionOutcome,
             }))
@@ -434,6 +436,7 @@ export function QueueClient({
           rows.map((row) => ({
             reportId: row.incident_report_id,
             acknowledgedAt: row.acknowledged_at,
+            inProgressAt: row.in_progress_at,
             resolvedAt: row.resolved_at,
             resolutionOutcome: row.resolution_outcome,
           }))

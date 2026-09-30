@@ -219,6 +219,7 @@ export function barangayOf(report: CityReport, t: Translate): string {
 
 function stageTime(r: AgencyRouting, t: Translate): string {
   if (r.resolvedAt) return t("drawer.stage.closed", { time: formatTimestamp(r.resolvedAt) });
+  if (r.inProgressAt) return t("drawer.stage.inProgress", { time: formatTimestamp(r.inProgressAt) });
   if (r.acknowledgedAt) return t("drawer.stage.acknowledged", { time: formatTimestamp(r.acknowledgedAt) });
   if (r.routedAt) return t("drawer.stage.routed", { time: formatTimestamp(r.routedAt) });
   return "";

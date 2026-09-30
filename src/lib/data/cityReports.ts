@@ -99,6 +99,7 @@ interface RawRouting {
   auto_routed: boolean | null;
   routed_at: string | null;
   acknowledged_at: string | null;
+  in_progress_at: string | null;
   resolved_at: string | null;
   resolution_outcome: AgencyRouting["resolutionOutcome"];
 }
@@ -200,7 +201,7 @@ async function loadRouting(reportIds: string[]): Promise<Map<string, AgencyRouti
     ...chunks.map((ids) =>
       supabase
         .from("agency_routing")
-        .select("incident_report_id, agency_id, is_primary, auto_routed, routed_at, acknowledged_at, resolved_at, resolution_outcome")
+        .select("incident_report_id, agency_id, is_primary, auto_routed, routed_at, acknowledged_at, in_progress_at, resolved_at, resolution_outcome")
         .in("incident_report_id", ids)
     ),
   ]);
@@ -231,6 +232,7 @@ async function loadRouting(reportIds: string[]): Promise<Map<string, AgencyRouti
       autoRouted: Boolean(row.auto_routed),
       routedAt: row.routed_at,
       acknowledgedAt: row.acknowledged_at,
+      inProgressAt: row.in_progress_at,
       resolvedAt: row.resolved_at,
       resolutionOutcome: row.resolution_outcome,
     });

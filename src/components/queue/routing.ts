@@ -108,6 +108,9 @@ export function agencyProgressLabel(row: AgencyRouting, t: Translate): string {
       ? t("routing.progress.closed", { outcome: outcomeLabel(row.resolutionOutcome, t) })
       : t("status.resolved");
   }
+  // In progress outranks acknowledged: the agency sets it after
+  // acknowledging, and an agency may set it without acknowledging first.
+  if (row.inProgressAt) return t("routing.progress.inProgress");
   if (row.acknowledgedAt) return t("routing.progress.acknowledged");
   return t("routing.progress.awaiting");
 }
@@ -178,7 +181,11 @@ export function downstreamSummary(
   if (returned) return t("routing.summary.returnedOpen", { agency: returned.agencyName, agencies: stillOpen });
 
   // Only agencies still holding it count from here: a closed lead is not the
-  // one to wait on.
+  // one to wait on. An agency at work outranks one that has only
+  // acknowledged.
+  const working = open.find((r) => r.inProgressAt);
+  if (working) return t("routing.summary.inProgressAt", { agency: working.agencyName, more });
+
   const acknowledging = open.find((r) => r.acknowledgedAt);
   if (acknowledging) {
     return t("routing.summary.acknowledgedBy", { agency: acknowledging.agencyName, more });

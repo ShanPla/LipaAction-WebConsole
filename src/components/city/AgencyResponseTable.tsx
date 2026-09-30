@@ -31,13 +31,14 @@ export function AgencyResponseTable({ response }: { response: CityResponseData }
         )
       ) : (
         <div className="overflow-x-auto rounded-card border border-ink-100 bg-white shadow-panel">
-          <table className="w-full min-w-[820px] text-left text-sm">
+          <table className="w-full min-w-[900px] text-left text-sm">
             <caption className="sr-only">{t("city.response.caption")}</caption>
             <thead>
               <tr className="border-b border-ink-100 bg-ink-50 text-[11px] uppercase tracking-wide text-ink-500">
                 <th scope="col" className="px-4 py-2.5 font-semibold">{t("city.response.col.agency")}</th>
                 <th scope="col" className="px-4 py-2.5 text-right font-semibold">{t("city.response.col.routed")}</th>
                 <th scope="col" className="px-4 py-2.5 text-right font-semibold">{t("city.response.col.awaiting")}</th>
+                <th scope="col" className="px-4 py-2.5 text-right font-semibold">{t("routing.progress.inProgress")}</th>
                 <th scope="col" className="px-4 py-2.5 font-semibold">{t("city.response.col.toAck")}</th>
                 <th scope="col" className="px-4 py-2.5 font-semibold">{t("city.response.col.toResolve")}</th>
                 <th scope="col" className="px-4 py-2.5 text-right font-semibold">{t("city.response.col.resolved")}</th>
@@ -60,6 +61,7 @@ export function AgencyResponseTable({ response }: { response: CityResponseData }
                   >
                     {a.awaitingAcknowledgement}
                   </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-ink-700">{a.inProgress}</td>
                   <td className="px-4 py-2.5">
                     <Duration summary={a.toAcknowledge} />
                   </td>
