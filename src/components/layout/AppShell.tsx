@@ -53,7 +53,12 @@ export function AppShell({
           search={search}
           onMenuClick={() => setMobileNavOpen(true)}
         />
-        <main id="main-content" className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+        {/* relative: the page's scroll area must also be the box that
+            absolutely positioned content (every sr-only label) is placed in.
+            Without it, a label far down a long list was placed against the
+            whole document instead, escaped this area's clipping and gave the
+            page a second scrollbar onto blank space below the shell. */}
+        <main id="main-content" className="relative flex-1 overflow-y-auto px-4 py-5 sm:px-6">
           {children}
         </main>
       </div>
