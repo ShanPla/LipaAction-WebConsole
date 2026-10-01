@@ -234,6 +234,15 @@ export function startOfManilaDay(now: number = Date.now()): Date {
 }
 
 /**
+ * Every distinct category among a duplicate group's members, in the order the
+ * members come, display form. Shared by the queue and Cluster Explorer
+ * loaders so both pages describe a group the same way.
+ */
+export function distinctCategories(categories: string[]): string[] {
+  return [...new Set(categories)];
+}
+
+/**
  * Turns a category key into something readable: `medical_emergency` becomes
  * `Medical emergency`.
  *

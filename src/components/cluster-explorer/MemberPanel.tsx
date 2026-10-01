@@ -33,7 +33,7 @@ export function MemberPanel({
       <div className="flex flex-col gap-2 border-b border-ink-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-ink-900">
-            {t("cluster.member.title", { id: cluster.id, category: cluster.category, count: cluster.memberCount })}
+            {t("cluster.member.title", { id: cluster.id, category: cluster.categories.join(", "), count: cluster.memberCount })}
           </p>
           <p className="text-xs text-ink-500">{cluster.centroidLabel}</p>
         </div>
@@ -53,6 +53,7 @@ export function MemberPanel({
             <div className="mb-1.5 flex flex-wrap items-center gap-2">
               <span className="font-mono text-xs text-ink-500">{member.reportId}</span>
               <PriorityBadge priority={member.priority} />
+              <span className="text-xs font-medium text-ink-700">{member.category}</span>
               <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-medium text-ink-700">
                 {member.relationship === "Primary" ? t("cluster.member.primary") : t("cluster.member.related")}
               </span>

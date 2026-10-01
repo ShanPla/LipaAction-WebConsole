@@ -582,6 +582,7 @@ export const MESSAGES = {
   },
 
   // --- Cluster Explorer (empty state only; see ClusterExplorerClient) -------
+  "cluster.mixedCategories": { en: "Mixed categories", tl: "Magkakaibang kategorya" },
   "cluster.card.inBarangay": { en: "{count} reports in {barangay}", tl: "{count} ulat sa {barangay}" },
   "cluster.card.acrossBarangays": { en: "{count} reports across {barangays} barangays", tl: "{count} ulat mula sa {barangays} barangay" },
   "cluster.card.withheld": { en: "· {count} identity-withheld", tl: "· {count} nakatago ang pagkakakilanlan" },

@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { categoryLabel, medianAgeMinutes, reporterLabel, startOfManilaDay, timeAgo } from "@/lib/utils";
+import { categoryLabel, distinctCategories, medianAgeMinutes, reporterLabel, startOfManilaDay, timeAgo } from "@/lib/utils";
 import type {
   AgencyRouting,
   KpiSummary,
@@ -241,8 +241,7 @@ export async function getBarangayQueue(
   const activeCluster: SituationCluster | null = largestGroup
     ? {
         id: largestGroup[0].cluster_id as string,
-        label: categoryLabel(largestGroup[0].category).toUpperCase(),
-        category: categoryLabel(largestGroup[0].category),
+        categories: distinctCategories(largestGroup.map((r) => categoryLabel(r.category))),
         memberCount: largestGroup.length,
         // RLS only lets this official see their own barangay's reports, so a
         // cross-barangay cluster (if one exists) would only ever show this

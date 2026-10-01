@@ -90,8 +90,10 @@ export function ClusterCard({
     <div className="mb-4 overflow-hidden rounded-card border border-priority-critical/30 bg-priority-criticalBg/40">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-priority-critical/20 px-4 py-2.5">
         <div className="flex items-center gap-2">
+          {/* One category names the group; several are said as mixed, and each
+              member row below names its own. */}
           <span className="rounded-full bg-priority-critical px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
-            {cluster.label}
+            {cluster.categories.length === 1 ? cluster.categories[0] : t("cluster.mixedCategories")}
           </span>
           <span className="text-sm font-medium text-ink-900">{summary}</span>
           {cluster.identityWithheldMembers > 0 && (
@@ -128,6 +130,7 @@ export function ClusterCard({
               <div className="mb-1 flex flex-wrap items-center gap-2">
                 <span className="font-mono text-xs text-ink-500">{member.id}</span>
                 <PriorityBadge priority={member.priority} />
+                <span className="text-xs font-medium text-ink-700">{member.category}</span>
               </div>
               <p className="mb-1.5 truncate text-sm text-ink-900">{member.summary}</p>
               <div className="flex flex-wrap items-center gap-3 text-xs text-ink-500">

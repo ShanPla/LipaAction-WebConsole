@@ -59,7 +59,12 @@ export function ClusterList({
                   {statusText(cluster.status)}
                 </span>
               </div>
-              <span className="text-sm font-medium text-ink-900">{cluster.category}</span>
+              <span className="text-sm font-medium text-ink-900">
+                {cluster.categories.length === 1 ? cluster.categories[0] : t("cluster.mixedCategories")}
+              </span>
+              {cluster.categories.length > 1 && (
+                <span className="text-xs text-ink-700">{cluster.categories.join(", ")}</span>
+              )}
               <span className="text-xs text-ink-500">
                 {t("cluster.list.members", { count: cluster.memberCount })}
                 {cluster.radiusMeters !== undefined && t("cluster.list.radius", { meters: cluster.radiusMeters })}

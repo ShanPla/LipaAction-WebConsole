@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { categoryLabel, reporterLabel, timeAgo } from "@/lib/utils";
+import { categoryLabel, distinctCategories, reporterLabel, timeAgo } from "@/lib/utils";
 import type { ClusterExplorerEntry, ClusterMemberDetail } from "@/types";
 
 const PENDING_STATUSES = ["pending_priority", "prioritized"];
@@ -107,7 +107,7 @@ export async function getBarangayClusters(
 
     entries.push({
       id: clusterId,
-      category: categoryLabel(group[0].category),
+      categories: distinctCategories(group.map((r) => categoryLabel(r.category))),
       memberCount: group.length,
       status: highestPriority === null ? null : statusFromPriority(highestPriority),
       // No radiusMeters — see the "Known simplification" note above.

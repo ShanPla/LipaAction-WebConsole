@@ -124,8 +124,11 @@ export interface QueueReport {
 
 export interface SituationCluster {
   id: string; // e.g. "CL-083"
-  label: string; // e.g. "ACTIVE FLOODING"
-  category: string;
+  // Every category among the members, display form, in member order. The
+  // duplicate flagger weighs category rather than requiring it to match, so
+  // one group can mix a fire, a medical emergency and an accident; a single
+  // headline category taken from one member would misdescribe the rest.
+  categories: string[];
   memberCount: number;
   barangaysAffected: string[];
   identityWithheldMembers: number;
@@ -147,7 +150,8 @@ export interface ClusterMemberDetail {
 
 export interface ClusterExplorerEntry {
   id: string;
-  category: string;
+  // Every category among the members, in member order; see SituationCluster.
+  categories: string[];
   memberCount: number;
   // The highest tier any member was scored; null when no member has been
   // scored yet, shown as [Not scored] rather than defaulted to a tier.
