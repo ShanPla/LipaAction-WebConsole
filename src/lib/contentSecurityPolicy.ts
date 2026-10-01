@@ -16,7 +16,8 @@
  * - connect-src: the Supabase project over HTTPS (queries, auth) and WSS
  *   (the Realtime channel the queue listens on).
  * - img-src: the same project, for report media once the app uploads it
- *   (signed URLs), plus data: and blob: for anything the browser builds.
+ *   (signed URLs), plus data: and blob: for anything the browser builds,
+ *   and OpenStreetMap's tile server for the street map on the city map page.
  * - font-src 'self': next/font serves Inter and JetBrains Mono from this
  *   site, never from Google.
  * - style-src 'unsafe-inline': a handful of computed style attributes (the
@@ -28,6 +29,10 @@
  * a local production build (plain http://localhost) the directive would
  * rewrite the site's own requests to an https:// port nothing listens on.
  */
+// The one tile host the city map loads from (CityMap.tsx); kept in step with
+// the URL template there.
+const OSM_TILES = "https://tile.openstreetmap.org";
+
 export function contentSecurityPolicy(nonce: string, supabaseUrl: string | undefined): string {
   const supabase = supabaseOrigins(supabaseUrl);
   const dev = process.env.NODE_ENV === "development";
@@ -36,7 +41,7 @@ export function contentSecurityPolicy(nonce: string, supabaseUrl: string | undef
     "default-src": ["'self'"],
     "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(dev ? ["'unsafe-eval'"] : [])],
     "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": ["'self'", "data:", "blob:", ...supabase.https],
+    "img-src": ["'self'", "data:", "blob:", ...supabase.https, OSM_TILES],
     "font-src": ["'self'"],
     "connect-src": ["'self'", ...supabase.https, ...supabase.wss],
     "object-src": ["'none'"],

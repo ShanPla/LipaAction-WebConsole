@@ -7,6 +7,7 @@ import {
   Inbox,
   Layers,
   Lock,
+  Map as MapGlyph,
   Menu,
   PhoneOff,
   Search,
@@ -31,7 +32,8 @@ export type IconName =
   | "settings"
   | "no-contact"
   | "agencies"
-  | "timer";
+  | "timer"
+  | "map";
 
 /**
  * The console's icons, from Lucide (lucide-react, ISC licence).
@@ -56,6 +58,7 @@ const ICONS: Record<IconName, LucideIcon> = {
   "no-contact": PhoneOff, // a discreet report: don't call or text the reporter
   agencies: Building2, // the responder offices
   timer: Timer, // how long agencies take
+  map: MapGlyph, // where open reports are
 };
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {

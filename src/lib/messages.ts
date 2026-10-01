@@ -872,6 +872,47 @@ export const MESSAGES = {
   "nav.cityResponse": { en: "Agency response", tl: "Tugon ng ahensya" },
   "nav.cityReports": { en: "Reports", tl: "Mga Ulat" },
   "nav.cityAgencies": { en: "Agencies", tl: "Mga Ahensya" },
+  "nav.cityMap": { en: "Map", tl: "Mapa" },
+  "banner.what.cityMap": { en: "The city map", tl: "mapa ng lungsod" },
+  "city.map.title": { en: "Open reports on the map", tl: "Mga bukas na ulat sa mapa" },
+  "city.map.intro": {
+    en: "Reports still open (awaiting review, validated, or with agencies), filed in the last {days} days. Each dot is where the reporter's phone was when they filed. A report whose resident withheld their identity, or asked for discreet reporting, is never placed on the map; it is counted under its barangay instead.",
+    tl: "Mga ulat na bukas pa (naghihintay ng pagsusuri, na-validate, o nasa ahensya), na naisampa sa nakaraang {days} araw. Ang bawat tuldok ay kung saan naroon ang telepono ng nag-ulat nang magsampa. Ang ulat na itinago ng residente ang pagkakakilanlan, o humiling ng discreet na pag-uulat, ay hindi kailanman inilalagay sa mapa; binibilang ito sa barangay nito.",
+  },
+  "city.map.label": { en: "Map of open reports in Lipa City", tl: "Mapa ng mga bukas na ulat sa Lungsod ng Lipa" },
+  "city.map.loading": { en: "Loading the map…", tl: "Nilo-load ang mapa…" },
+  "city.map.failed": {
+    en: "The map couldn't load. The counts and the list below still cover every open report.",
+    tl: "Hindi na-load ang mapa. Saklaw pa rin ng mga bilang at listahan sa ibaba ang bawat bukas na ulat.",
+  },
+  "city.map.legend": { en: "Priority", tl: "Priyoridad" },
+  "city.map.byBarangay": { en: "By barangay", tl: "Bawat barangay" },
+  "city.map.col.mapped": { en: "On the map", tl: "Nasa mapa" },
+  "city.map.col.withheld": { en: "Identity withheld", tl: "Itinago ang pagkakakilanlan" },
+  "city.map.col.unlocated": { en: "No location", tl: "Walang lokasyon" },
+  "city.map.countsCaption": {
+    en: "Open reports per barangay: on the map, with the identity withheld, discreet, and sent without a location",
+    tl: "Mga bukas na ulat bawat barangay: nasa mapa, itinago ang pagkakakilanlan, discreet, at naipadala nang walang lokasyon",
+  },
+  "city.map.total": { en: "All barangays", tl: "Lahat ng barangay" },
+  "city.map.listTitle": { en: "Reports on the map", tl: "Mga ulat sa mapa" },
+  "city.map.listCaption": { en: "Open reports placed on the map", tl: "Mga bukas na ulat na nasa mapa" },
+  "city.map.empty": {
+    en: "No report filed in the last {days} days is still open.",
+    tl: "Walang bukas pang ulat na naisampa sa nakaraang {days} araw.",
+  },
+  "city.map.noneMapped": {
+    en: "None of the open reports can be placed on the map: each has the identity withheld, is discreet, or was sent without a location.",
+    tl: "Wala sa mga bukas na ulat ang mailalagay sa mapa: bawat isa ay itinago ang pagkakakilanlan, discreet, o naipadala nang walang lokasyon.",
+  },
+  "city.map.footer": {
+    en: "Data as of {time}. A dot marks where the reporter's phone was, which may not be the exact spot of the incident. The street map comes from OpenStreetMap.",
+    tl: "Datos hanggang {time}. Ang tuldok ay kung saan naroon ang telepono ng nag-ulat, na maaaring hindi eksaktong lugar ng insidente. Galing sa OpenStreetMap ang mapa ng kalye.",
+  },
+  "city.map.capped": {
+    en: "More reports are open than this page reads: it takes the newest {limit} that may be placed on the map and the newest {limit} that may not.",
+    tl: "Mas marami ang bukas na ulat kaysa nababasa ng pahinang ito: kinukuha nito ang pinakabagong {limit} na maaaring ilagay sa mapa at ang pinakabagong {limit} na hindi.",
+  },
   "banner.what.cityAgencies": { en: "The agency list", tl: "listahan ng ahensya" },
   "city.agencies.title": { en: "Responder agencies", tl: "Mga ahensyang tumutugon" },
   "city.agencies.intro": {
