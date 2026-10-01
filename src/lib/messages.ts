@@ -516,7 +516,6 @@ export const MESSAGES = {
       "nag-ulat, at oras ng pagsusuri",
   },
   "history.col.report": { en: "Report", tl: "Ulat" },
-  "history.col.categoryPriority": { en: "Category / Priority", tl: "Kategorya / Priyoridad" },
   "history.col.verdict": { en: "Verdict", tl: "Pasya" },
   "history.col.official": { en: "Validating official", tl: "Opisyal na nag-validate" },
   "history.tier.emergency": { en: "Emergency", tl: "Emergency" },

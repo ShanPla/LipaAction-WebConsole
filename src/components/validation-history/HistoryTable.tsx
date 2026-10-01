@@ -31,12 +31,13 @@ export function HistoryTable({
 
   return (
     <div className="overflow-x-auto rounded-card border border-ink-100 bg-white shadow-panel">
-      <table className="w-full min-w-[720px] text-left text-sm">
+      <table className="w-full min-w-[800px] text-left text-sm">
         <caption className="sr-only">{t("history.caption")}</caption>
         <thead>
           <tr className="border-b border-ink-100 bg-ink-50 text-[11px] uppercase tracking-wide text-ink-500">
             <th scope="col" className="px-4 py-2.5 font-semibold">{t("history.col.report")}</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">{t("history.col.categoryPriority")}</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">{t("reports.col.category")}</th>
+            <th scope="col" className="px-4 py-2.5 font-semibold">{t("drawer.priority")}</th>
             <th scope="col" className="px-4 py-2.5 font-semibold">{t("history.col.verdict")}</th>
             <th scope="col" className="px-4 py-2.5 font-semibold">{t("history.col.official")}</th>
             <th scope="col" className="px-4 py-2.5 font-semibold">{t("field.reporter")}</th>
@@ -50,16 +51,19 @@ export function HistoryTable({
               className="border-b border-ink-100 last:border-0 hover:bg-ink-50/60"
             >
               <td className="px-4 py-3 font-mono text-xs text-ink-500">{record.reportId}</td>
+              {/* Category and priority in columns of their own: sharing one
+                  cell, each badge started wherever its category name ended,
+                  so the badges zigzagged down the table. */}
               <td className="px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-ink-700">{record.category}</span>
-                  <PriorityBadge priority={record.priority} />
-                </div>
+                <span className="text-xs text-ink-700">{record.category}</span>
                 {/* Intake tier, kept as plain text so it can't be mistaken for
                     a second priority reading. */}
                 <p className="mt-0.5 text-[11px] text-ink-500">
                   {t(`history.tier.${record.entryTier}`)}
                 </p>
+              </td>
+              <td className="px-4 py-3">
+                <PriorityBadge priority={record.priority} />
               </td>
               <td className="px-4 py-3 align-top">
                 <Badge tone={record.verdict === "Confirmed" ? "success" : "warning"}>
