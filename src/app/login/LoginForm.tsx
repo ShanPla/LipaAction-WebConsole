@@ -217,7 +217,8 @@ export function LoginForm() {
             </Button>
 
             <p className="mt-4 text-center text-[11px] text-ink-500">
-              For barangay and agency officials only. Residents use the LipaAction mobile app.
+              For barangay officials and city administrators only. Agency staff use the agency
+              console, and residents use the LipaAction mobile app.
             </p>
           </form>
         )}

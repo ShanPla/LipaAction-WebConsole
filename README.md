@@ -15,8 +15,8 @@ report writes to the production database through the same review path the rest o
 system uses.
 
 **Deployed:** <https://lipa-action-web-console.vercel.app> — Vercel, as specified in
-Chapter 3. Only pre-provisioned barangay officials can sign in; an unknown email
-address does not create an account.
+Chapter 3. Only pre-provisioned barangay officials and city administrators can sign
+in; an unknown email address does not create an account.
 
 ## Tech stack
 
