@@ -136,6 +136,11 @@ the opening line of its description before any view is logged, and the Validatio
 History CSV export writes no audit record. Both are recorded as open questions for the
 backend and data-protection review.
 
+One limit is structural: the console records an opening, but the database does not
+require one. An official's own session can read the same reports through the database's
+API, which row-level security allows and nothing logs. A complete trail needs the backend
+to serve report details only through a function that records the read as it returns it.
+
 ## Folder structure
 
 ```
@@ -187,8 +192,9 @@ In each case the console shows nothing rather than an approximation.
   cannot name an official; its filters narrow the events already loaded rather than the
   whole trail, and the page says so.
 - **Access-log coverage is incomplete.** See the Privacy section: list rows and the CSV
-  export are not individually logged, and live updates deliver full report rows to the
-  browser because Supabase cannot filter that feed by column.
+  export are not individually logged, live updates deliver full report rows to the
+  browser because Supabase cannot filter that feed by column, and a read made outside
+  the console, directly through the database's API, is not logged at all.
 - **There is no who-viewed-this panel on a report.** Openings are recorded and appear
   in the Audit Log, but the read function returns no actor identity, so the console can
   say a report was opened by a role, never by whom.
