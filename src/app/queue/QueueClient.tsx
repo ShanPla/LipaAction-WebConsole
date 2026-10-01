@@ -106,8 +106,8 @@ const CATCH_UP_LIMIT = 1000;
 // compares has changed.
 const STALE_DATA_MS = 60_000;
 
-// Agency progress arrives on this clock rather than live — see the agency
-// progress check in the component.
+// The fallback clock for agency progress, which normally arrives live on its
+// own channel — see the agency progress check in the component.
 const AGENCY_PROGRESS_CHECK_MS = 60_000;
 const AGENCY_PROGRESS_LIMIT = 1000;
 
@@ -393,11 +393,14 @@ export function QueueClient({
 
   /**
    * Agency progress (an acknowledgement, a resolution, an out-of-scope
-   * return) is written to agency_routing, and only incident_reports is in
-   * the Realtime publication. So an agency acting on a routed report sent
-   * this page nothing: the row kept reading [awaiting acknowledgement] until
-   * something else refreshed it, while an official watched it on screen.
-   * About once a minute while the queue is on screen, this compares the
+   * return) is written to agency_routing. Until the backend's #70 put that
+   * table in the Realtime publication, an agency acting on a routed report
+   * sent this page nothing: the row kept reading [awaiting acknowledgement]
+   * until something else refreshed it, while an official watched it on
+   * screen. The agency-progress channel below now carries those changes
+   * (seen on prod 2026-10-01, within a second of each), and this check stays
+   * as the fallback for one the channel misses, a dropped socket for one.
+   * About once a minute while the queue is on screen, it compares the
    * routing the page shows with the database and refreshes only on a
    * difference, for the same router-cache reason as catchUp. A check that
    * fails waits for the next one: refreshing on an error would repeat every
@@ -502,13 +505,14 @@ export function QueueClient({
         agencyChannel = subscribeAgencyProgress();
       });
 
-    // Agency progress (acknowledged, resolved, returned) lives on
-    // agency_routing, which joins the Realtime publication with the backend's
-    // migration #70. A channel of its own, so nothing about it can touch the
-    // queue channel or the footer: until #70 is on prod it simply receives
-    // nothing, and the once-a-minute progress check above keeps covering it.
-    // agency_routing has no barangay column to filter on, so row-level
-    // security (ar_select_barangay) is what scopes the events to this desk.
+    // Agency progress (acknowledged, in progress, resolved, returned) lives
+    // on agency_routing, which joined the Realtime publication with the
+    // backend's migration #70 (on prod; seen delivering 2026-10-01). A
+    // channel of its own, so nothing about it can touch the queue channel or
+    // the footer; if it ever drops, the once-a-minute progress check above
+    // still covers it. agency_routing has no barangay column to filter on,
+    // so row-level security (ar_select_barangay) is what scopes the events
+    // to this desk.
     function subscribeAgencyProgress() {
       return supabase
         .channel(`agency-progress:${official.barangayId}`)
