@@ -138,12 +138,46 @@ export async function updateReportStatus(
   if (error) {
     return {
       success: false,
-      message: transportMessage(httpStatus, error) ?? messageForReviewError(error),
+      message:
+        transportMessage(httpStatus, error) ??
+        (await alreadyDecidedMessage(supabase, reportId, error)) ??
+        messageForReviewError(error),
     };
   }
 
   revalidatePath("/queue");
   return { success: true };
+}
+
+// review_report()'s window: a report can be decided only while it is one of
+// these. Kept in step with PENDING_STATUSES in src/lib/data/queue.ts.
+const REVIEWABLE = new Set(["pending_priority", "prioritized"]);
+
+/**
+ * Says so when a refusal means another official decided the report first.
+ *
+ * review_report() answers a decision on a report that is already validated
+ * with 42501, not 55000: the report has left the review window, and 42501 is
+ * also its answer for a wrong barangay or a missing report. Mapped from the
+ * code alone, an official who lost a race to a colleague was told [Not
+ * permitted — wrong barangay], which sends them looking for a permissions
+ * problem they don't have. So a 42501 is followed by one read of the report,
+ * under the same RLS: readable and no longer pending means someone decided
+ * it. Anything else, a failed read included, keeps the generic message.
+ */
+async function alreadyDecidedMessage(
+  supabase: ReturnType<typeof createClient>,
+  reportId: string,
+  error: { code?: string }
+): Promise<string | null> {
+  if (error.code !== "42501") return null;
+  const { data, error: readError } = await supabase
+    .from("incident_reports")
+    .select("status")
+    .eq("id", reportId)
+    .maybeSingle();
+  if (readError || !data) return null;
+  return REVIEWABLE.has(data.status as string) ? null : "Someone else already reviewed this report.";
 }
 
 /**
@@ -643,7 +677,10 @@ export async function validateReports(reportIds: string[]): Promise<BulkValidate
       for (const remaining of ids.slice(index)) failures.push({ reportId: remaining, message: transport });
       break;
     }
-    failures.push({ reportId, message: messageForReviewError(error) });
+    failures.push({
+      reportId,
+      message: (await alreadyDecidedMessage(supabase, reportId, error)) ?? messageForReviewError(error),
+    });
   }
 
   if (validated > 0) revalidatePath("/queue");
