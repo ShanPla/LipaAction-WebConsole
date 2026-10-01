@@ -13,6 +13,7 @@ import { medianAgeMinutes } from "@/lib/utils";
 import { useNow } from "@/lib/useNow";
 import { KpiHeader } from "@/components/queue/KpiHeader";
 import { ClusterCard } from "@/components/queue/ClusterCard";
+import { DuplicateGroup } from "@/components/queue/DuplicateGroup";
 import { QueueTabs, queuePanelDomId, queueTabDomId } from "@/components/queue/QueueTabs";
 import { ReportRow } from "@/components/queue/ReportRow";
 import { ReportDetailPanel } from "@/components/queue/ReportDetailPanel";
@@ -706,6 +707,16 @@ export function QueueClient({
   // its real state wins — otherwise a report validated from the Emergency
   // tab reappears in Recent validated still wearing its collapsed
   // [Validated] mark, hiding the Route button it now needs.
+  // A group validated as one marks each validated member's row, as a single
+  // decision does, until the refresh takes them off the pending tabs.
+  const markValidated = useCallback((ids: string[]) => {
+    setResolved((prev) => {
+      const next = { ...prev };
+      for (const id of ids) next[id] = "validated";
+      return next;
+    });
+  }, []);
+
   function renderRow(report: QueueReport) {
     return (
       <ReportRow
@@ -764,7 +775,12 @@ export function QueueClient({
       {activeTab === "emergency" && queueData.activeCluster && (
         // Keyed on the cluster: its local [resolved] flag must not carry over
         // to a different cluster that takes its place after a refresh.
-        <ClusterCard key={queueData.activeCluster.id} cluster={queueData.activeCluster} now={now} />
+        <ClusterCard
+          key={queueData.activeCluster.id}
+          cluster={queueData.activeCluster}
+          now={now}
+          onValidated={markValidated}
+        />
       )}
 
       <QueueTabs tabs={queueData.queueTabMeta} activeTab={activeTab} onChange={setActiveTab} />
@@ -818,6 +834,18 @@ export function QueueClient({
               renderRow={renderRow}
             />
           </>
+        ) : activeTab === "duplicates" ? (
+          // One section per group, so the official sees which reports the
+          // system grouped, and can validate any group as one.
+          queueData.duplicateClusters.map((cluster) => (
+            <DuplicateGroup
+              key={cluster.id}
+              cluster={cluster}
+              rows={rows.filter((r) => r.details.clusterId === cluster.id)}
+              renderRow={renderRow}
+              onValidated={markValidated}
+            />
+          ))
         ) : (
           rows.map(renderRow)
         )}

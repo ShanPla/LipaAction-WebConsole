@@ -583,6 +583,15 @@ export const MESSAGES = {
 
   // --- Cluster Explorer (empty state only; see ClusterExplorerClient) -------
   "cluster.mixedCategories": { en: "Mixed categories", tl: "Magkakaibang kategorya" },
+  "cluster.confirm.mixed": {
+    en: "The reports in this group have different categories ({categories}). Check that each one is genuine before validating them together.",
+    tl: "Magkakaiba ang kategorya ng mga ulat sa pangkat na ito ({categories}). Tiyaking totoo ang bawat isa bago i-validate nang sabay.",
+  },
+  "queue.dupGroup.title": { en: "Duplicate group · {count} reports", tl: "Pangkat ng doble · {count} ulat" },
+  "queue.dupGroup.done": {
+    en: "All validated. They move to Recent validated.",
+    tl: "Na-validate lahat. Lilipat ang mga ito sa Kamakailang Na-validate.",
+  },
   "cluster.card.inBarangay": { en: "{count} reports in {barangay}", tl: "{count} ulat sa {barangay}" },
   "cluster.card.acrossBarangays": { en: "{count} reports across {barangays} barangays", tl: "{count} ulat mula sa {barangays} barangay" },
   "cluster.card.withheld": { en: "· {count} identity-withheld", tl: "· {count} nakatago ang pagkakakilanlan" },

@@ -104,6 +104,9 @@ const NO_ROUTING: RoutingExtras = { routing: [], routingPlan: null, routingOptio
 export interface QueueData {
   kpiSummary: KpiSummary;
   activeCluster: SituationCluster | null;
+  // Every duplicate group, largest first; activeCluster is the first of them.
+  // The Flagged duplicates tab shows each one with its own header and action.
+  duplicateClusters: SituationCluster[];
   queueByTab: Record<QueueTabId, QueueReport[]>;
   queueTabMeta: { id: QueueTabId; label: string; count: number }[];
   // True when the queries failed and the empty shape above is a fallback,
@@ -232,25 +235,30 @@ export async function getBarangayQueue(
     group.push(r);
     clusterGroups.set(r.cluster_id, group);
   }
-  const duplicateGroups = [...clusterGroups.values()].filter((g) => g.length >= 2);
+  // Largest group first. Groups are built in the pending order (score, then
+  // longest waiting), and the sort is stable, so among groups of one size the
+  // one holding the highest-ranked report leads.
+  const duplicateGroups = [...clusterGroups.values()]
+    .filter((g) => g.length >= 2)
+    .sort((a, b) => b.length - a.length);
+  // Flat, in the same group order, so the tab's rows, its count, the search
+  // box and [Validate next] all read the groups as they are shown.
   const duplicates = duplicateGroups.flat().map((r) => toQueueReport(r, routingExtras.get(r.id)));
+  const duplicateClusters: SituationCluster[] = duplicateGroups.map((group) => ({
+    id: group[0].cluster_id as string,
+    categories: distinctCategories(group.map((r) => categoryLabel(r.category))),
+    memberCount: group.length,
+    // RLS only lets this official see their own barangay's reports, so a
+    // cross-barangay cluster (if one exists) would only ever show this one
+    // barangay's members from here.
+    barangaysAffected: [barangayName],
+    identityWithheldMembers: group.filter((r) => r.identity_withheld).length,
+    members: group.map((r) => toQueueReport(r, routingExtras.get(r.id))),
+  }));
 
-  // Active-cluster banner (the "ACTIVE FLOODING"-style card): the single
-  // largest duplicate group, if any exist.
-  const largestGroup = [...duplicateGroups].sort((a, b) => b.length - a.length)[0] ?? null;
-  const activeCluster: SituationCluster | null = largestGroup
-    ? {
-        id: largestGroup[0].cluster_id as string,
-        categories: distinctCategories(largestGroup.map((r) => categoryLabel(r.category))),
-        memberCount: largestGroup.length,
-        // RLS only lets this official see their own barangay's reports, so a
-        // cross-barangay cluster (if one exists) would only ever show this
-        // one barangay's members from here.
-        barangaysAffected: [barangayName],
-        identityWithheldMembers: largestGroup.filter((r) => r.identity_withheld).length,
-        members: largestGroup.map((r) => toQueueReport(r, routingExtras.get(r.id))),
-      }
-    : null;
+  // Active-cluster banner (the "ACTIVE FLOODING"-style card) on the
+  // Emergency tab: the largest duplicate group, if any exist.
+  const activeCluster: SituationCluster | null = duplicateClusters[0] ?? null;
 
   const kpiSummary: KpiSummary = {
     fastTriageCount: emergency.length,
@@ -284,7 +292,7 @@ export async function getBarangayQueue(
     { id: "validated", label: "Recent validated", count: validated.length },
   ];
 
-  return { kpiSummary, activeCluster, queueByTab, queueTabMeta, loadFailed: false, validatedUnavailable };
+  return { kpiSummary, activeCluster, duplicateClusters, queueByTab, queueTabMeta, loadFailed: false, validatedUnavailable };
 }
 
 /**
@@ -547,6 +555,7 @@ function failedQueueData(): QueueData {
   return {
     kpiSummary: { fastTriageCount: 0, standardIntakeCount: 0, medianMinutes: 0, validatedCount: 0 },
     activeCluster: null,
+    duplicateClusters: [],
     queueByTab: { emergency: [], standard: [], duplicates: [], validated: [] },
     queueTabMeta: [
       { id: "emergency", label: "Emergency Fast-triage", count: 0 },

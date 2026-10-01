@@ -1,15 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/Button";
+import { useState } from "react";
 import { ReporterChip } from "@/components/ui/ReporterChip";
 import { PriorityBadge } from "@/components/ui/Badge";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { useToast } from "@/components/ui/Toast";
-import { validateReports } from "@/app/actions/reports";
-import { callAction } from "@/lib/callAction";
 import { useLang, useT } from "@/lib/i18n";
 import { timeAgo } from "@/lib/utils";
+import { ValidateClusterButton } from "./ValidateClusterButton";
 import type { SituationCluster } from "@/types";
 
 export function ClusterCard({
@@ -17,54 +13,16 @@ export function ClusterCard({
   // QueueClient's clock, so member ages keep moving while nothing refreshes;
   // null on the first render, which shows the server's own strings.
   now = null,
+  onValidated,
 }: {
   cluster: SituationCluster;
   now?: number | null;
+  // So the queue can mark the validated members' rows before the refresh.
+  onValidated?: (validatedIds: string[]) => void;
 }) {
-  const { showToast } = useToast();
   const t = useT();
   const lang = useLang();
-  const [isPending, startTransition] = useTransition();
-  const [showConfirm, setShowConfirm] = useState(false);
   const [resolved, setResolved] = useState(false);
-
-  function handleValidateCluster() {
-    startTransition(async () => {
-      const result = await callAction(() => validateReports(cluster.members.map((m) => m.id)));
-      setShowConfirm(false);
-      if (result === null) {
-        showToast(t("common.noAnswer"), "danger");
-        return;
-      }
-      const { validated, failures } = result;
-
-      // Partial success is the normal case here, not an edge case: another
-      // official can review one member between page load and this click. Say
-      // exactly what happened rather than rounding it to success.
-      // `validated > 0` guards the success branch: a zero-length member list
-      // would otherwise report [Validated all 0 reports] as a success and mark
-      // the cluster resolved. Not reachable today — a cluster needs 2+ members
-      // to render — but a success toast for work that did not happen is the
-      // exact failure this button was fixed to stop making.
-      if (failures.length === 0 && validated > 0) {
-        setResolved(true);
-        showToast(t("cluster.toast.all", { count: validated, id: cluster.id }), "success");
-      } else if (validated > 0) {
-        showToast(
-          t("cluster.toast.partial", {
-            validated,
-            total: cluster.members.length,
-            failed: failures.length,
-          }),
-          "info"
-        );
-      } else {
-        // The server's own reason when it gave one, which stays English like
-        // every message a server action returns.
-        showToast(failures[0]?.message ?? t("cluster.toast.failed"), "danger");
-      }
-    });
-  }
 
   if (resolved) {
     return (
@@ -108,14 +66,13 @@ export function ClusterCard({
             duplicate-flagging algorithm owns cluster assignment and would
             likely re-cluster anyway. It fired a toast claiming the split had
             happened. Re-add only once the backend confirms a supported path. */}
-        <Button
-          variant="primary"
-          size="sm"
-          disabled={isPending}
-          onClick={() => setShowConfirm(true)}
-        >
-          {t("cluster.card.validate")}
-        </Button>
+        <ValidateClusterButton
+          cluster={cluster}
+          onValidated={(ids, all) => {
+            if (all) setResolved(true);
+            onValidated?.(ids);
+          }}
+        />
       </div>
 
       {/* The English screen keeps a Tagalog hint, as elsewhere. It used to
@@ -148,17 +105,6 @@ export function ClusterCard({
           </div>
         ))}
       </div>
-
-      {showConfirm && (
-        <ConfirmModal
-          title={t("cluster.confirm.title", { count: cluster.memberCount, id: cluster.id })}
-          description={t("cluster.confirm.body")}
-          confirmLabel={t("cluster.confirm.label", { count: cluster.memberCount })}
-          busy={isPending}
-          onCancel={() => setShowConfirm(false)}
-          onConfirm={handleValidateCluster}
-        />
-      )}
     </div>
   );
 }
