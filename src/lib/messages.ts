@@ -185,13 +185,15 @@ export const MESSAGES = {
   },
   "queue.dup.bodyLive": {
     en:
-      "Pending reports the system groups as the same incident show here, so they can be " +
-      "reviewed together: same category and barangay, filed within 72 hours of each other, " +
-      "and close together when they carry a location.",
+      "Pending reports the system judges to be the same incident show here, so they can be " +
+      "reviewed together. It compares reports from the same barangay filed within 72 hours " +
+      "of each other, weighing how close they are in place and time and their category, so " +
+      "reports in different categories can still be grouped.",
     tl:
-      "Lumalabas dito ang mga nakabinbing ulat na pinagsama ng sistema bilang iisang " +
-      "insidente, para masuri nang sabay: parehong kategorya at barangay, naipadala sa loob " +
-      "ng 72 oras ng isa't isa, at magkalapit kung may lokasyon.",
+      "Lumalabas dito ang mga nakabinbing ulat na itinuring ng sistema na iisang insidente, " +
+      "para masuri nang sabay. Pinaghahambing nito ang mga ulat mula sa iisang barangay na " +
+      "naipadala sa loob ng 72 oras ng isa't isa, ayon sa lapit ng lugar at oras at sa " +
+      "kategorya, kaya maaaring mapagsama ang mga ulat na magkaiba ang kategorya.",
   },
   "queue.sla.title": {
     en: "Tier 0 report past its 5-minute window",
@@ -634,16 +636,19 @@ export const MESSAGES = {
   },
   "clusters.emptyBodyLive": {
     en:
-      "Pending reports that look like the same incident are grouped here automatically: " +
-      "same category and barangay, filed within 72 hours of each other, and close together " +
-      "when they carry a location. Reports without a location are grouped by category and " +
-      "barangay alone. The grouping is the system's and can't be changed from this console.",
+      "Pending reports the system judges to be the same incident are grouped here " +
+      "automatically. It compares reports from the same barangay filed within 72 hours of " +
+      "each other, weighing how close they are in place and time and their category, so " +
+      "reports in different categories can still be grouped. Reports without a location are " +
+      "matched by category and barangay. The grouping is the system's and can't be changed " +
+      "from this console.",
     tl:
-      "Awtomatikong pinagsasama-sama rito ang mga nakabinbing ulat na mukhang iisang " +
-      "insidente: parehong kategorya at barangay, naipadala sa loob ng 72 oras ng isa't isa, " +
-      "at magkalapit kung may lokasyon. Ang mga ulat na walang lokasyon ay pinagsasama ayon sa " +
-      "kategorya at barangay lamang. Ang sistema ang nagpapangkat, at hindi ito mababago mula " +
-      "sa console na ito.",
+      "Awtomatikong pinagsasama-sama rito ang mga nakabinbing ulat na itinuring ng sistema " +
+      "na iisang insidente. Pinaghahambing nito ang mga ulat mula sa iisang barangay na " +
+      "naipadala sa loob ng 72 oras ng isa't isa, ayon sa lapit ng lugar at oras at sa " +
+      "kategorya, kaya maaaring mapagsama ang mga ulat na magkaiba ang kategorya. Ang mga ulat " +
+      "na walang lokasyon ay itinutugma ayon sa kategorya at barangay. Ang sistema ang " +
+      "nagpapangkat, at hindi ito mababago mula sa console na ito.",
   },
 
   // --- Audit Log (sample page) ----------------------------------------------

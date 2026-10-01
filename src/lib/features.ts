@@ -10,5 +10,8 @@
  * connected. An empty list looks the same either way, so nothing on the page
  * can tell which case it is in: when write-back is live, set this to true and
  * the empty states switch to copy that describes the grouping instead.
+ *
+ * On since 2026-10-01, when the backend owner confirmed write-back is live
+ * and the first real clusters appeared in Inosluban.
  */
-export const DUPLICATE_WRITEBACK_LIVE: boolean = false;
+export const DUPLICATE_WRITEBACK_LIVE: boolean = true;
