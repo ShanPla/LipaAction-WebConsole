@@ -209,17 +209,8 @@ In each case the console shows nothing rather than an approximation.
   the spatial panel is a labelled schematic rather than a map with invented positions.
   Only reports from the same barangay filed within 72 hours of each other are compared,
   and only pending reports are grouped, so a group thins out as its members are decided.
-  Grouping by photo similarity is not computed.
-- **A report reaches the desk of the reporter's home barangay.** The mobile app in
-  testers' hands today files every report under the resident's own barangay, wherever
-  the incident is, so an incident seen in a neighbouring barangay appears in the
-  reporter's queue, and two residents of different barangays reporting the same
-  incident are never grouped as duplicates. The next Android build picks the barangay
-  from the phone's position against the boundaries of the four pilot barangays,
-  identity-withheld reports included, and asks the resident to confirm when there is
-  no position, the position is outside the four, or it lies too close to a boundary.
-  Until testers have that build, this limitation holds. The console shows whatever
-  barangay the report carries and does not check it.
+  Reports sent without a location, every identity-withheld report included, are left out
+  of grouping. Grouping by photo similarity is not computed.
 - **Priority comes from the inference service.** A report it has not scored is labelled
   Not scored rather than given a tier, and pending reports are listed highest score
   first, then longest-waiting first, with unscored reports after scored ones. Because

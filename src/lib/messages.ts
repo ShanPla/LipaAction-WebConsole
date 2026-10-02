@@ -648,16 +648,17 @@ export const MESSAGES = {
       "Pending reports the system judges to be the same incident are grouped here " +
       "automatically. It compares reports from the same barangay filed within 72 hours of " +
       "each other, weighing how close they are in place and time and their category, so " +
-      "reports in different categories can still be grouped. Reports without a location are " +
-      "matched by category and barangay. The grouping is the system's and can't be changed " +
-      "from this console.",
+      "reports in different categories can still be grouped. Reports sent without a location, " +
+      "including every identity-withheld report, are left out of grouping. The grouping is " +
+      "the system's and can't be changed from this console.",
     tl:
       "Awtomatikong pinagsasama-sama rito ang mga nakabinbing ulat na itinuring ng sistema " +
       "na iisang insidente. Pinaghahambing nito ang mga ulat mula sa iisang barangay na " +
       "naipadala sa loob ng 72 oras ng isa't isa, ayon sa lapit ng lugar at oras at sa " +
-      "kategorya, kaya maaaring mapagsama ang mga ulat na magkaiba ang kategorya. Ang mga ulat " +
-      "na walang lokasyon ay itinutugma ayon sa kategorya at barangay. Ang sistema ang " +
-      "nagpapangkat, at hindi ito mababago mula sa console na ito.",
+      "kategorya, kaya maaaring mapagsama ang mga ulat na magkaiba ang kategorya. Hindi " +
+      "isinasama sa pagpapangkat ang mga ulat na naipadala nang walang lokasyon, kasama ang " +
+      "bawat ulat na nakatago ang pagkakakilanlan. Ang sistema ang nagpapangkat, at hindi ito " +
+      "mababago mula sa console na ito.",
   },
 
   // --- Audit Log (sample page) ----------------------------------------------
