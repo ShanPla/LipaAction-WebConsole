@@ -1222,6 +1222,19 @@ export const MESSAGES = {
   "city.response.p95": { en: "95th {value}", tl: "ika-95 {value}" },
   "city.response.samples": { en: "{count} timed", tl: "{count} naorasan" },
   "city.response.noTiming": { en: "No timing yet", tl: "Wala pang oras" },
+  "city.response.grid.ack": {
+    en: "Time to acknowledge, by agency and category",
+    tl: "Oras bago kilalanin, bawat ahensya at kategorya",
+  },
+  "city.response.grid.resolve": {
+    en: "Acknowledged to resolved, by agency and category",
+    tl: "Mula pagkilala hanggang lutas, bawat ahensya at kategorya",
+  },
+  "city.response.exported": {
+    en: "Exported the agency response times as CSV",
+    tl: "Na-export ang oras ng tugon ng ahensya bilang CSV",
+  },
+  "city.response.exportNothing": { en: "Nothing to export", tl: "Walang mai-e-export" },
   "city.unnamedAgency": { en: "Agency name unavailable", tl: "Hindi makuha ang pangalan ng ahensya" },
   "city.response.empty": {
     en: "No report was routed to an agency in the last {days} days.",
