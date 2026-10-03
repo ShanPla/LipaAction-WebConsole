@@ -732,10 +732,15 @@ export const MESSAGES = {
   "audit.action.routing_in_progress": { en: "In progress at an agency", tl: "Inaasikaso ng ahensya" },
   "audit.action.report_resolved_by_agencies": { en: "Resolved by agencies", tl: "Nalutas ng mga ahensya" },
   "audit.action.report_returned_to_barangay": { en: "Returned to barangay", tl: "Ibinalik sa barangay" },
+  // Shown only on the city access log, which reads the whole trail.
+  "audit.action.report_status_changed": { en: "Status changed", tl: "Nabago ang status" },
+  "audit.action.identity_reveal": { en: "Identity revealed", tl: "Inilantad ang pagkakakilanlan" },
   "audit.reportGone": { en: "Report no longer in the database", tl: "Wala na sa database ang ulat" },
   "role.municipal_admin": { en: "Municipal Admin", tl: "Municipal Admin" },
   "role.agency_user": { en: "Agency staff", tl: "Kawani ng ahensya" },
   "role.agency_supervisor": { en: "Agency supervisor", tl: "Superbisor ng ahensya" },
+  "role.dpo": { en: "Data Protection Officer", tl: "Data Protection Officer" },
+  "role.resident": { en: "Resident", tl: "Residente" },
 
   // --- Settings -------------------------------------------------------------
   "settings.nav.profile": { en: "Profile", tl: "Profile" },
@@ -874,6 +879,54 @@ export const MESSAGES = {
   "nav.cityReports": { en: "Reports", tl: "Mga Ulat" },
   "nav.cityAgencies": { en: "Agencies", tl: "Mga Ahensya" },
   "nav.cityMap": { en: "Map", tl: "Mapa" },
+  "nav.cityAccessLog": { en: "Access log", tl: "Talaan ng access" },
+  "banner.what.cityAccessLog": { en: "The access log", tl: "talaan ng access" },
+  "city.access.title": { en: "Who opened and acted on reports", tl: "Sino ang nagbukas at kumilos sa mga ulat" },
+  "city.access.intro": {
+    en: "Every recorded opening, decision and routing across the city, newest first, with the official who did it. Residents are never named. Opening this page is itself recorded.",
+    tl: "Bawat naitalang pagbukas, pasya at pagpasa sa buong lungsod, pinakabago muna, kasama ang opisyal na gumawa nito. Hindi kailanman pinangangalanan ang mga residente. Itinatala rin ang pagbukas ng pahinang ito.",
+  },
+  "city.access.filter": { en: "Kind of event", tl: "Uri ng pangyayari" },
+  "city.access.kind.routing": { en: "Routing and agencies", tl: "Pagpasa at mga ahensya" },
+  "city.access.kind.other": { en: "Other", tl: "Iba pa" },
+  "city.access.tile.officials": { en: "Officials in these events", tl: "Mga opisyal sa mga pangyayaring ito" },
+  "city.access.caption": {
+    en: "Recorded events on reports across the city, with the official behind each",
+    tl: "Mga naitalang pangyayari sa mga ulat sa buong lungsod, kasama ang opisyal sa likod ng bawat isa",
+  },
+  "city.access.col.who": { en: "Official", tl: "Opisyal" },
+  "city.access.resident": { en: "Resident, not named", tl: "Residente, hindi pinangangalanan" },
+  "city.access.system": { en: "System, automatic", tl: "Sistema, awtomatiko" },
+  "city.access.notNamed": { en: "Not named", tl: "Hindi pinangangalanan" },
+  "city.access.nameUnavailable": { en: "Name unavailable", tl: "Hindi makuha ang pangalan" },
+  "city.access.unnamed": { en: "Unnamed official", tl: "Opisyal na walang pangalan" },
+  "city.access.action.opened": { en: "Access log opened", tl: "Binuksan ang talaan ng access" },
+  "city.access.empty": { en: "No events have been recorded yet.", tl: "Wala pang naitalang pangyayari." },
+  "city.access.emptyFiltered": {
+    en: "No events of this kind have been recorded.",
+    tl: "Walang naitalang pangyayari na ganitong uri.",
+  },
+  "city.access.footer": {
+    en: "{count} shown, newest first. Names and offices are as they are now; the role is the one recorded with each event.",
+    tl: "{count} ang ipinapakita, pinakabago muna. Ang mga pangalan at tanggapan ay ayon sa kasalukuyan; ang tungkulin ay ang naitala kasama ng bawat pangyayari.",
+  },
+  "city.access.capped": {
+    en: "Only the newest {limit} are read; choose a kind of event to see older ones.",
+    tl: "Ang pinakabagong {limit} lamang ang nababasa; pumili ng uri ng pangyayari para makita ang mas luma.",
+  },
+  "city.access.notRecorded.title": {
+    en: "The access log can't be shown right now",
+    tl: "Hindi maipakita ang talaan ng access ngayon",
+  },
+  "city.access.notRecorded.body": {
+    en: "Every opening of this page is recorded, and that record couldn't be written, so nothing is shown. Try again in a moment.",
+    tl: "Itinatala ang bawat pagbukas ng pahinang ito, at hindi naisulat ang talang iyon, kaya walang ipinapakita. Subukang muli maya-maya.",
+  },
+  "city.access.notRecorded.session": {
+    en: "Your session has expired, so this opening couldn't be recorded and nothing is shown. Sign in again to see the access log.",
+    tl: "Nag-expire na ang iyong session, kaya hindi naitala ang pagbukas na ito at walang ipinapakita. Mag-sign in muli para makita ang talaan ng access.",
+  },
+  "city.access.retry": { en: "Try again", tl: "Subukang muli" },
   "banner.what.cityMap": { en: "The city map", tl: "mapa ng lungsod" },
   "city.map.title": { en: "Open reports on the map", tl: "Mga bukas na ulat sa mapa" },
   "city.map.intro": {

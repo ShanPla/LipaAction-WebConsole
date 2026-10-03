@@ -7,7 +7,9 @@ import { useT, type MessageKey } from "@/lib/i18n";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import type { ConsoleUser } from "@/lib/auth";
 
-type NavItem = { href: string; label: MessageKey; icon: IconName };
+// prefetch: false for a page whose render writes an access record, so that
+// merely seeing the link can never record an opening nobody made.
+type NavItem = { href: string; label: MessageKey; icon: IconName; prefetch?: false };
 
 const primaryNav: NavItem[] = [
   { href: "/queue", label: "nav.queue", icon: "queue" },
@@ -30,6 +32,7 @@ const cityNav: NavItem[] = [
   { href: "/city/reports", label: "nav.cityReports", icon: "queue" },
   { href: "/city/response-times", label: "nav.cityResponse", icon: "timer" },
   { href: "/city/agencies", label: "nav.cityAgencies", icon: "agencies" },
+  { href: "/city/access-log", label: "nav.cityAccessLog", icon: "audit", prefetch: false },
 ];
 
 type NavGroup = { heading?: MessageKey; items: NavItem[] };
@@ -46,12 +49,14 @@ function NavLink({
   href,
   label,
   icon,
+  prefetch,
   active,
   onNavigate,
 }: {
   href: string;
   label: MessageKey;
   icon: IconName;
+  prefetch?: false;
   active: boolean;
   onNavigate?: () => void;
 }) {
@@ -59,6 +64,7 @@ function NavLink({
   return (
     <Link
       href={href}
+      prefetch={prefetch}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cx(

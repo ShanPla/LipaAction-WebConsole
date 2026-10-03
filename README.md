@@ -8,7 +8,8 @@ submitted by residents through the LipaAction mobile app.
 The same console also carries a read-only city dashboard for the municipal
 administrator (**Section 3.7.5** and **Appendix A.5**): city-wide report activity per
 barangay, a map of open reports, a city-wide report list, each agency's response
-times, and the agency list.
+times, the agency list, and an access log naming the officials who opened and acted on
+reports.
 
 This is a working implementation against the project's shared Supabase backend — not
 a static mockup. Sign-in is real, report data is real, and validating or rejecting a
@@ -106,6 +107,7 @@ official's browser is set.
 | **City reports** (`/city/reports`) | Live, read-only. Every report filed in the city in the last 30 days, newest first, filterable by barangay and by stage (awaiting review, validated but not routed, with agencies, rejected). Each row shows its time, barangay, category, priority with score, status, and the agencies holding it with the lead agency's progress. The list shows no description; the detail drawer shows the resident's account, the triage reading and each agency's progress, has no decision or routing controls, and records every opening in the access log, as the queue's drawer does. |
 | **Agency response** (`/city/response-times`) | Live, read-only. The thesis's per-agency response time view: for every routing in the last 30 days, per agency, how many reports it was sent, how many await acknowledgement, how many it is working on now, the median time to acknowledge and from acknowledgement to resolution (with the 95th percentile once an agency has 20 timings), and how many it resolved or returned out of scope. |
 | **Agencies** (`/city/agencies`) | Live, read-only. Every agency configured in the system, with its code and tier, and the report categories routing sends to it, lead categories marked. Adding agencies or changing where a category goes is not done here. |
+| **Access log** (`/city/access-log`) | Live, read-only, for the municipal administrator. Every recorded event on reports across the city (openings, decisions, routings and agency progress), newest first, with the official who acted named alongside their role and office, filterable by kind of event. Residents are never named, an event the database wrote by itself is shown as automatic, and no raw account identifier appears. Opening the page is itself recorded, and if that record can't be written the page shows nothing. |
 | **Audit Log** | Live. The barangay's own access trail: every report opening, validation, rejection and routing on its reports, newest first, filterable by kind. Read access comes through a database function that returns only the safe columns, not a table policy, so no official is named and the reporter is never in it — each row shows the time, the action, the role that did it, and the report. It loads the newest 500 events and says so. |
 
 All report data on the barangay pages is scoped to the signed-in official's own
@@ -128,10 +130,13 @@ are logged through the backend functions that perform them. If a view can't be l
 the console says so on screen rather than failing silently.
 
 The city dashboard follows the same rule. Its role can read reporter identity in the
-database, so the dashboard's queries never select the reporter's account or the
-reviewing official, and no page names a reporter or an official. Its counts carry no
-personal data, so viewing them writes no access record; opening a report in the city
-report list is logged like any other opening. The city map is the one page that reads a
+database, so the dashboard's queries never select the reporter's account, and no page
+names a reporter. Its counts carry no personal data, so viewing them writes no access
+record; opening a report in the city report list is logged like any other opening.
+The one page that names officials is the city access log, the oversight view of the
+trail: it shows who opened, decided and routed each report, never whom a report
+concerns, and never a resident. Opening it is recorded too, and it shows nothing if that
+record can't be written. The city map is the one page that reads a
 report's location, and only for reports whose resident neither withheld their identity
 nor asked for discreet reporting; for those, the location is never read at all, and the
 report is only counted under its barangay.
@@ -201,9 +206,14 @@ In each case the console shows nothing rather than an approximation.
   export are not individually logged, live updates deliver full report rows to the
   browser because Supabase cannot filter that feed by column, and a read made outside
   the console, directly through the database's API, is not logged at all.
-- **There is no who-viewed-this panel on a report.** Openings are recorded and appear
-  in the Audit Log, but the read function returns no actor identity, so the console can
-  say a report was opened by a role, never by whom.
+- **Only the city access log names who opened a report.** The barangay Audit Log's
+  read function returns no actor identity, so a desk sees that a report was opened by a
+  role, never by whom; the municipal administrator's access log names the official.
+  There is no who-viewed-this panel on a report itself.
+- **The city access log shows the newest 200 events of the chosen kind.** Names and
+  offices are read from each official's profile as it is now; the role shown is the one
+  recorded with the event. The thesis's CSV export of the log for data-protection requests
+  is not built: an export is itself an access event and would need its own record.
 - **Cluster data.** The console shows which reports the duplicate-detection service
   grouped, not why: no centroid, radius, or per-report proximity signal is shown, and
   the spatial panel is a labelled schematic rather than a map with invented positions.
@@ -265,7 +275,7 @@ In each case the console shows nothing rather than an approximation.
   Settings has a test-sound button.
 - **The city dashboard covers three of the thesis's six city views.** The city-wide
   overview, the incident map and per-agency response time are built, plus a city-wide
-  report list and a read-only agency list. Not built: the false-route rate (defined over automatically routed reports; automatic routing is
+  report list, a read-only agency list and an access log. Not built: the false-route rate (defined over automatically routed reports; automatic routing is
   off), cross-barangay verification quality (Tier 1 verification has no backend),
   recalibration controls, agency management (adding, elevating or editing agencies), identity reveal, and
   multi-factor sign-in.
