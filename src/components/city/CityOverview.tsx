@@ -4,6 +4,7 @@ import { Tile } from "@/components/ui/Tile";
 import { useT } from "@/lib/i18n";
 // Type-only import from a server-only module — erased at compile time.
 import type { BarangayActivity, CityOverviewData } from "@/lib/data/cityOverview";
+import { PrintButton } from "@/components/ui/PrintButton";
 
 /**
  * The city dashboard's overview: city-wide tiles, then one row per barangay
@@ -15,12 +16,18 @@ export function CityOverview({ overview }: { overview: CityOverviewData }) {
   const { totals, barangays, days, loadFailed } = overview;
 
   return (
-    <section aria-labelledby="city-overview-title" className="mb-6">
-      <div className="mb-3">
-        <h2 id="city-overview-title" className="text-sm font-semibold text-ink-900">
-          {t("city.overview.title")}
-        </h2>
-        <p className="text-xs text-ink-500">{t("city.overview.intro")}</p>
+    <section aria-labelledby="city-overview-title" data-printable="overview" className="mb-6">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 id="city-overview-title" className="text-sm font-semibold text-ink-900">
+            {t("city.overview.title")}
+          </h2>
+          <p className="text-xs text-ink-500">{t("city.overview.intro")}</p>
+        </div>
+        {/* The city-wide summary is what gets printed for a meeting. */}
+        <div className="print:hidden">
+          <PrintButton section="overview" />
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-3">
@@ -44,8 +51,8 @@ export function CityOverview({ overview }: { overview: CityOverviewData }) {
           </div>
         )
       ) : (
-        <div className="overflow-x-auto rounded-card border border-ink-100 bg-white shadow-panel">
-          <table className="w-full min-w-[760px] text-left text-sm">
+        <div className="overflow-x-auto rounded-card border border-ink-100 bg-white shadow-panel print:overflow-visible">
+          <table className="w-full min-w-[760px] text-left text-sm print:min-w-0">
             <caption className="sr-only">{t("city.overview.caption")}</caption>
             <thead>
               <tr className="border-b border-ink-100 bg-ink-50 text-[11px] uppercase tracking-wide text-ink-500">
