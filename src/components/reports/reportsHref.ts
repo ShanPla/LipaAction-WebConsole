@@ -1,12 +1,14 @@
 // The Reports page keeps each report's choice in the URL (?date= for the
-// daily summary, ?month= for the monthly resolution times), so a view can be
-// reloaded or shared. Changing one must keep the other.
+// daily summary, ?week= for the weekly verification activity's last day,
+// ?month= for the monthly resolution times), so a view can be reloaded or
+// shared. Changing one must keep the others.
 export function reportsHref(
-  next: { date: string; month: string },
+  next: { date: string; month: string; week: string },
   defaults: { today: string; currentMonth: string }
 ): string {
   const params = new URLSearchParams();
   if (next.date !== defaults.today) params.set("date", next.date);
+  if (next.week !== defaults.today) params.set("week", next.week);
   if (next.month !== defaults.currentMonth) params.set("month", next.month);
   const query = params.toString();
   return query ? `/reports?${query}` : "/reports";

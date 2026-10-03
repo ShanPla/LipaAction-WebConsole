@@ -76,6 +76,8 @@ const EXPORT_LABELS: Record<ExportKind, MessageKey> = {
   audit_log_csv: "export.kind.audit_log_csv",
   access_log_csv: "export.kind.access_log_csv",
   access_log_print: "export.kind.access_log_print",
+  verification_activity_csv: "export.kind.verification_activity_csv",
+  verification_activity_print: "export.kind.verification_activity_print",
 };
 
 /** The page's address for a kind and a date range, defaults left out. */

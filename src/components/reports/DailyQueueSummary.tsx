@@ -30,12 +30,15 @@ export function DailyQueueSummary({
   barangayName,
   month,
   currentMonth,
+  week,
 }: {
   summary: DailyQueueSummaryData;
   barangayName: string;
-  // The monthly report's month, kept in the URL when the day changes.
+  // The monthly report's month and the weekly report's last day, kept in the
+  // URL when the day changes.
   month: string;
   currentMonth: string;
+  week: string;
 }) {
   const t = useT();
   const router = useRouter();
@@ -46,7 +49,7 @@ export function DailyQueueSummary({
   useEffect(() => () => window.clearTimeout(settleTimer.current), []);
 
   function showDay(next: string) {
-    router.push(reportsHref({ date: next, month }, { today, currentMonth }));
+    router.push(reportsHref({ date: next, month, week }, { today, currentMonth }));
   }
 
   function handleDateChange(next: string) {

@@ -677,14 +677,6 @@ export const MESSAGES = {
   },
   "reports.cadence.weekly": { en: "weekly", tl: "lingguhan" },
   "reports.cadence.monthly": { en: "monthly", tl: "buwanan" },
-  "reports.catalogue.13.title": {
-    en: "Weekly Verification Activity by Official",
-    tl: "Lingguhang Aktibidad ng Pag-verify bawat Opisyal",
-  },
-  "reports.catalogue.13.status": {
-    en: "Not built yet: it counts the Tier 1 verifications made on the Verify Resident page, per official.",
-    tl: "Hindi pa nabubuo: binibilang nito ang mga Tier 1 na pag-verify na ginawa sa page na I-verify ang Residente, bawat opisyal.",
-  },
   "reports.catalogue.15.title": {
     en: "Weekly Safety-Net Trigger Summary",
     tl: "Lingguhang Buod ng mga Na-trigger na Safety-Net",
@@ -1650,6 +1642,111 @@ export const MESSAGES = {
   "export.kind.audit_log_csv": { en: "Audit Log, CSV", tl: "Talaan ng Audit, CSV" },
   "export.kind.access_log_csv": { en: "Access log, CSV", tl: "Talaan ng access, CSV" },
   "export.kind.access_log_print": { en: "Access log, print", tl: "Talaan ng access, print" },
+  "export.kind.verification_activity_csv": {
+    en: "Weekly Verification Activity, CSV",
+    tl: "Lingguhang Aktibidad ng Pag-verify, CSV",
+  },
+  "export.kind.verification_activity_print": {
+    en: "Weekly Verification Activity, print",
+    tl: "Lingguhang Aktibidad ng Pag-verify, print",
+  },
+
+  // --- Reports: #13 Weekly Verification Activity by Official -----------------
+  "common.shareOf": { en: "{part} of {whole} ({percent}%)", tl: "{part} sa {whole} ({percent}%)" },
+  "reports.verification.title": {
+    en: "Weekly Verification Activity by Official",
+    tl: "Lingguhang Aktibidad ng Pag-verify bawat Opisyal",
+  },
+  "reports.verification.intro": {
+    en: "Tier 1 verifications made in the seven days shown, by the official who attested and how residency was established.",
+    tl: "Mga Tier 1 na pag-verify sa pitong araw na ipinapakita, ayon sa opisyal na nagpatotoo at sa paraan ng patotoo.",
+  },
+  "reports.verification.weekEnding": { en: "Week ending", tl: "Linggong nagtatapos sa" },
+  "reports.verification.thisWeek": { en: "This week", tl: "Ngayong linggo" },
+  "reports.verification.col.promotions": { en: "Tier 1 promotions", tl: "Na-promote sa Tier 1" },
+  "reports.verification.col.other": { en: "Other method", tl: "Ibang paraan" },
+  "reports.verification.col.revoked": { en: "Revoked since", tl: "Binawi mula noon" },
+  "reports.verification.total": { en: "Total", tl: "Kabuuan" },
+  "reports.verification.caption": {
+    en: "Tier 1 verifications by official, {range}",
+    tl: "Mga Tier 1 na pag-verify bawat opisyal, {range}",
+  },
+  "reports.verification.empty": {
+    en: "No Tier 1 verification was made in {range}.",
+    tl: "Walang Tier 1 na pag-verify na ginawa noong {range}.",
+  },
+  "reports.verification.failed": {
+    en: "The weekly verification activity couldn't load. Refresh the page; the other reports are unaffected.",
+    tl: "Hindi na-load ang lingguhang aktibidad ng pag-verify. I-refresh ang page; hindi apektado ang ibang ulat.",
+  },
+  "reports.verification.footer": {
+    en:
+      "Revoked since counts this week's verifications that a senior barangay admin has revoked, up to now: the nearest record there is of a verification being contested. " +
+      "The export and the print name officials, so each is recorded in the access trail.",
+    tl:
+      "Binibilang ng Binawi mula noon ang mga pag-verify ngayong linggo na binawi na ng senior admin ng barangay hanggang ngayon: ito ang pinakamalapit na tala ng pagtutol sa isang pag-verify. " +
+      "Pinapangalanan ng export at ng print ang mga opisyal, kaya itinatala ang bawat isa sa talaan ng access.",
+  },
+  "reports.verification.capped": {
+    en: "Only the newest {limit} verifications of the week were counted",
+    tl: "Ang pinakabagong {limit} pag-verify lamang ng linggo ang nabilang",
+  },
+  "reports.verification.exported": {
+    en: "Exported the verification activity for {range} as CSV",
+    tl: "Na-export ang aktibidad ng pag-verify para sa {range} bilang CSV",
+  },
+  "reports.verification.exportNothing": { en: "Nothing to export for this week", tl: "Walang mai-e-export para sa linggong ito" },
+
+  // --- City: verification quality ---------------------------------------------
+  "nav.cityVerification": { en: "Verification quality", tl: "Kalidad ng pag-verify" },
+  "banner.what.cityVerification": { en: "Verification quality", tl: "kalidad ng pag-verify" },
+  "city.verification.title": { en: "Verification quality by barangay", tl: "Kalidad ng pag-verify bawat barangay" },
+  "city.verification.intro": {
+    en: "Tier 1 verification over the last {days} days: what each barangay attested, how much of it was later revoked, and how often its verified residents' reports were closed as false.",
+    tl: "Tier 1 na pag-verify sa nakaraang {days} araw: ang pinatotohanan ng bawat barangay, gaano karami ang binawi kalaunan, at gaano kadalas isinara bilang hindi totoo ang mga ulat ng mga beripikado nitong residente.",
+  },
+  "city.verification.tile.promotions": { en: "Tier 1 promotions", tl: "Na-promote sa Tier 1" },
+  "city.verification.tile.revoked": { en: "Revoked since", tl: "Binawi mula noon" },
+  "city.verification.tile.false": { en: "False reports, verified residents", tl: "Hindi totoong ulat, beripikadong residente" },
+  "city.verification.col.promotions": { en: "Tier 1 promotions", tl: "Na-promote sa Tier 1" },
+  "city.verification.col.officials": { en: "Verifying officials", tl: "Mga opisyal na nag-verify" },
+  "city.verification.col.false": { en: "False reports, verified residents", tl: "Hindi totoong ulat, beripikadong residente" },
+  "city.verification.col.trend": { en: "{days}-day trend", tl: "Takbo sa {days} araw" },
+  "city.verification.aboveCity": { en: "Above the city's rate", tl: "Mas mataas sa rate ng lungsod" },
+  "city.verification.trendSummary": {
+    en: "Promotions per day over {days} days; the busiest day had {busiest}.",
+    tl: "Mga na-promote bawat araw sa loob ng {days} araw; {busiest} sa pinakaabalang araw.",
+  },
+  "city.verification.caption": {
+    en: "Tier 1 verification by barangay over the last {days} days",
+    tl: "Tier 1 na pag-verify bawat barangay sa nakaraang {days} araw",
+  },
+  "city.verification.empty": {
+    en: "No barangay has verified a resident in the last {days} days.",
+    tl: "Walang barangay na nag-verify ng residente sa nakaraang {days} araw.",
+  },
+  "city.verification.outcomesUnavailable": {
+    en: "The false-report figures couldn't load, so that column is blank. The verification counts are current.",
+    tl: "Hindi na-load ang bilang ng hindi totoong ulat, kaya blangko ang column na iyon. Napapanahon ang bilang ng pag-verify.",
+  },
+  "city.verification.footer": {
+    en:
+      "False reports, verified residents: of the reports agencies closed in this period that came from residents who were verified when the agency closed the report, the share closed as false. " +
+      "A barangay is marked when its share is above the city's on at least {min} closed reports. " +
+      "Revoked since counts the period's verifications that have been revoked up to now. No official or resident is named here.",
+    tl:
+      "Hindi totoong ulat, beripikadong residente: sa mga ulat na isinara ng mga ahensya sa panahong ito mula sa mga residenteng beripikado nang isara ng ahensya ang ulat, ang bahaging isinara bilang hindi totoo. " +
+      "Minamarkahan ang barangay kapag mas mataas ang bahagi nito kaysa sa lungsod sa hindi bababa sa {min} isinarang ulat. " +
+      "Binibilang ng Binawi mula noon ang mga pag-verify sa panahong ito na binawi na hanggang ngayon. Walang opisyal o residenteng pinangangalanan dito.",
+  },
+  "city.verification.capped": {
+    en: "Only the newest {limit} records were counted.",
+    tl: "Ang pinakabagong {limit} tala lamang ang nabilang.",
+  },
+  "city.verification.exported": {
+    en: "Exported verification quality as CSV",
+    tl: "Na-export ang kalidad ng pag-verify bilang CSV",
+  },
 } satisfies Record<string, Entry>;
 
 export type MessageKey = keyof typeof MESSAGES;

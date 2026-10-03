@@ -20,6 +20,8 @@ export const EXPORT_KINDS = [
   "audit_log_csv",
   "access_log_csv",
   "access_log_print",
+  "verification_activity_csv",
+  "verification_activity_print",
 ] as const;
 
 export type ExportKind = (typeof EXPORT_KINDS)[number];

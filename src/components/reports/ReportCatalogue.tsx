@@ -6,7 +6,6 @@ import { useT, type MessageKey } from "@/lib/i18n";
 // each with the reason it isn't generated here. Listed, never faked: a report
 // that needs data this console can't read stays a catalogue entry.
 const ENTRIES: { number: number; cadence: MessageKey; title: MessageKey; status: MessageKey }[] = [
-  { number: 13, cadence: "reports.cadence.weekly", title: "reports.catalogue.13.title", status: "reports.catalogue.13.status" },
   { number: 14, cadence: "reports.cadence.weekly", title: "reports.weeklyTitle", status: "reports.weeklyUnavailable" },
   { number: 15, cadence: "reports.cadence.weekly", title: "reports.catalogue.15.title", status: "reports.catalogue.15.status" },
   { number: 17, cadence: "reports.cadence.monthly", title: "reports.catalogue.17.title", status: "reports.catalogue.17.status" },

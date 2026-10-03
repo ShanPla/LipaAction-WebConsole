@@ -40,6 +40,7 @@ const cityNav: NavItem[] = [
   { href: "/city/map", label: "nav.cityMap", icon: "map" },
   { href: "/city/reports", label: "nav.cityReports", icon: "queue" },
   { href: "/city/response-times", label: "nav.cityResponse", icon: "timer" },
+  { href: "/city/verification", label: "nav.cityVerification", icon: "verify" },
   { href: "/city/agencies", label: "nav.cityAgencies", icon: "agencies" },
   { href: "/city/access-log", label: "nav.cityAccessLog", icon: "audit", prefetch: false },
 ];

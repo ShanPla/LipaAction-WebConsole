@@ -22,12 +22,15 @@ import type { ResolutionTimesData } from "@/lib/data/resolutionTimes";
 export function ResolutionTimes({
   data,
   date,
+  week,
   today,
   barangayName,
 }: {
   data: ResolutionTimesData;
-  // The daily summary's day, kept in the URL when the month changes.
+  // The daily summary's day and the weekly report's last day, kept in the
+  // URL when the month changes.
   date: string;
+  week: string;
   today: string;
   barangayName: string;
 }) {
@@ -72,7 +75,7 @@ export function ResolutionTimes({
             {t("reports.resolution.month")}
             <select
               value={month}
-              onChange={(e) => router.push(reportsHref({ date, month: e.target.value }, { today, currentMonth }))}
+              onChange={(e) => router.push(reportsHref({ date, month: e.target.value, week }, { today, currentMonth }))}
               className="min-h-11 rounded-md border border-ink-100 bg-white px-3 text-sm text-ink-900 focus:border-brand-500 focus:outline-none"
             >
               {monthOptions(currentMonth, month).map((m) => (

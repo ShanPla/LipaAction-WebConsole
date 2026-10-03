@@ -9,8 +9,8 @@ use it to verify residents (Tier 1) and to lift the sanctions that false reports
 The same console also carries a read-only city dashboard for the municipal
 administrator (**Section 3.7.5** and **Appendix A.5**): city-wide report activity per
 barangay, a map of open reports, a city-wide report list, each agency's response
-times, the agency list, and an access log naming the officials who opened and acted on
-reports.
+times, verification quality per barangay, the agency list, and an access log naming the
+officials who opened and acted on reports.
 
 This is a working implementation against the project's shared Supabase backend — not
 a static mockup. Sign-in is real, report data is real, and validating or rejecting a
@@ -114,12 +114,13 @@ official's browser is set.
 | **Validation History** | Live. Reviewed reports (validated or rejected) with the reviewing official, timestamp, rejection category and note, and, for a confirmed report, what became of it since (not routed yet, with agencies, resolved, confirmed false, closed as a duplicate, or returned out of scope). Filters by date range, verdict, official, category, priority and that resolution outcome, over the rows loaded. Exports the visible rows to CSV, and prints or saves them as a PDF through the browser. Both name the validating officials, so each is recorded in the access trail first and doesn't happen if the record can't be written. |
 | **Verify Resident** (`/verify-resident`) | Live, for `barangay_admin` and `senior_barangay_admin`. Tier 1 verification (thesis A.3.9): the barangay's attestation, under RA 7160 Section 389(b), that a resident lives there. Lists the barangay's residents by name, with the last four digits of each one's phone number, the day they registered, and their tier, under three groups (not yet verified, verified, all), with a search by name, by a full phone number, or by a number's last four digits. A resident whose profile carries no name is listed, and named in the dialogs, by the ending of their phone number. Verify asks how residency was established (in person, a field visit, or the barangay's own records) and for the official's own statement, neither preselected, and moves the account to Tier 1; the row then shows who attested, how and when. A senior barangay admin can revoke an attestation with a required reason, which returns the account to Tier 0 and stays on the row. Both go through the backend's functions, which enforce the roles and the barangay. |
 | **Sanctions** (`/sanctions`) | Live, for `barangay_admin` and `senior_barangay_admin`. The barangay's active cooldowns and suspensions (thesis A.3.4), which the backend applies when an agency closes a resident's report as confirmed false. One card per sanctioned resident: the track (inaccurate or malicious) and kind, the day a cooldown ends or that a suspension stands until lifted, both strike counts, the trust score, and the resident's strikes and lifts so far, by day. Filters by who may lift: the malicious-track filter holds everything only a senior barangay admin can lift. Lift takes a required reason, shows what the lift will do (the trust score back to 0.5, the cooldown and suspension ended, the tier unchanged) and under whose name, and goes through the backend's function. Anything on the malicious track can be lifted only by a senior barangay admin; for a barangay admin the card says so in place of the button. The report behind a strike is never shown. |
-| **Reports** | Live. Two of the thesis's barangay reports, each exportable as CSV and printable or savable as a PDF through the browser. The Daily Queue Summary (#12): the reports submitted on a chosen day (today by default), by category, counted by where each stands now — awaiting review, validated, or rejected. The Monthly Resolution Time by Agency (#16): for the routings of the barangay's reports that agencies closed in a chosen month, each agency's median time from routing to resolution (with the 95th percentile once it has 20 timings), with reports returned out of scope counted apart. The rest of the thesis's barangay catalogue is listed with the reason each isn't generated: the weekly false-report rate per reporter (#14) and the monthly resident engagement summary (#17) would set named residents beside the outcomes of their reports, which the console never does; weekly verification activity (#13), which counts the verifications made on the Verify Resident page, is not built yet; the weekly safety-net trigger summary (#15) needs events nothing records; and monthly recall usage (#18) has nothing to count while automatic routing is off. |
+| **Reports** | Live. Three of the thesis's barangay reports, each exportable as CSV and printable or savable as a PDF through the browser. The Daily Queue Summary (#12): the reports submitted on a chosen day (today by default), by category, counted by where each stands now — awaiting review, validated, or rejected. The Weekly Verification Activity by Official (#13): for the seven days ending on a chosen day, each official's Tier 1 promotions, by how residency was established, and how many of them a senior barangay admin has since revoked; it names officials, so its export and print are recorded in the access trail. The Monthly Resolution Time by Agency (#16): for the routings of the barangay's reports that agencies closed in a chosen month, each agency's median time from routing to resolution (with the 95th percentile once it has 20 timings), with reports returned out of scope counted apart. The rest of the thesis's barangay catalogue is listed with the reason each isn't generated: the weekly false-report rate per reporter (#14) and the monthly resident engagement summary (#17) would set named residents beside the outcomes of their reports, which the console never does; the weekly safety-net trigger summary (#15) needs events nothing records; and monthly recall usage (#18) has nothing to count while automatic routing is off. |
 | **Settings** | Profile is live (name, role, barangay, email, phone); the display name is editable. Language and alert preferences are saved in the browser on the current device. The interface language switches the console between English and Tagalog — the same choice as the EN/TL switch at the top right of every page; the alert preferences drive the Queue page's chime and browser notification. Senior barangay administrators default to Tagalog, as the thesis specifies. The bilingual-emphasis setting is recorded but does not yet change any screen, and says so. |
 | **City overview** (`/city`) | Live, read-only, for the municipal administrator. City-wide tiles (reports today, the 7-day daily average, reports awaiting review, Critical ones among them, and emergencies waiting more than five minutes), then one row per barangay: its last 7 days as daily bars, today's count, what awaits review now however old, and how many of the week's reports were validated or rejected. No decision or routing controls. Prints or saves as a PDF through the browser. |
 | **City map** (`/city/map`) | Live, read-only. Reports still open (awaiting review, validated, or with agencies) from the last 7 days, as dots on an OpenStreetMap street map coloured by priority, each where the reporter's phone was when they filed. A report whose resident withheld their identity or asked for discreet reporting is never placed on the map: it is counted under its barangay beside the map, as are reports sent without a location. Every dot is also listed in a table below the map. Counts by priority sit above the map and cover every open report, the ones kept off it included, and the dots and the table can be narrowed by priority and category. A dot, or Details in the table, opens the report in the city report list, whose drawer records the opening in the access log. |
 | **City reports** (`/city/reports`) | Live, read-only. Every report filed in the city in the last 30 days, newest first, filterable by barangay and by stage (awaiting review, validated but not routed, with agencies, rejected). Each row shows its time, barangay, category, priority with score, status, and the agencies holding it with the lead agency's progress. The list shows no description; the detail drawer shows the resident's account, the triage reading and each agency's progress, has no decision or routing controls, and records every opening in the access log, as the queue's drawer does. A report can also be opened straight from the city map. |
 | **Agency response** (`/city/response-times`) | Live, read-only. The thesis's per-agency response time view: for every routing in the last 30 days, per agency, how many reports it was sent, how many await acknowledgement, how many it is working on now, the median time to acknowledge and from acknowledgement to resolution (with the 95th percentile once an agency has 20 timings), and how many it resolved or returned out of scope. Below the table, the same two clocks per agency and report category, as two grids. Exports CSV and prints or saves a PDF through the browser. |
+| **Verification quality** (`/city/verification`) | Live, read-only. The thesis's cross-barangay verification quality view: per barangay over the last 30 days, the Tier 1 promotions made, how many were later revoked, how many officials made them, a day-by-day trend, and, of the reports by verified residents that agencies closed in the period, the share closed as false. A barangay whose share is above the city's on at least five closed reports is marked. Counts only: no official or resident is named. Exports CSV and prints or saves a PDF through the browser. |
 | **Agencies** (`/city/agencies`) | Live, read-only. Every agency configured in the system, with its code and tier, and the report categories routing sends to it, lead categories marked. Adding agencies or changing where a category goes is not done here. |
 | **Access log** (`/city/access-log`) | Live, read-only, for the municipal administrator. Every recorded event on reports across the city (openings, decisions, routings and agency progress), newest first, with the official who acted named alongside their role and office, filterable by kind of event and by a range of dates. Residents are never named, an event the database wrote by itself is shown as automatic, and no raw account identifier appears. Opening the page is itself recorded, and if that record can't be written the page shows nothing. The events shown can be exported as CSV or printed (saved as a PDF), the thesis's RA 10173 Data Access Log for data-protection requests; each export is recorded in the trail first and doesn't happen otherwise. Exports then appear in the log themselves, under their own filter, each with what was exported and how many rows; an opening of the log says which view was opened. |
 | **City settings** (`/city/settings`) | Live. The city account's own display name, which the access log shows beside what it opened, with its email read-only, the day its two-step sign-in was set up, and the console's language, kept in the browser as on the barangay side. No alert switches: those drive the barangay queue. |
@@ -146,7 +147,10 @@ the console says so on screen rather than failing silently.
 
 The city dashboard follows the same rule. Its role can read reporter identity in the
 database, so the dashboard's queries never select the reporter's account, and no page
-names a reporter. Its counts carry no personal data, so viewing them writes no access
+names a reporter. One view differs in what it reads, not in what it shows: to count
+which closed reports came from verified residents, verification quality matches the
+resident ids on the trust records against the resident ids on the attestations. It
+reads no name or phone number with them, and only counts per barangay leave the server. Its counts carry no personal data, so viewing them writes no access
 record; opening a report in the city report list is logged like any other opening.
 The one page that names officials is the city access log, the oversight view of the
 trail: it shows who opened, decided and routed each report, never whom a report
@@ -183,10 +187,12 @@ the reports an agency closed as false that day.
 
 Exports are recorded as well. A file or a print that names people, or that is the trail
 itself, is written to the access trail before it is made: the Validation History CSV and
-print, the Audit Log CSV, and the city access log's CSV and print. The record says who
+print, the Audit Log CSV, the weekly verification report's CSV and print, and the city
+access log's CSV and print. The record says who
 started an export of what, and of how many rows; if it can't be written, nothing is downloaded or
-printed. Exports of counts alone (the Reports page, the city overview and the agency
-response times) carry no personal data and write no record. The record cannot follow a
+printed. Exports of counts alone (the Reports page's other two reports, the city
+overview, the agency response times and verification quality) carry no personal data and
+write no record. The record cannot follow a
 file once it exists, and printing through the browser's own menu instead of the
 console's button bypasses it.
 
@@ -222,6 +228,7 @@ src/
     city/                     City dashboard (municipal_admin), read-only
       two-step/               The second sign-in step, and its set-up
       response-times/
+      verification/
       page.tsx                Server component: auth gate + data fetch
       <Name>Client.tsx        Client component: the page UI
   components/
@@ -342,13 +349,21 @@ In each case the console shows nothing rather than an approximation.
   nobody has clicked, and the chime is triggered by an arriving report, not a click. After
   loading or refreshing the queue, the footer asks for one click until it has had one.
   Settings has a test-sound button.
-- **The city dashboard covers three of the thesis's six city views.** The city-wide
-  overview, the incident map and per-agency response time are built, plus a city-wide
-  report list, a read-only agency list and an access log. Not built: the false-route rate (defined over automatically routed reports; automatic routing is
-  off), cross-barangay verification quality,
-  recalibration controls, agency management (adding, elevating or editing agencies), and identity reveal.
+- **The city dashboard covers four of the thesis's six city views.** The city-wide
+  overview, the incident map, per-agency response time and cross-barangay verification
+  quality are built, plus a city-wide report list, a read-only agency list and an access
+  log. Not built: the false-route rate (defined over automatically routed reports;
+  automatic routing is off), recalibration controls, agency management (adding, elevating
+  or editing agencies), and identity reveal.
   Response times are measured from when a barangay routed the report, since nothing
   routes automatically.
+- **Verification figures count what the system records.** The thesis's contestation
+  rate is shown as revocations, on the barangay's report #13 and on the city's
+  verification quality view: a senior barangay admin revoking an attestation is the only
+  record there is of one being contested. The false-report share counts reports an
+  agency closed, by what the closure did to the reporter's trust record, for residents
+  verified when the agency closed the report; a report still open is in neither number. Until residents are
+  verified in numbers, both views are mostly zeros.
 - **Two-step sign-in is the city dashboard's, and the console's own check.** A city
   session that skips the step gets no city page, but the same session could still read or change data
   through the database's API, or the console's own action endpoints, until the backend also requires the step there, which is
