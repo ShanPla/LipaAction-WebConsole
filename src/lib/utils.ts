@@ -263,6 +263,34 @@ export function categoryLabel(category: string): string {
 }
 
 /**
+ * A lookup that only answers for the record's own keys. The label maps for
+ * values the backend stores (a method, a role, a cause) are plain objects,
+ * and a stored value of [toString] or [constructor] would otherwise find
+ * something on every object and be handed on as if it were a label. An
+ * unknown value gets undefined, and is then shown as itself.
+ */
+export function ownValue<T>(record: Record<string, T>, key: string): T | undefined {
+  return Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+}
+
+/**
+ * A calendar date in Manila, `Oct 2, 2026`, for values where the day is what
+ * matters and the hour would only add noise. Manila like every other time on
+ * the console; an unparseable value passes through rather than becoming
+ * [Invalid Date].
+ */
+export function manilaDate(isoString: string): string {
+  const parsed = new Date(isoString);
+  if (Number.isNaN(parsed.getTime())) return isoString;
+  return parsed.toLocaleDateString("en-US", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/**
  * An exact timestamp in Manila, keeping its offset: `2026-09-16T15:54:43+08:00`.
  *
  * For files that leave the console. Everything on screen is Manila (see

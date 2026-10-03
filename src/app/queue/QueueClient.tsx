@@ -13,6 +13,7 @@ import { medianAgeMinutes } from "@/lib/utils";
 import { useNow } from "@/lib/useNow";
 import { KpiHeader } from "@/components/queue/KpiHeader";
 import { RecentActivity } from "@/components/queue/RecentActivity";
+import { AdminShortcuts } from "@/components/queue/AdminShortcuts";
 import { ClusterCard } from "@/components/queue/ClusterCard";
 import { DuplicateGroup } from "@/components/queue/DuplicateGroup";
 import { QueueTabs, queuePanelDomId, queueTabDomId } from "@/components/queue/QueueTabs";
@@ -885,6 +886,8 @@ export function QueueClient({
         {prefs.audibleAlertNewEmergency && soundLocked && ` · ${t("queue.footer.soundLocked")}`}
       </p>
 
+      {/* Admin roles only (recentActivity is loaded for them alone). */}
+      {recentActivity && <AdminShortcuts role={official.role} />}
       {recentActivity && <RecentActivity data={recentActivity} />}
 
       {selected && selectedReport && (

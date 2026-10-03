@@ -676,8 +676,8 @@ export const MESSAGES = {
     tl: "Lingguhang Aktibidad ng Pag-verify bawat Opisyal",
   },
   "reports.catalogue.13.status": {
-    en: "Not built yet: it counts Tier 1 verifications, which aren't part of this console yet.",
-    tl: "Hindi pa nabubuo: binibilang nito ang mga Tier 1 na pag-verify, na hindi pa bahagi ng console na ito.",
+    en: "Not built yet: it counts the Tier 1 verifications made on the Verify Resident page, per official.",
+    tl: "Hindi pa nabubuo: binibilang nito ang mga Tier 1 na pag-verify na ginawa sa page na I-verify ang Residente, bawat opisyal.",
   },
   "reports.catalogue.15.title": {
     en: "Weekly Safety-Net Trigger Summary",
@@ -1267,6 +1267,192 @@ export const MESSAGES = {
       "Naka-off ang awtomatikong pag-route, kaya nagsisimula ang bawat orasan nang i-route ng barangay ang ulat. " +
       "Hiwalay na binibilang ang mga ibinalik bilang labas sa saklaw at hindi isinasama sa oras ng paglutas. " +
       "Lumalabas ang ika-95 na percentile kapag may {min} nang naorasan ang ahensya.",
+  },
+
+  // --- How a write ended, shared by the admin pages -------------------------
+  // The actions behind Verify Resident answer with a code; these word it.
+  "common.required": { en: "required", tl: "kailangan" },
+  "outcome.invalid": {
+    en: "That request wasn't valid. Refresh the page and try again.",
+    tl: "Hindi wasto ang kahilingang iyon. I-refresh ang page at subukang muli.",
+  },
+  "outcome.sessionExpired": {
+    en: "Your session expired. Sign in again.",
+    tl: "Nag-expire ang iyong session. Mag-sign in muli.",
+  },
+  "outcome.unreachable": {
+    en: "Couldn't reach the server. Check your connection, then try again.",
+    tl: "Hindi maabot ang server. Tingnan ang iyong koneksyon, saka subukang muli.",
+  },
+  "outcome.failed": { en: "Something went wrong. Try again.", tl: "May nangyaring mali. Subukang muli." },
+  "outcome.noAnswer": {
+    en: "Couldn't confirm that went through. Refresh the page and check before trying again.",
+    tl: "Hindi makumpirma kung natuloy iyon. I-refresh ang page at tingnan muna bago subukang muli.",
+  },
+
+  // --- Verify Resident (barangay admins) ------------------------------------
+  "nav.residents": { en: "Residents", tl: "Mga Residente" },
+  "nav.verifyResident": { en: "Verify Resident", tl: "I-verify ang Residente" },
+  "banner.what.residents": { en: "The resident list", tl: "listahan ng residente" },
+  "queue.shortcuts.title": { en: "Shortcuts", tl: "Mga shortcut" },
+  "queue.shortcuts.revoke": { en: "Revoke Attestation", tl: "Bawiin ang Patotoo" },
+  "verify.intro": {
+    en:
+      "Tier 1 verification is the barangay's attestation that a resident lives here, under RA 7160 Section 389(b). " +
+      "Only the attestation is recorded: who attested, how, and when. No ID number, ID image or biometric is stored (RA 10173 Section 11(c)).",
+    tl:
+      "Ang Tier 1 na beripikasyon ay patotoo ng barangay na dito nakatira ang residente, alinsunod sa RA 7160 Seksyon 389(b). " +
+      "Ang patotoo lamang ang itinatala: sino ang nagpatotoo, paano, at kailan. Walang iniimbak na ID number, larawan ng ID o biometric (RA 10173 Seksyon 11(c)).",
+  },
+  "verify.scope": {
+    en: "Residents of Brgy. {barangay} only. The database refuses a resident of another barangay.",
+    tl: "Mga residente ng Brgy. {barangay} lamang. Tinatanggihan ng database ang residente ng ibang barangay.",
+  },
+  "verify.search.label": {
+    en: "Search residents by name, by a full phone number, or by a number's last 4 digits",
+    tl: "Hanapin ang residente ayon sa pangalan, buong numero ng telepono, o huling 4 na digit ng numero",
+  },
+  "verify.search.placeholder": { en: "Name, full number, or last 4 digits", tl: "Pangalan, buong numero, o huling 4 na digit" },
+  "verify.search.submit": { en: "Search", tl: "Hanapin" },
+  "verify.search.clear": { en: "Clear search", tl: "Alisin ang paghahanap" },
+  "verify.search.result": { en: "Residents matching [{query}]: {count}.", tl: "Mga residenteng tumutugma sa [{query}]: {count}." },
+  "verify.search.refused": {
+    en: "Not permitted. Only a barangay admin can search residents.",
+    tl: "Hindi pinapayagan. Admin ng barangay lamang ang makakapaghanap ng residente.",
+  },
+  "verify.search.noAnswer": {
+    en: "The search got no answer. Check your connection, then try again.",
+    tl: "Walang sagot sa paghahanap. Tingnan ang iyong koneksyon, saka subukang muli.",
+  },
+  "verify.filter.label": { en: "Residents to show", tl: "Mga residenteng ipapakita" },
+  "verify.filter.tier0": { en: "Not yet verified", tl: "Hindi pa beripikado" },
+  "verify.filter.tier1": { en: "Verified", tl: "Beripikado na" },
+  "verify.filter.all": { en: "All residents", tl: "Lahat ng residente" },
+  "verify.caption": {
+    en: "Residents of the barangay and their verification tier",
+    tl: "Mga residente ng barangay at ang kanilang tier ng beripikasyon",
+  },
+  "verify.col.resident": { en: "Resident", tl: "Residente" },
+  "verify.col.tier": { en: "Tier", tl: "Tier" },
+  "verify.col.verification": { en: "Verification", tl: "Beripikasyon" },
+  "verify.col.action": { en: "Action", tl: "Aksyon" },
+  "verify.unnamed": { en: "Name not set", tl: "Walang nakatalang pangalan" },
+  // Who a sentence is about. A profile can carry no name, and then the
+  // account is told apart by its phone number's ending. Tagalog needs the
+  // marker with it (si/ang, and ni/ng for [of]), so the phrase carries it.
+  "verify.who.name": { en: "{name}", tl: "si {name}" },
+  "verify.who.nameOf": { en: "{name}", tl: "ni {name}" },
+  "verify.who.phone": {
+    en: "the holder of the account with a phone ending in {digits}",
+    tl: "ang may-ari ng account na may teleponong nagtatapos sa {digits}",
+  },
+  "verify.who.phoneOf": {
+    en: "the holder of the account with a phone ending in {digits}",
+    tl: "ng may-ari ng account na may teleponong nagtatapos sa {digits}",
+  },
+  "verify.who.account": { en: "the holder of this account", tl: "ang may-ari ng account na ito" },
+  "verify.who.accountOf": { en: "the holder of this account", tl: "ng may-ari ng account na ito" },
+  "verify.phoneEnding": { en: "Phone ending in {digits}", tl: "Teleponong nagtatapos sa {digits}" },
+  "verify.registered": { en: "Registered {date}", tl: "Nagrehistro noong {date}" },
+  "verify.tier.tier0": { en: "Tier 0 · phone-verified", tl: "Tier 0 · beripikado ang telepono" },
+  "verify.tier.tier1": { en: "Tier 1 · barangay-verified", tl: "Tier 1 · pinatotohanan ng barangay" },
+  "verify.method.in_person": { en: "In person", tl: "Personal" },
+  "verify.method.field": { en: "Field visit", tl: "Pagbisita sa tahanan" },
+  "verify.method.bulk_import": { en: "Barangay records", tl: "Rekord ng barangay" },
+  "verify.verifiedBy": { en: "By {who}", tl: "Ni {who}" },
+  "verify.notVerified": { en: "Not verified", tl: "Hindi pa beripikado" },
+  "verify.detailsUnavailable": {
+    en: "Verification details couldn't load, so only each resident's tier is shown. Refresh to try again.",
+    tl: "Hindi na-load ang detalye ng beripikasyon, kaya tier lamang ng bawat residente ang ipinapakita. I-refresh para subukang muli.",
+  },
+  "verify.lastRevoked": { en: "An earlier verification was revoked on {date}.", tl: "May naunang beripikasyong binawi noong {date}." },
+  "verify.lastRevokedReason": {
+    en: "An earlier verification was revoked on {date}: {reason}",
+    tl: "May naunang beripikasyong binawi noong {date}: {reason}",
+  },
+  "verify.action.verify": { en: "Verify", tl: "I-verify" },
+  "verify.action.verifyLabel": { en: "Verify {who}", tl: "I-verify {who}" },
+  "verify.action.revoke": { en: "Revoke", tl: "Bawiin" },
+  "verify.action.revokeLabel": { en: "Revoke the verification of {whoOf}", tl: "Bawiin ang beripikasyon {whoOf}" },
+  "verify.seniorOnly": {
+    en: "Only a senior barangay admin can revoke.",
+    tl: "Senior admin ng barangay lamang ang makakabawi.",
+  },
+  "verify.empty.title": { en: "No residents to show", tl: "Walang residenteng maipapakita" },
+  "verify.empty.tier0": {
+    en: "No resident of this barangay is waiting for verification: each one with an account is verified already, or none has registered yet.",
+    tl: "Walang residente ng barangay na ito ang naghihintay ng beripikasyon: beripikado na ang bawat may account, o wala pang nagrerehistro.",
+  },
+  "verify.empty.tier1": {
+    en: "No resident of this barangay has been verified yet.",
+    tl: "Wala pang residente ng barangay na ito ang na-verify.",
+  },
+  "verify.empty.all": {
+    en: "No resident of this barangay has an account yet.",
+    tl: "Wala pang residente ng barangay na ito ang may account.",
+  },
+  "verify.empty.search": {
+    en: "No resident matches [{query}] here. Check the spelling or the number, or look under another group above.",
+    tl: "Walang residenteng tumutugma sa [{query}] dito. Tingnan ang baybay o ang numero, o tumingin sa ibang grupo sa itaas.",
+  },
+  "verify.footerOne": { en: "1 resident shown.", tl: "1 residente ang ipinapakita." },
+  "verify.footer": { en: "{count} residents shown, by name.", tl: "{count} residente ang ipinapakita, ayon sa pangalan." },
+  "verify.footerCapped": {
+    en: "Showing the first {limit} residents by name. Search by name or phone number to find one not listed.",
+    tl: "Ipinapakita ang unang {limit} residente ayon sa pangalan. Maghanap ayon sa pangalan o numero ng telepono para makita ang wala sa listahan.",
+  },
+  "verify.attest.title": { en: "Verify {who} as a resident", tl: "I-verify {who} bilang residente" },
+  "verify.attest.description": {
+    en: "This moves the account from Tier 0 to Tier 1. A senior barangay admin can revoke it later.",
+    tl: "Ililipat nito ang account mula Tier 0 patungong Tier 1. Maaari itong bawiin ng senior admin ng barangay.",
+  },
+  "verify.attest.method": { en: "How residency was established", tl: "Paraan ng patotoo" },
+  "verify.attest.hint.in_person": { en: "The resident is with you now.", tl: "Kasama mo ang residente ngayon." },
+  "verify.attest.hint.field": { en: "You visited the resident at home.", tl: "Binisita mo ang residente sa kanyang tahanan." },
+  "verify.attest.hint.bulk_import": {
+    en: "From the barangay's own list of long-time residents.",
+    tl: "Mula sa sariling listahan ng barangay ng matagal nang residente.",
+  },
+  "verify.attest.oath": {
+    en: "I attest that {who} is a resident of Brgy. {barangay}, under RA 7160 Section 389(b). A false attestation can be sanctioned.",
+    tl: "Pinatutotohanan ko na {who} ay residente ng Brgy. {barangay}, alinsunod sa RA 7160 Seksyon 389(b). May parusa ang maling patotoo.",
+  },
+  "verify.attest.minimization": {
+    en: "Nothing of the ID or proof shown to you is stored: no ID number, no image, no biometric. Only this attestation is recorded (RA 10173 Section 11(c)).",
+    tl: "Walang iniimbak mula sa ID o patunay na ipinakita sa iyo: walang ID number, larawan o biometric. Ang patotoong ito lamang ang itinatala (RA 10173 Seksyon 11(c)).",
+  },
+  "verify.attest.confirm": { en: "Verify resident", tl: "I-verify ang residente" },
+  "verify.revoke.title": { en: "Revoke the verification of {whoOf}", tl: "Bawiin ang beripikasyon {whoOf}" },
+  "verify.revoke.description": {
+    en: "This returns the account to Tier 0. The reason is recorded with the revocation.",
+    tl: "Ibabalik nito ang account sa Tier 0. Itatala ang dahilan kasama ng pagbawi.",
+  },
+  "verify.revoke.placeholder": {
+    en: "For example: moved out of the barangay",
+    tl: "Halimbawa: lumipat na sa labas ng barangay",
+  },
+  "verify.revoke.confirm": { en: "Revoke verification", tl: "Bawiin ang beripikasyon" },
+  "verify.toast.attested": { en: "{who} is now Tier 1.", tl: "Tier 1 na {who}." },
+  "verify.toast.revoked": { en: "{who} is back to Tier 0.", tl: "Ibinalik {who} sa Tier 0." },
+  "verify.toast.staleAttest": {
+    en: "{who} was already verified. The list is up to date now.",
+    tl: "Beripikado na pala {who}. Napapanahon na ang listahan.",
+  },
+  "verify.toast.staleRevoke": {
+    en: "{who} has no active verification to revoke. The list is up to date now.",
+    tl: "Walang aktibong beripikasyon {who} na mababawi. Napapanahon na ang listahan.",
+  },
+  "verify.toast.refusedAttest": {
+    en: "Not permitted. Your role can't verify residents, or this resident isn't in your barangay.",
+    tl: "Hindi pinapayagan. Hindi makakapag-verify ng residente ang iyong tungkulin, o wala sa iyong barangay ang residenteng ito.",
+  },
+  "verify.toast.refusedRevoke": {
+    en: "Not permitted. Only a senior barangay admin can revoke, and only in their own barangay.",
+    tl: "Hindi pinapayagan. Senior admin ng barangay lamang ang makakabawi, at sa sarili lamang niyang barangay.",
+  },
+  "verify.toast.notEligible": {
+    en: "This account can't be verified: it isn't a resident's account.",
+    tl: "Hindi ma-verify ang account na ito: hindi ito account ng residente.",
   },
 } satisfies Record<string, Entry>;
 

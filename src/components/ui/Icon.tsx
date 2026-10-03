@@ -13,6 +13,7 @@ import {
   Search,
   SlidersHorizontal,
   Timer,
+  UserCheck,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -33,7 +34,8 @@ export type IconName =
   | "no-contact"
   | "agencies"
   | "timer"
-  | "map";
+  | "map"
+  | "verify";
 
 /**
  * The console's icons, from Lucide (lucide-react, ISC licence).
@@ -59,6 +61,7 @@ const ICONS: Record<IconName, LucideIcon> = {
   agencies: Building2, // the responder offices
   timer: Timer, // how long agencies take
   map: MapGlyph, // where open reports are
+  verify: UserCheck, // attesting that a resident lives in the barangay
 };
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {

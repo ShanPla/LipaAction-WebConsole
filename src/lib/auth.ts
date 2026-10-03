@@ -132,6 +132,22 @@ export async function requireBarangayOfficial(): Promise<OfficialProfile> {
   };
 }
 
+export type BarangayAdminRole = Exclude<BarangayRole, "barangay_official">;
+export type BarangayAdminProfile = OfficialProfile & { role: BarangayAdminRole };
+
+/**
+ * The gate for the admin-only barangay pages (Verify Resident). The thesis
+ * gives Tier 1 verification to barangay_admin and senior_barangay_admin, and
+ * no such control to a barangay_official (A.3.1), so that role is sent back
+ * to its queue: it has a console, just not this page. The database enforces
+ * the same split on every write; this only keeps the page off the screen.
+ */
+export async function requireBarangayAdmin(): Promise<BarangayAdminProfile> {
+  const official = await requireBarangayOfficial();
+  if (official.role === "barangay_official") redirect("/queue");
+  return { ...official, role: official.role };
+}
+
 /**
  * The gate for /city. A barangay official is sent back to their queue rather
  * than told they have no access, since they do have a console; every other

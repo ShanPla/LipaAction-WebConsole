@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cx, displayName, initials } from "@/lib/utils";
 import { useT, type MessageKey } from "@/lib/i18n";
 import { Icon, type IconName } from "@/components/ui/Icon";
+import { isBarangayAdminRole } from "@/lib/roles";
 import type { ConsoleUser } from "@/lib/auth";
 
 // prefetch: false for a page whose render writes an access record, so that
@@ -22,6 +23,13 @@ const secondaryNav: NavItem[] = [
   { href: "/audit-log", label: "nav.auditLog", icon: "audit" },
 ];
 
+// For barangay_admin and senior_barangay_admin only: the thesis gives Tier 1
+// verification to those roles (A.3). A barangay_official's sidebar doesn't
+// list the page, and the page sends that role back to the queue.
+const residentNav: NavItem[] = [
+  { href: "/verify-resident", label: "nav.verifyResident", icon: "verify" },
+];
+
 const bottomNav: NavItem[] = [{ href: "/settings", label: "nav.settings", icon: "settings" }];
 
 // The city dashboard's own links. None of the barangay pages appear: each is
@@ -37,11 +45,14 @@ const cityNav: NavItem[] = [
 
 type NavGroup = { heading?: MessageKey; items: NavItem[] };
 
-const BARANGAY_GROUPS: NavGroup[] = [
-  { items: primaryNav },
-  { heading: "nav.records", items: secondaryNav },
-  { heading: "nav.account", items: bottomNav },
-];
+function barangayGroups(role: string): NavGroup[] {
+  return [
+    { items: primaryNav },
+    ...(isBarangayAdminRole(role) ? [{ heading: "nav.residents" as const, items: residentNav }] : []),
+    { heading: "nav.records", items: secondaryNav },
+    { heading: "nav.account", items: bottomNav },
+  ];
+}
 
 const CITY_GROUPS: NavGroup[] = [
   { items: cityNav },
@@ -94,7 +105,7 @@ export function Sidebar({
   const name = displayName(official.fullName);
   const t = useT();
   const isBarangay = "barangayName" in official;
-  const groups = isBarangay ? BARANGAY_GROUPS : CITY_GROUPS;
+  const groups = isBarangay ? barangayGroups(official.role) : CITY_GROUPS;
 
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-ink-100 bg-white">
