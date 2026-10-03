@@ -80,6 +80,7 @@ export async function getBarangayAuditLog(): Promise<AuditLogData> {
     // break the page.
     actorRole: row.actor_role ?? "",
     timestamp: formatEventTime(row.created_at),
+    at: row.created_at,
     reportId: row.report_id,
     // Not on the audit row: read from the reports themselves, the same way
     // Validation History resolves reviewer names. Null when the report is

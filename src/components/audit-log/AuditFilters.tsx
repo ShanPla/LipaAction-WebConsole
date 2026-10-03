@@ -18,6 +18,16 @@ export const AUDIT_FILTERS = {
 
 export type AuditFilterId = keyof typeof AUDIT_FILTERS;
 
+// The thesis's date filters for the log (A.3.7: Today, Last 7d), over the
+// same loaded window.
+export type AuditRange = "today" | "7d" | "all";
+
+const RANGES: { id: AuditRange; label: MessageKey }[] = [
+  { id: "today", label: "history.range.today" },
+  { id: "7d", label: "history.range.7d" },
+  { id: "all", label: "history.range.all" },
+];
+
 const LABELS: Record<AuditFilterId, MessageKey> = {
   all: "audit.filter.all",
   decisions: "audit.filter.decisions",
@@ -37,9 +47,13 @@ const LABELS: Record<AuditFilterId, MessageKey> = {
 export function AuditFilters({
   active,
   onChange,
+  range,
+  onRangeChange,
 }: {
   active: AuditFilterId;
   onChange: (id: AuditFilterId) => void;
+  range: AuditRange;
+  onRangeChange: (range: AuditRange) => void;
 }) {
   const t = useT();
 
@@ -60,6 +74,24 @@ export function AuditFilters({
             )}
           >
             {t(LABELS[id])}
+          </button>
+        ))}
+      </div>
+      <div role="group" aria-label={t("audit.filterRange")} className="flex flex-wrap items-center gap-1.5">
+        {RANGES.map((r) => (
+          <button
+            key={r.id}
+            type="button"
+            aria-pressed={range === r.id}
+            onClick={() => onRangeChange(r.id)}
+            className={cx(
+              "inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium transition-colors",
+              range === r.id
+                ? "bg-brand-500 text-white"
+                : "bg-white text-ink-700 border border-ink-100 hover:bg-ink-50"
+            )}
+          >
+            {t(r.label)}
           </button>
         ))}
       </div>

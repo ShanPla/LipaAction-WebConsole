@@ -238,6 +238,9 @@ export interface AuditLogEntry {
   action: string;
   actorRole: string;
   timestamp: string;
+  // The same moment as an ISO instant, for the date filters: `timestamp` is
+  // formatted for display and can't be compared.
+  at: string;
   reportId: string | null;
   category: string | null;
 }

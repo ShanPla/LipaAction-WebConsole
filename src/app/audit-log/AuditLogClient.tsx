@@ -5,7 +5,8 @@ import { AppShell } from "@/components/layout/AppShell";
 import { DataUnavailableBanner } from "@/components/layout/DataUnavailableBanner";
 import { useT } from "@/lib/i18n";
 import { AuditSummaryTiles } from "@/components/audit-log/AuditSummaryTiles";
-import { AUDIT_FILTERS, AuditFilters, type AuditFilterId } from "@/components/audit-log/AuditFilters";
+import { AUDIT_FILTERS, AuditFilters, type AuditFilterId, type AuditRange } from "@/components/audit-log/AuditFilters";
+import { startOfManilaDay } from "@/lib/utils";
 import { AuditTable } from "@/components/audit-log/AuditTable";
 import type { OfficialProfile } from "@/lib/auth";
 // Type-only import from a server-only module — erased at compile time.
@@ -21,11 +22,15 @@ export function AuditLogClient({
   const t = useT();
   const { entries, summary, limit, loadFailed, refusal } = auditData;
   const [filter, setFilter] = useState<AuditFilterId>("all");
+  const [range, setRange] = useState<AuditRange>("all");
 
   const shown = useMemo(() => {
     const actions: readonly string[] = AUDIT_FILTERS[filter];
-    return actions.length === 0 ? entries : entries.filter((e) => actions.includes(e.action));
-  }, [entries, filter]);
+    return entries.filter(
+      (e) => (actions.length === 0 || actions.includes(e.action)) && inRange(e.at, range)
+    );
+  }, [entries, filter, range]);
+  const narrowed = filter !== "all" || range !== "all";
 
   return (
     <AppShell breadcrumb={[official.barangayName, t("nav.auditLog")]} official={official}>
@@ -54,13 +59,13 @@ export function AuditLogClient({
           </div>
 
           <AuditSummaryTiles summary={summary} />
-          <AuditFilters active={filter} onChange={setFilter} />
-          <AuditTable entries={shown} filtered={filter !== "all"} />
+          <AuditFilters active={filter} onChange={setFilter} range={range} onRangeChange={setRange} />
+          <AuditTable entries={shown} filtered={narrowed} />
 
           {/* Never [the audit trail]: the function returns at most `limit`
               rows and cannot say whether older ones were dropped. */}
           <p className="mt-3 text-xs text-ink-500">
-            {filter === "all"
+            {!narrowed
               ? t("audit.footer", { count: entries.length, limit })
               : t("audit.footerFiltered", { shown: shown.length, count: entries.length })}
           </p>
@@ -68,4 +73,13 @@ export function AuditLogClient({
       )}
     </AppShell>
   );
+}
+
+// Manila's day, not the browser's, as on Validation History.
+function inRange(at: string | undefined, range: AuditRange): boolean {
+  if (range === "all") return true;
+  const time = at ? Date.parse(at) : NaN;
+  if (Number.isNaN(time)) return false;
+  if (range === "today") return time >= startOfManilaDay().getTime();
+  return time >= Date.now() - 7 * 24 * 60 * 60 * 1000;
 }

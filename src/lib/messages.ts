@@ -810,9 +810,10 @@ export const MESSAGES = {
     tl: "Ang pagbukas, pag-validate, pagtanggi o pagpapasa ng ulat ay nagdaragdag dito.",
   },
   "audit.empty.filtered": {
-    en: "No events of this kind among the ones loaded.",
-    tl: "Walang ganitong pangyayari sa mga naka-load.",
+    en: "No events match these filters among the ones loaded.",
+    tl: "Walang pangyayaring tugma sa mga filter na ito sa mga naka-load.",
   },
+  "audit.filterRange": { en: "Date range", tl: "Saklaw ng petsa" },
   "audit.refusal.noRole": {
     en: "This account has no barangay role, so there is no trail to show for it.",
     tl: "Walang tungkulin sa barangay ang account na ito, kaya walang talaang maipapakita.",
