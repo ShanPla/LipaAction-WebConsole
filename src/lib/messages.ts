@@ -916,6 +916,14 @@ export const MESSAGES = {
     en: "Ask a municipal admin to change this",
     tl: "Humiling sa municipal admin para baguhin ito",
   },
+  "profile.askSystemAdmin": {
+    en: "Ask the system's administrator to change this",
+    tl: "Humiling sa administrator ng sistema para baguhin ito",
+  },
+  "profile.nameDescriptionCity": {
+    en: "This is the name the city access log shows beside every report you open.",
+    tl: "Ito ang pangalang ipinapakita ng talaan ng access ng lungsod sa tabi ng bawat ulat na binubuksan mo.",
+  },
   "profile.nameUnconfirmed": {
     en: "Couldn't confirm your name was saved. Try again.",
     tl: "Hindi makumpirma kung na-save ang iyong pangalan. Subukang muli.",

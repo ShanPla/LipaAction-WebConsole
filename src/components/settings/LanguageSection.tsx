@@ -3,7 +3,7 @@
 import { cx } from "@/lib/utils";
 import { useLang, useT, type MessageKey } from "@/lib/i18n";
 import { usePreferences, type BilingualEmphasis, type InterfaceLanguage } from "@/lib/preferences";
-import type { BarangayRole } from "@/lib/auth";
+import type { ConsoleRole } from "@/lib/auth";
 
 function SegmentedControl<T extends string>({
   label,
@@ -60,7 +60,7 @@ const emphasisOptions: BilingualEmphasis[] = ["english-first", "tagalog-first", 
  * make it look like it does more. Senior barangay admins default to Tagalog
  * for both, as the paper specifies.
  */
-export function LanguageSection({ role }: { role: BarangayRole }) {
+export function LanguageSection({ role }: { role: ConsoleRole }) {
   const { prefs, update, hydrated } = usePreferences(role);
   const t = useT();
   const lang = useLang();

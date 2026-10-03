@@ -12,8 +12,8 @@ export function ProfileMenu({ official }: { official: ConsoleUser }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const name = displayName(official.fullName);
   const t = useT();
-  // A city account has no barangay. Settings is left out of its menu: the
-  // page is barangay-gated, and its alert switches drive the queue.
+  // A city account has no barangay, and its own Settings page (name and
+  // language, without the queue's alert switches).
   const isBarangay = "barangayName" in official;
 
   useEffect(() => {
@@ -62,20 +62,16 @@ export function ProfileMenu({ official }: { official: ConsoleUser }) {
             </p>
           </div>
 
-          {isBarangay && (
-            <>
-              <Link
-                href="/settings"
-                role="menuitem"
-                onClick={() => setOpen(false)}
-                className="flex min-h-11 items-center px-3.5 text-sm text-ink-700 hover:bg-ink-100"
-              >
-                {t("nav.settings")}
-              </Link>
+          <Link
+            href={isBarangay ? "/settings" : "/city/settings"}
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex min-h-11 items-center px-3.5 text-sm text-ink-700 hover:bg-ink-100"
+          >
+            {t("nav.settings")}
+          </Link>
 
-              <div className="border-t border-ink-100" />
-            </>
-          )}
+          <div className="border-t border-ink-100" />
 
           <form action={signOut}>
             <button

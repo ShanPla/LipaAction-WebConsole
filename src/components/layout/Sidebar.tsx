@@ -43,7 +43,10 @@ const BARANGAY_GROUPS: NavGroup[] = [
   { heading: "nav.account", items: bottomNav },
 ];
 
-const CITY_GROUPS: NavGroup[] = [{ items: cityNav }];
+const CITY_GROUPS: NavGroup[] = [
+  { items: cityNav },
+  { heading: "nav.account", items: [{ href: "/city/settings", label: "nav.settings", icon: "settings" }] },
+];
 
 function NavLink({
   href,

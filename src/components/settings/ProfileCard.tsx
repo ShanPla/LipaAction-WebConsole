@@ -8,7 +8,7 @@ import { TextPromptModal } from "@/components/ui/TextPromptModal";
 import { useToast } from "@/components/ui/Toast";
 import { updateDisplayName } from "@/app/actions/profile";
 import { callAction } from "@/lib/callAction";
-import type { OfficialProfile } from "@/lib/auth";
+import type { ConsoleUser } from "@/lib/auth";
 
 function FieldRow({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
@@ -22,13 +22,17 @@ function FieldRow({ label, value, note }: { label: string; value: string; note?:
   );
 }
 
-export function ProfileCard({ official }: { official: OfficialProfile }) {
+// Shared by the barangay and city Settings pages. A city account has no
+// barangay and no phone on its profile, and its name appears in the city's
+// access log rather than on decisions.
+export function ProfileCard({ official }: { official: ConsoleUser }) {
   const { showToast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const t = useT();
 
   const name = displayName(official.fullName);
+  const isBarangay = "barangayName" in official;
 
   function handleSaveName(nextName: string) {
     startTransition(async () => {
@@ -57,7 +61,7 @@ export function ProfileCard({ official }: { official: OfficialProfile }) {
           <div>
             <p className="text-base font-semibold text-ink-900">{name}</p>
             <p className="text-xs text-ink-500">
-              {t(`role.${official.role}`)} &middot; {official.barangayName}
+              {t(`role.${official.role}`)} &middot; {isBarangay ? official.barangayName : t("city.scope")}
             </p>
           </div>
         </div>
@@ -77,13 +81,15 @@ export function ProfileCard({ official }: { official: OfficialProfile }) {
         <FieldRow
           label={t("profile.email")}
           value={official.email ?? t("profile.notSet")}
-          note={t("profile.askAdmin")}
+          note={t(isBarangay ? "profile.askAdmin" : "profile.askSystemAdmin")}
         />
-        <FieldRow
-          label={t("profile.phone")}
-          value={official.phone ?? t("profile.notSet")}
-          note={t("profile.askAdmin")}
-        />
+        {isBarangay && (
+          <FieldRow
+            label={t("profile.phone")}
+            value={official.phone ?? t("profile.notSet")}
+            note={t("profile.askAdmin")}
+          />
+        )}
       </div>
 
       {/* No [Change password] row — this system is passwordless (email OTP /
@@ -96,7 +102,7 @@ export function ProfileCard({ official }: { official: OfficialProfile }) {
       {showNamePrompt && (
         <TextPromptModal
           title={t("profile.editName")}
-          description={t("profile.nameDescription")}
+          description={t(isBarangay ? "profile.nameDescription" : "profile.nameDescriptionCity")}
           label={t("profile.nameLabel")}
           initialValue={official.fullName?.trim() ?? ""}
           confirmLabel={t("common.save")}
