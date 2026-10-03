@@ -386,6 +386,28 @@ export const MESSAGES = {
   "drawer.status": { en: "Status", tl: "Katayuan" },
   "drawer.cluster": { en: "Duplicate cluster", tl: "Kumpol ng doble" },
   "drawer.section.submission": { en: "Submission", tl: "Pagsumite" },
+  "drawer.section.location": { en: "Location", tl: "Lokasyon" },
+  "drawer.location.label": {
+    en: "Map of where the reporter's phone was when they filed",
+    tl: "Mapa kung saan naroon ang telepono ng nag-ulat nang magsampa",
+  },
+  "drawer.location.caption": {
+    en: "Where the reporter's phone was when they filed, which may not be the exact spot of the incident: {lat}, {lng}. Street map from OpenStreetMap.",
+    tl: "Kung saan naroon ang telepono ng nag-ulat nang magsampa, na maaaring hindi eksaktong lugar ng insidente: {lat}, {lng}. Galing sa OpenStreetMap ang mapa ng kalye.",
+  },
+  "drawer.location.none": { en: "This report carries no location.", tl: "Walang lokasyon ang ulat na ito." },
+  "drawer.location.hidden": {
+    en: "Not shown: the location of an identity-withheld or discreet report is never displayed.",
+    tl: "Hindi ipinapakita: hindi kailanman ipinapakita ang lokasyon ng ulat na itinago ang pagkakakilanlan o discreet.",
+  },
+  "drawer.location.unavailable": {
+    en: "The location couldn't be loaded.",
+    tl: "Hindi na-load ang lokasyon.",
+  },
+  "drawer.location.failed": {
+    en: "The map couldn't load. The coordinates below still give the position.",
+    tl: "Hindi na-load ang mapa. Ibinibigay pa rin ng mga coordinate sa ibaba ang posisyon.",
+  },
   "drawer.submitted": { en: "Submitted", tl: "Isinumite" },
   "drawer.section.routing": { en: "Agency routing", tl: "Pagpasa sa ahensya" },
   "drawer.plan.willRoute": { en: "Will route to", tl: "Ipapasa sa" },

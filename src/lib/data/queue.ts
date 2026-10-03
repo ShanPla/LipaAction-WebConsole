@@ -1,15 +1,8 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { parsePoint } from "@/lib/geo";
 import { categoryLabel, distinctCategories, medianAgeMinutes, reporterLabel, startOfManilaDay, timeAgo } from "@/lib/utils";
-import type {
-  AgencyRouting,
-  KpiSummary,
-  QueueReport,
-  QueueTabId,
-  RoutingOption,
-  RoutingPlanEntry,
-  SituationCluster,
-} from "@/types";
+import type { AgencyRouting, KpiSummary, QueueReport, QueueTabId, RoutingOption, RoutingPlanEntry, SituationCluster, ReportPosition } from "@/types";
 
 // Statuses that still belong in an active working queue. Anything past this
 // (validated/routed/resolved/rejected) has already been acted on.
@@ -100,6 +93,13 @@ interface RoutingExtras {
 }
 
 const NO_ROUTING: RoutingExtras = { routing: [], routingPlan: null, routingOptions: null };
+
+// A report whose position was never looked up reads as unavailable, never as
+// [no location sent], which would be a claim about the report.
+const UNKNOWN_POSITION: ReportPosition = { kind: "unavailable" };
+
+// Ids per .in() request: they travel in the URL.
+const POSITION_ID_CHUNK = 100;
 
 export interface QueueData {
   kpiSummary: KpiSummary;
@@ -212,18 +212,22 @@ export async function getBarangayQueue(
       );
   const validatedUnavailable = Boolean(awaitingRes.error) || routedFailed;
 
-  const routingExtras = await loadRouting(supabase, pending, awaiting, routed);
+  const [routingExtras, positions] = await Promise.all([
+    loadRouting(supabase, pending, awaiting, routed),
+    loadPositions(supabase, [...pending, ...awaiting, ...routed]),
+  ]);
+  const positionOf = (r: RawReport) => positions.get(r.id) ?? UNKNOWN_POSITION;
 
   const emergency = pending
     .filter((r) => r.entry_tier === "emergency")
-    .map((r) => toQueueReport(r, routingExtras.get(r.id)));
+    .map((r) => toQueueReport(r, routingExtras.get(r.id), positionOf(r)));
   const standard = pending
     .filter((r) => r.entry_tier === "other_reports")
-    .map((r) => toQueueReport(r, routingExtras.get(r.id)));
+    .map((r) => toQueueReport(r, routingExtras.get(r.id), positionOf(r)));
   // Awaiting routing first: those still need someone to act. Routed ones
   // are there to show what the agencies have done since.
   const validated = [...awaiting, ...routed].map((r) =>
-    toQueueReport(r, routingExtras.get(r.id))
+    toQueueReport(r, routingExtras.get(r.id), positionOf(r))
   );
 
   // Duplicates: pending reports that share a cluster_id with at least one
@@ -243,7 +247,7 @@ export async function getBarangayQueue(
     .sort((a, b) => b.length - a.length);
   // Flat, in the same group order, so the tab's rows, its count, the search
   // box and [Validate next] all read the groups as they are shown.
-  const duplicates = duplicateGroups.flat().map((r) => toQueueReport(r, routingExtras.get(r.id)));
+  const duplicates = duplicateGroups.flat().map((r) => toQueueReport(r, routingExtras.get(r.id), positionOf(r)));
   const duplicateClusters: SituationCluster[] = duplicateGroups.map((group) => ({
     id: group[0].cluster_id as string,
     categories: distinctCategories(group.map((r) => categoryLabel(r.category))),
@@ -253,7 +257,7 @@ export async function getBarangayQueue(
     // barangay's members from here.
     barangaysAffected: [barangayName],
     identityWithheldMembers: group.filter((r) => r.identity_withheld).length,
-    members: group.map((r) => toQueueReport(r, routingExtras.get(r.id))),
+    members: group.map((r) => toQueueReport(r, routingExtras.get(r.id), positionOf(r))),
   }));
 
   // Active-cluster banner (the "ACTIVE FLOODING"-style card) on the
@@ -507,7 +511,71 @@ async function loadRouting(
   return extras;
 }
 
-function toQueueReport(r: RawReport, extras: RoutingExtras = NO_ROUTING): QueueReport {
+/**
+ * Where each report's phone was, for the drawer's map preview (A.3.2: [a GPS
+ * map preview centered on the reported location]).
+ *
+ * geom is read in a query of its own, never in REPORT_COLUMNS, and the
+ * database itself leaves out every identity-withheld or discreet report: the
+ * app doesn't send a position for a withheld report, but nothing in the
+ * database stops one being there, and a discreet report's position is likely
+ * the resident's home. Those two are marked hidden without asking, and a
+ * missing withheld flag counts as withheld, as on the city map. A report that
+ * changed between the two queries and didn't come back is hidden too: when in
+ * doubt, no map. A failed lookup costs only the maps.
+ */
+async function loadPositions(
+  supabase: ReturnType<typeof createClient>,
+  reports: RawReport[]
+): Promise<Map<string, ReportPosition>> {
+  const positions = new Map<string, ReportPosition>();
+  const eligible: RawReport[] = [];
+  for (const r of reports) {
+    if (r.identity_withheld === false && r.discreet_reporting !== true) eligible.push(r);
+    else positions.set(r.id, { kind: "hidden" });
+  }
+  if (eligible.length === 0) return positions;
+
+  const ids = [...new Set(eligible.map((r) => r.id))];
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += POSITION_ID_CHUNK) chunks.push(ids.slice(i, i + POSITION_ID_CHUNK));
+  const results = await Promise.all(
+    chunks.map((chunk) =>
+      supabase
+        .from("incident_reports")
+        .select("id, geom")
+        .in("id", chunk)
+        .eq("identity_withheld", false)
+        .not("discreet_reporting", "is", true)
+    )
+  );
+  const failed = results.find((res) => res.error || !res.data);
+  if (failed) {
+    console.error("[queue] positions load failed", failed.error?.code, failed.error?.message);
+    for (const r of eligible) positions.set(r.id, UNKNOWN_POSITION);
+    return positions;
+  }
+
+  const found = new Map<string, { lat: number; lng: number } | null>();
+  for (const row of results.flatMap((res) => (res.data ?? []) as { id: string; geom: unknown }[])) {
+    found.set(row.id, parsePoint(row.geom));
+  }
+  for (const r of eligible) {
+    if (!found.has(r.id)) {
+      positions.set(r.id, { kind: "hidden" });
+      continue;
+    }
+    const point = found.get(r.id);
+    positions.set(r.id, point ? { kind: "point", lat: point.lat, lng: point.lng } : { kind: "none" });
+  }
+  return positions;
+}
+
+function toQueueReport(
+  r: RawReport,
+  extras: RoutingExtras = NO_ROUTING,
+  position: ReportPosition = UNKNOWN_POSITION
+): QueueReport {
   return {
     id: r.id,
     // Display form. The raw key stays in the database; routeReport re-reads
@@ -547,6 +615,7 @@ function toQueueReport(r: RawReport, extras: RoutingExtras = NO_ROUTING): QueueR
       routing: extras.routing,
       routingPlan: extras.routingPlan,
       routingOptions: extras.routingOptions,
+      position,
     },
   };
 }

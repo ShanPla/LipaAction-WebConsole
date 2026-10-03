@@ -108,7 +108,23 @@ export interface ReportDetails {
   // can open; null there when the agency list couldn't be loaded, and null on
   // every other report.
   routingOptions: RoutingOption[] | null;
+  // Where the reporter's phone was when they filed, for the drawer's map.
+  position: ReportPosition;
 }
+
+/**
+ * A report's position, as the drawer may show it.
+ * - point: a usable position.
+ * - none: the report carries none (no fix, or an Other-report).
+ * - hidden: identity-withheld or discreet; the position is never read for
+ *   these, so it can't be shown by mistake.
+ * - unavailable: the lookup failed.
+ */
+export type ReportPosition =
+  | { kind: "point"; lat: number; lng: number }
+  | { kind: "none" }
+  | { kind: "hidden" }
+  | { kind: "unavailable" };
 
 export interface QueueReport {
   id: string; // e.g. "24-2024-2312"

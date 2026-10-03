@@ -15,6 +15,7 @@ import { ReasonPromptModal } from "@/components/ui/ReasonPromptModal";
 import { useDismissOnEscape } from "@/components/ui/useDismissOnEscape";
 import { useFocusTrap } from "@/components/ui/useFocusTrap";
 import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
+import { LocationPreview } from "./LocationPreview";
 import { useReportRouting } from "./useReportRouting";
 import { AgencyPickerModal } from "./AgencyPickerModal";
 import {
@@ -230,10 +231,15 @@ export function ReportDetailPanel({
           <div>
             <Row label={t("field.reporter")} value={<ReporterChip reporter={report.reporter} />} />
             <Row label={t("drawer.submitted")} value={formatTimestamp(d.submittedAt)} />
-            {/* No location row: incident_reports stores a geographic point
-                (geom), not an address, and nothing here decodes it into text
-                yet. Omitted rather than filled with a placeholder. */}
           </div>
+
+          {/* A map, not an address: incident_reports stores a point (geom),
+              and nothing decodes it into street text. Never shown for an
+              identity-withheld or discreet report. */}
+          <p className="mb-1.5 mt-5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+            {t("drawer.section.location")}
+          </p>
+          <LocationPreview position={d.position} />
 
           {/* Before the decision: where this report would go once validated.
               Read-only — routing stays a separate, confirmed step. */}
