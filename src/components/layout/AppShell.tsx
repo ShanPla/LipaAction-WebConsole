@@ -25,15 +25,18 @@ export function AppShell({
   const t = useT();
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-ink-50">
+    // print: the console's chrome stays off paper, and the content area stops
+    // being a fixed-height scroll box, so a printed report isn't cut off at
+    // the screen's height.
+    <div className="flex h-screen w-full overflow-hidden bg-ink-50 print:block print:h-auto print:overflow-visible print:bg-white">
       {/* Desktop sidebar */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block print:hidden">
         <Sidebar official={official} />
       </div>
 
       {/* Mobile off-canvas sidebar */}
       {mobileNavOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 z-40 lg:hidden print:hidden">
           <button
             aria-label={t("shell.closeMenu")}
             className="absolute inset-0 bg-ink-900/40"
@@ -45,7 +48,7 @@ export function AppShell({
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col print:block">
         <TopBar
           breadcrumb={breadcrumb}
           actions={actions}
@@ -58,7 +61,7 @@ export function AppShell({
             Without it, a label far down a long list was placed against the
             whole document instead, escaped this area's clipping and gave the
             page a second scrollbar onto blank space below the shell. */}
-        <main id="main-content" className="relative flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+        <main id="main-content" className="relative flex-1 overflow-y-auto px-4 py-5 sm:px-6 print:overflow-visible print:p-0">
           {children}
         </main>
       </div>

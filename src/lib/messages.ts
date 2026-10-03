@@ -579,6 +579,84 @@ export const MESSAGES = {
       "kailangan nito ang pagkakakilanlan at kasaysayan ng parusa ng bawat isa — datos na hindi " +
       "kailanman binabasa ng desk ng barangay.",
   },
+  "print.button": { en: "Print or save as PDF", tl: "I-print o i-save bilang PDF" },
+  "reports.resolution.title": {
+    en: "Monthly Resolution Time by Agency",
+    tl: "Buwanang Oras ng Paglutas bawat Ahensya",
+  },
+  "reports.resolution.intro": {
+    en: "For each agency, how long this barangay's reports took from routing to resolution, over the routings it closed in the chosen month.",
+    tl: "Para sa bawat ahensya, gaano katagal ang mga ulat ng barangay na ito mula sa pagpasa hanggang sa paglutas, sa mga pagpasang isinara nito sa napiling buwan.",
+  },
+  "reports.resolution.month": { en: "Month", tl: "Buwan" },
+  "reports.resolution.col.time": { en: "Routing to resolution", tl: "Mula pagpasa hanggang paglutas" },
+  "reports.resolution.caption": {
+    en: "Resolution time per agency for {month}: resolved, routing to resolution, returned out of scope",
+    tl: "Oras ng paglutas bawat ahensya para sa {month}: nalutas, mula pagpasa hanggang paglutas, ibinalik bilang labas sa saklaw",
+  },
+  "reports.resolution.empty": {
+    en: "No agency closed a report from this barangay in {month}.",
+    tl: "Walang ahensyang nagsara ng ulat mula sa barangay na ito noong {month}.",
+  },
+  "reports.resolution.failed": {
+    en: "The monthly resolution times couldn't load. Refresh the page; the daily summary above isn't affected.",
+    tl: "Hindi na-load ang buwanang oras ng paglutas. I-refresh ang page; hindi apektado ang buod ng araw sa itaas.",
+  },
+  "reports.resolution.footer": {
+    en: "Months and times are Manila. The clock starts when the report was routed. Reports returned out of scope are counted apart and kept out of the time. The 95th percentile appears once an agency has {min} timings.",
+    tl: "Buwan at oras sa Maynila. Nagsisimula ang orasan nang maipasa ang ulat. Hiwalay na binibilang ang mga ibinalik bilang labas sa saklaw at hindi isinasama sa oras. Lumalabas ang ika-95 na percentile kapag may {min} nang naorasan ang ahensya.",
+  },
+  "reports.resolution.capped": {
+    en: "Only the first {limit} closures of the month were counted.",
+    tl: "Ang unang {limit} pagsasara lamang ng buwan ang nabilang.",
+  },
+  "reports.resolution.exported": {
+    en: "Exported the resolution times for {month} as CSV",
+    tl: "Na-export ang oras ng paglutas para sa {month} bilang CSV",
+  },
+  "reports.resolution.exportNothing": {
+    en: "Nothing to export for this month",
+    tl: "Walang mai-e-export para sa buwang ito",
+  },
+  "reports.catalogue.title": {
+    en: "Other barangay reports in the thesis",
+    tl: "Iba pang ulat ng barangay sa tesis",
+  },
+  "reports.catalogue.intro": {
+    en: "The thesis's report catalogue also lists these for the barangay. Each is shown with the reason it isn't generated here.",
+    tl: "Nakalista rin sa katalogo ng ulat ng tesis ang mga ito para sa barangay. Ipinapakita ang bawat isa kasama ang dahilan kung bakit hindi ito nabubuo rito.",
+  },
+  "reports.cadence.weekly": { en: "weekly", tl: "lingguhan" },
+  "reports.cadence.monthly": { en: "monthly", tl: "buwanan" },
+  "reports.catalogue.13.title": {
+    en: "Weekly Verification Activity by Official",
+    tl: "Lingguhang Aktibidad ng Pag-verify bawat Opisyal",
+  },
+  "reports.catalogue.13.status": {
+    en: "Not built yet: it counts Tier 1 verifications, which aren't part of this console yet.",
+    tl: "Hindi pa nabubuo: binibilang nito ang mga Tier 1 na pag-verify, na hindi pa bahagi ng console na ito.",
+  },
+  "reports.catalogue.15.title": {
+    en: "Weekly Safety-Net Trigger Summary",
+    tl: "Lingguhang Buod ng mga Na-trigger na Safety-Net",
+  },
+  "reports.catalogue.15.status": {
+    en: "Not built: it counts each time a safety-net rule fired, and those events aren't recorded anywhere this console can read.",
+    tl: "Hindi nabuo: binibilang nito ang bawat pag-trigger ng isang safety-net na tuntunin, at hindi naitatala ang mga iyon kahit saan na nababasa ng console na ito.",
+  },
+  "reports.catalogue.17.title": {
+    en: "Monthly Resident Engagement Summary",
+    tl: "Buwanang Buod ng Pakikilahok ng Residente",
+  },
+  "reports.catalogue.17.status": {
+    en: "Not built: it counts activity per resident, and this console never reads who a reporter is.",
+    tl: "Hindi nabuo: binibilang nito ang aktibidad bawat residente, at hindi kailanman binabasa ng console na ito kung sino ang nag-ulat.",
+  },
+  "reports.catalogue.18.title": { en: "Monthly Override-Recall Usage", tl: "Buwanang Paggamit ng Recall" },
+  "reports.catalogue.18.status": {
+    en: "Not available: automatic routing and its recall window are switched off, so nothing can be recalled.",
+    tl: "Hindi available: naka-off ang awtomatikong pagpasa at ang recall window nito, kaya walang maire-recall.",
+  },
 
   // --- Cluster Explorer (empty state only; see ClusterExplorerClient) -------
   "cluster.mixedCategories": { en: "Mixed categories", tl: "Magkakaibang kategorya" },

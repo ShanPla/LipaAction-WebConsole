@@ -78,7 +78,7 @@ export function TopBar({
   const t = useT();
 
   return (
-    <header className="flex items-center justify-between gap-3 border-b border-ink-100 bg-white px-4 py-2 sm:px-6">
+    <header className="flex items-center justify-between gap-3 border-b border-ink-100 bg-white px-4 py-2 sm:px-6 print:hidden">
       <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"

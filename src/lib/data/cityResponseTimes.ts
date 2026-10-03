@@ -1,15 +1,10 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { startOfManilaDay } from "@/lib/utils";
+import { MIN_SAMPLES_FOR_P95, minutesBetween, summariseDurations as summarise, type DurationSummary } from "@/lib/durations";
 
-export interface DurationSummary {
-  // Whole minutes; null when there is no timing at all.
-  median: number | null;
-  // null below CityResponseData.minSamplesForP95 timings, where a 95th
-  // percentile would only be the slowest one under another name.
-  p95: number | null;
-  samples: number;
-}
+// Re-exported for the page, which imports its types from here.
+export type { DurationSummary };
 
 export interface AgencyResponse {
   agencyId: string;
@@ -50,7 +45,6 @@ interface RoutingRow {
 
 const WINDOW_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
-const MIN_SAMPLES_FOR_P95 = 20;
 const ROW_LIMIT = 5000;
 
 /**
@@ -153,29 +147,4 @@ export async function getCityResponseTimes(): Promise<CityResponseData> {
   );
 
   return { ...empty(false), agencies, capped: rows.length === ROW_LIMIT };
-}
-
-// Minutes from one timestamp to a later one. null when either is missing or
-// the order is impossible, which a hand-edited row can produce; a negative
-// time would drag every median down.
-function minutesBetween(from: string | null, to: string | null): number | null {
-  if (!from || !to) return null;
-  const diff = Date.parse(to) - Date.parse(from);
-  if (Number.isNaN(diff) || diff < 0) return null;
-  return diff / 60000;
-}
-
-function summarise(values: number[]): DurationSummary {
-  if (values.length === 0) return { median: null, p95: null, samples: 0 };
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  const median = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-  // Nearest-rank: the smallest timing at or above 95% of the others.
-  const p95 =
-    sorted.length >= MIN_SAMPLES_FOR_P95 ? sorted[Math.ceil(0.95 * sorted.length) - 1] : null;
-  return {
-    median: Math.round(median),
-    p95: p95 === null ? null : Math.round(p95),
-    samples: sorted.length,
-  };
 }

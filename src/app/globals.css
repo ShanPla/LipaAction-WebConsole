@@ -14,6 +14,14 @@
   }
 }
 
+/* Printing one report (PrintButton): the other printable sections step
+   aside while the print dialog is open. */
+@media print {
+  [data-print-hide] {
+    display: none !important;
+  }
+}
+
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;

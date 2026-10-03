@@ -3,10 +3,12 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { PrintButton } from "@/components/ui/PrintButton";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import { downloadCsv } from "@/lib/downloadCsv";
 import { useT } from "@/lib/i18n";
+import { reportsHref } from "./reportsHref";
 // Type-only import from a server-only module — erased at compile time.
 import type { DailyQueueSummaryData } from "@/lib/data/dailyQueueSummary";
 
@@ -26,9 +28,14 @@ const DATE_SETTLE_MS = 400;
 export function DailyQueueSummary({
   summary,
   barangayName,
+  month,
+  currentMonth,
 }: {
   summary: DailyQueueSummaryData;
   barangayName: string;
+  // The monthly report's month, kept in the URL when the day changes.
+  month: string;
+  currentMonth: string;
 }) {
   const t = useT();
   const router = useRouter();
@@ -39,7 +46,7 @@ export function DailyQueueSummary({
   useEffect(() => () => window.clearTimeout(settleTimer.current), []);
 
   function showDay(next: string) {
-    router.push(next === today ? "/reports" : `/reports?date=${next}`);
+    router.push(reportsHref({ date: next, month }, { today, currentMonth }));
   }
 
   function handleDateChange(next: string) {
@@ -65,7 +72,7 @@ export function DailyQueueSummary({
   }
 
   return (
-    <section aria-labelledby="daily-summary-title" className="mb-6">
+    <section aria-labelledby="daily-summary-title" data-printable="daily" className="mb-6">
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="daily-summary-title" className="text-sm font-semibold text-ink-900">
@@ -73,7 +80,7 @@ export function DailyQueueSummary({
           </h2>
           <p className="text-xs text-ink-500">{t("reports.dailyIntro")}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
           <label className="flex items-center gap-2 text-xs font-medium text-ink-700">
             {t("reports.date")}
             {/* Uncontrolled, and re-keyed on the day shown: a controlled
@@ -95,6 +102,7 @@ export function DailyQueueSummary({
           <Button variant="secondary" size="sm" disabled={loadFailed} onClick={handleExport}>
             {t("history.export")}
           </Button>
+          <PrintButton section="daily" />
         </div>
       </div>
 

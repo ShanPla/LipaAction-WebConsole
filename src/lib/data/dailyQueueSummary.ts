@@ -49,10 +49,11 @@ const DATE_SHAPE = /^\d{4}-\d{2}-\d{2}$/;
  * selected, and counts carry no personal information, so no access-log entry
  * is written for viewing it.
  *
- * The paper also offers a PNG export; this page exports CSV only (no image
- * library is bundled). Its other implemented report, the Weekly False-Report
- * Rate per Reporter (#14), needs reporter identity and sanction history that
- * this console never reads — the page says so rather than showing a stand-in.
+ * The paper also offers a PNG export; this page exports CSV, and prints or
+ * saves a PDF through the browser (no image library is bundled). Its other
+ * implemented report, the Weekly False-Report Rate per Reporter (#14), needs
+ * reporter identity and sanction history that this console never reads — the
+ * page lists it in its catalogue with that reason rather than a stand-in.
  */
 export async function getDailyQueueSummary(
   barangayId: string,
