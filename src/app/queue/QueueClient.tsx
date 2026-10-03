@@ -12,6 +12,7 @@ import { DUPLICATE_WRITEBACK_LIVE } from "@/lib/features";
 import { medianAgeMinutes } from "@/lib/utils";
 import { useNow } from "@/lib/useNow";
 import { KpiHeader } from "@/components/queue/KpiHeader";
+import { RecentActivity } from "@/components/queue/RecentActivity";
 import { ClusterCard } from "@/components/queue/ClusterCard";
 import { DuplicateGroup } from "@/components/queue/DuplicateGroup";
 import { QueueTabs, queuePanelDomId, queueTabDomId } from "@/components/queue/QueueTabs";
@@ -24,6 +25,7 @@ import { useToast } from "@/components/ui/Toast";
 import type { QueueReport, QueueTabId } from "@/types";
 import type { OfficialProfile } from "@/lib/auth";
 import type { QueueData } from "@/lib/data/queue";
+import type { RecentActivityData } from "@/lib/data/auditLog";
 
 // Fallback cadence when the Realtime channel can't be established (network
 // that blocks websockets, or the subscription errors). The thesis gives
@@ -183,9 +185,12 @@ function actionableSignature(data: QueueData): string | null {
 export function QueueClient({
   official,
   queueData,
+  recentActivity = null,
 }: {
   official: OfficialProfile;
   queueData: QueueData;
+  // The barangay admin's recent-activity list; null for every other role.
+  recentActivity?: RecentActivityData | null;
 }) {
   const [activeTab, setActiveTab] = useState<QueueTabId>("emergency");
   const [query, setQuery] = useState("");
@@ -759,6 +764,8 @@ export function QueueClient({
     >
       {queueData.loadFailed && <DataUnavailableBanner what={t("banner.what.queue")} />}
       <KpiHeader
+        // Admin roles only (recentActivity is loaded for them alone).
+        duplicateCount={recentActivity ? queueData.queueByTab.duplicates.length : undefined}
         summary={
           now === null
             ? queueData.kpiSummary
@@ -877,6 +884,8 @@ export function QueueClient({
         {updateWaiting && ` · ${t("queue.footer.updateWaiting")}`}
         {prefs.audibleAlertNewEmergency && soundLocked && ` · ${t("queue.footer.soundLocked")}`}
       </p>
+
+      {recentActivity && <RecentActivity data={recentActivity} />}
 
       {selected && selectedReport && (
         <ReportDetailPanel

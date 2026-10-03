@@ -122,6 +122,45 @@ async function loadCategories(
   );
 }
 
+export interface RecentActivityData {
+  entries: AuditLogEntry[];
+  // True when the function refused or failed: the panel says so in a line,
+  // and nothing else on the queue is affected.
+  failed: boolean;
+}
+
+const RECENT_LIMIT = 5;
+
+/**
+ * The newest few events on this barangay's reports, for the barangay admin's
+ * recent-activity list on the queue page (A.3.1). The same function and the
+ * same rules as the Audit Log page: no .order(), no .single(), roles only.
+ * Any refusal or error is just [couldn't load] here; the Audit Log page is
+ * where a refusal gets explained.
+ */
+export async function getRecentAuditActivity(): Promise<RecentActivityData> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("barangay_audit_log", { p_report_id: null, p_limit: RECENT_LIMIT });
+  if (error) {
+    console.error("[recent-activity] load failed", error.code, typeof error.details === "string" ? error.details : "");
+    return { entries: [], failed: true };
+  }
+  const rows = (data ?? []) as RawAuditRow[];
+  const categories = await loadCategories(supabase, rows);
+  return {
+    entries: rows.map((row) => ({
+      id: row.id,
+      action: row.action,
+      actorRole: row.actor_role ?? "",
+      timestamp: formatEventTime(row.created_at),
+      at: row.created_at,
+      reportId: row.report_id,
+      category: row.report_id ? categories.get(row.report_id) ?? null : null,
+    })),
+    failed: false,
+  };
+}
+
 function summarise(entries: AuditLogEntry[]): AuditSummary {
   return {
     totalEvents: entries.length,

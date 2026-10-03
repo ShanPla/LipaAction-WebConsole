@@ -13,7 +13,7 @@ import type { AuditLogEntry } from "@/types";
 // owner's UAT plan, 2026-09-29). They reach this page only once his
 // allow-list change to barangay_audit_log is live; the labels are ready
 // before that so they never show as raw text.
-const ACTION_LABELS: Record<string, MessageKey> = {
+export const ACTION_LABELS: Record<string, MessageKey> = {
   report_viewed: "audit.action.report_viewed",
   report_validated: "audit.action.report_validated",
   report_rejected: "audit.action.report_rejected",
@@ -40,7 +40,7 @@ const ACTION_TONES: Record<string, "neutral" | "brand" | "warning"> = {
 // agency events above, in case they carry the role of the agency user whose
 // action set them off; what the system-written rows carry is still to be
 // confirmed with the backend owner.
-const ROLE_LABELS: Record<string, MessageKey> = {
+export const ROLE_LABELS: Record<string, MessageKey> = {
   barangay_official: "role.barangay_official",
   barangay_admin: "role.barangay_admin",
   senior_barangay_admin: "role.senior_barangay_admin",

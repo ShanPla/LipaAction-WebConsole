@@ -100,6 +100,15 @@ export const MESSAGES = {
   "queue.kpi.standard": { en: "Standard intake", tl: "Karaniwang ulat" },
   "queue.kpi.medianWait": { en: "Median wait", tl: "Median na paghihintay" },
   "queue.kpi.validatedToday": { en: "Validated today", tl: "Na-validate ngayon" },
+  "queue.kpi.duplicates": { en: "Flagged duplicates", tl: "Naka-flag na doble" },
+  "queue.activity.title": { en: "Recent activity", tl: "Kamakailang aktibidad" },
+  "queue.activity.intro": {
+    en: "The newest events on this barangay's reports, by role. Shown to barangay admins.",
+    tl: "Ang pinakabagong pangyayari sa mga ulat ng barangay na ito, ayon sa tungkulin. Ipinapakita sa mga admin ng barangay.",
+  },
+  "queue.activity.viewAll": { en: "Open the Audit Log", tl: "Buksan ang Talaan ng Audit" },
+  "queue.activity.empty": { en: "No events yet.", tl: "Wala pang pangyayari." },
+  "queue.activity.failed": { en: "Recent activity couldn't load.", tl: "Hindi na-load ang kamakailang aktibidad." },
   "queue.validateNext": { en: "Validate next", tl: "I-validate ang susunod" },
   "queue.nothingToValidate": {
     en: "Nothing left in this tab to validate",

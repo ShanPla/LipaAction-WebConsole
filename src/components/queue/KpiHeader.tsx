@@ -3,12 +3,22 @@ import { formatDuration } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import type { KpiSummary } from "@/types";
 
-export function KpiHeader({ summary }: { summary: KpiSummary }) {
+export function KpiHeader({
+  summary,
+  duplicateCount,
+}: {
+  summary: KpiSummary;
+  // Set for barangay admins only: the paper's admin KPI strip (A.3.1) adds
+  // the flagged-duplicates count. Its sanctions-to-lift card needs sanction
+  // data this console can't read yet.
+  duplicateCount?: number;
+}) {
   const t = useT();
   return (
     <div className="mb-4 flex flex-wrap gap-3">
       <Tile label={t("queue.kpi.fastTriage")} value={summary.fastTriageCount} accent="critical" />
       <Tile label={t("queue.kpi.standard")} value={summary.standardIntakeCount} />
+      {duplicateCount !== undefined && <Tile label={t("queue.kpi.duplicates")} value={duplicateCount} />}
       {/* "Median wait", not a bare "Median" — this is the median age of
           reports still pending, so the label has to say what is being
           measured. It is not the mockup's median resolution time; no
