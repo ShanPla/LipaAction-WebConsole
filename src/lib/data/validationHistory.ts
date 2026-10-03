@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { categoryLabel, displayName, parseRejectReason, reporterLabel } from "@/lib/utils";
-import type { ValidationRecord, ValidationSummary } from "@/types";
+import type { ResolutionStatus, ValidationRecord, ValidationSummary } from "@/types";
 
 interface RawReviewedReport {
   id: string;
@@ -27,6 +27,15 @@ export interface ValidationHistoryData {
   // True when the query failed and the empty result is a fallback. The page
   // shows a banner instead of [No validation records yet].
   loadFailed: boolean;
+  // True when the agency rows couldn't be read: every resolution is unknown,
+  // and the page hides its resolution filter rather than filter on nothing.
+  resolutionUnavailable: boolean;
+}
+
+interface RawOutcome {
+  incident_report_id: string;
+  resolved_at: string | null;
+  resolution_outcome: string | null;
 }
 
 const HISTORY_LIMIT = 50;
@@ -83,27 +92,47 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
   const reviewerIds = [
     ...new Set(rows.map((r) => r.reviewed_by).filter((id): id is string => Boolean(id))),
   ];
+  // Confirmed reports only: a rejected one never reaches an agency.
+  const confirmedIds = rows.filter((r) => r.status !== "rejected").map((r) => r.id);
+
+  // Both lookups at once. Each failure costs only its own column.
+  const [reviewersRes, outcomesRes] = await Promise.all([
+    reviewerIds.length > 0
+      ? supabase.from("profiles").select("id, full_name").in("id", reviewerIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string | null }[], error: null }),
+    confirmedIds.length > 0
+      ? supabase
+          .from("agency_routing")
+          .select("incident_report_id, resolved_at, resolution_outcome")
+          .in("incident_report_id", confirmedIds)
+      : Promise.resolve({ data: [] as RawOutcome[], error: null }),
+  ]);
 
   const reviewerNames = new Map<string, string>();
   // If this lookup fails, the names are UNKNOWN, not absent. It used to drop
   // its error, so every decision read [Unnamed official] — which looks like a
   // fact about the officials rather than a failed query.
   let namesUnavailable = false;
-  if (reviewerIds.length > 0) {
-    const { data: reviewers, error: reviewersError } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .in("id", reviewerIds);
-    if (reviewersError) {
-      console.error("[validation-history] reviewer names failed", reviewersError.code, reviewersError.message);
-      namesUnavailable = true;
-    }
-    for (const r of reviewers ?? []) {
-      reviewerNames.set(r.id, displayName(r.full_name));
-    }
+  if (reviewersRes.error) {
+    console.error("[validation-history] reviewer names failed", reviewersRes.error.code, reviewersRes.error.message);
+    namesUnavailable = true;
+  }
+  for (const r of (reviewersRes.data ?? []) as { id: string; full_name: string | null }[]) {
+    reviewerNames.set(r.id, displayName(r.full_name));
   }
 
-  const records = rows.map((r) => toValidationRecord(r, reviewerNames, namesUnavailable));
+  const resolutionUnavailable = Boolean(outcomesRes.error);
+  if (outcomesRes.error) {
+    console.error("[validation-history] agency outcomes failed", outcomesRes.error.code, outcomesRes.error.message);
+  }
+  const outcomesByReport = new Map<string, RawOutcome[]>();
+  for (const o of (outcomesRes.data ?? []) as RawOutcome[]) {
+    outcomesByReport.set(o.incident_report_id, [...(outcomesByReport.get(o.incident_report_id) ?? []), o]);
+  }
+
+  const records = rows.map((r) =>
+    toValidationRecord(r, reviewerNames, namesUnavailable, resolutionUnavailable ? null : resolutionOf(r, outcomesByReport.get(r.id) ?? []))
+  );
 
   const summary: ValidationSummary = {
     total: rows.length,
@@ -118,13 +147,30 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
     identityWithheld: rows.filter((r) => r.identity_withheld).length,
   };
 
-  return { summary, records, limit: HISTORY_LIMIT, loadFailed: false };
+  return { summary, records, limit: HISTORY_LIMIT, loadFailed: false, resolutionUnavailable };
+}
+
+/**
+ * What became of a confirmed report, from its agency rows: still held while
+ * any agency hasn't closed it; once all have, the strongest outcome any of
+ * them recorded, with [returned] only when every one sent it back.
+ */
+function resolutionOf(r: RawReviewedReport, outcomes: RawOutcome[]): ResolutionStatus | null {
+  if (r.status === "rejected") return null;
+  if (outcomes.length === 0) return "notRouted";
+  if (outcomes.some((o) => !o.resolved_at)) return "withAgencies";
+  const has = (outcome: string) => outcomes.some((o) => o.resolution_outcome === outcome);
+  if (has("resolved")) return "resolved";
+  if (has("confirmed-false")) return "confirmedFalse";
+  if (has("duplicate")) return "duplicate";
+  return "returned";
 }
 
 function toValidationRecord(
   r: RawReviewedReport,
   reviewerNames: Map<string, string>,
-  namesUnavailable: boolean
+  namesUnavailable: boolean,
+  resolution: ResolutionStatus | null
 ): ValidationRecord {
   const parsedReason = r.review_reason ? parseRejectReason(r.review_reason) : null;
   return {
@@ -159,6 +205,7 @@ function toValidationRecord(
     reason: r.review_reason ?? undefined,
     reasonCode: parsedReason?.code ?? null,
     reasonNote: parsedReason?.note,
+    resolution,
   };
 }
 
@@ -168,6 +215,7 @@ function failedValidationHistoryData(): ValidationHistoryData {
     records: [],
     limit: HISTORY_LIMIT,
     loadFailed: true,
+    resolutionUnavailable: true,
   };
 }
 

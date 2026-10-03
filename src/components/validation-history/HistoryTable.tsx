@@ -4,6 +4,7 @@ import { cx } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { Icon } from "@/components/ui/Icon";
 import type { ValidationRecord } from "@/types";
+import { RESOLUTION_LABELS } from "./historyOptions";
 
 export function HistoryTable({
   records,
@@ -30,8 +31,8 @@ export function HistoryTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-card border border-ink-100 bg-white shadow-panel">
-      <table className="w-full min-w-[800px] text-left text-sm">
+    <div className="overflow-x-auto rounded-card border border-ink-100 bg-white shadow-panel print:overflow-visible">
+      <table className="w-full min-w-[800px] text-left text-sm print:min-w-0">
         <caption className="sr-only">{t("history.caption")}</caption>
         <thead>
           <tr className="border-b border-ink-100 bg-ink-50 text-[11px] uppercase tracking-wide text-ink-500">
@@ -77,6 +78,12 @@ export function HistoryTable({
                     validate — so this block is absent, not empty, otherwise.
                     The category is parsed from the reason's prefix; a reason
                     without one shows its text alone. */}
+                {/* What became of a confirmed report since: still with an
+                    agency, resolved, sent back. Absent on a rejection, and
+                    when the agency rows couldn't be read. */}
+                {record.resolution && (
+                  <p className="mt-1 text-[11px] text-ink-500">{t(RESOLUTION_LABELS[record.resolution])}</p>
+                )}
                 {record.reason && (
                   <div className="mt-1 max-w-[220px] text-xs leading-snug text-ink-500">
                     {record.reasonCode && (

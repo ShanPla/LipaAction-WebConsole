@@ -203,7 +203,18 @@ export interface ValidationRecord {
   // whole text, shown as it stands.
   reasonCode?: RejectReasonCode | null;
   reasonNote?: string;
+  // What became of a confirmed report after the desk (A.3.7's resolution
+  // outcome), from its agency rows. null on a rejected report, which never
+  // reaches an agency, and when the agency rows couldn't be read.
+  resolution: ResolutionStatus | null;
 }
+
+/**
+ * Where a confirmed report ended up: not routed yet, still with an agency,
+ * or closed — resolved, confirmed false or a duplicate by an agency, or sent
+ * back as out of scope by every agency that had it.
+ */
+export type ResolutionStatus = "notRouted" | "withAgencies" | "resolved" | "confirmedFalse" | "duplicate" | "returned";
 
 export interface ValidationSummary {
   total: number;

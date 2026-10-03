@@ -10,6 +10,7 @@ import {
   type OutcomeFilter,
   type RangeFilter,
 } from "@/components/validation-history/HistoryFilters";
+import { NOT_SCORED, RESOLUTION_ORDER } from "@/components/validation-history/historyOptions";
 import { HistoryTable } from "@/components/validation-history/HistoryTable";
 import { DataUnavailableBanner } from "@/components/layout/DataUnavailableBanner";
 // Type-only — validationHistory.ts is "server-only", so importing any runtime
@@ -17,7 +18,7 @@ import { DataUnavailableBanner } from "@/components/layout/DataUnavailableBanner
 // as data (historyData.limit) instead.
 import type { ValidationHistoryData } from "@/lib/data/validationHistory";
 import type { OfficialProfile } from "@/lib/auth";
-import type { ValidationRecord, ValidationSummary } from "@/types";
+import type { ResolutionStatus, ValidationRecord, ValidationSummary } from "@/types";
 
 export function ValidationHistoryClient({
   official,
@@ -26,12 +27,17 @@ export function ValidationHistoryClient({
   official: OfficialProfile;
   historyData: ValidationHistoryData;
 }) {
-  const { summary: loadedSummary, records, limit, loadFailed } = historyData;
+  const { summary: loadedSummary, records, limit, loadFailed, resolutionUnavailable } = historyData;
   const t = useT();
 
   const [range, setRange] = useState<RangeFilter>("all");
   const [outcome, setOutcome] = useState<OutcomeFilter>("all");
   const [validatingOfficial, setValidatingOfficial] = useState("all");
+  // The thesis's other history filters (A.3.7): category, priority, and the
+  // resolution outcome. Like the others, they narrow the rows already loaded.
+  const [category, setCategory] = useState("all");
+  const [priority, setPriority] = useState("all");
+  const [resolution, setResolution] = useState<ResolutionStatus | "all">("all");
 
   // Built from the full loaded set, not the filtered one — otherwise the
   // dropdown would shed its own options as soon as you picked one.
@@ -40,9 +46,31 @@ export function ValidationHistoryClient({
     [records]
   );
 
+  // Each list holds only values present in the loaded rows, so no option can
+  // only ever produce an empty table.
+  const categoryOptions = useMemo(() => [...new Set(records.map((r) => r.category))].sort(), [records]);
+  const priorityOptions = useMemo(() => {
+    const present = new Set<string>(records.map((r) => r.priority ?? NOT_SCORED));
+    return ["Critical", "High", "Medium", "Low", NOT_SCORED].filter((p) => present.has(p));
+  }, [records]);
+  const resolutionOptions = useMemo(() => {
+    if (resolutionUnavailable) return [];
+    const present = new Set(records.map((r) => r.resolution));
+    return RESOLUTION_ORDER.filter((s) => present.has(s));
+  }, [records, resolutionUnavailable]);
+
   const filtered = useMemo(
-    () => records.filter((r) => matchesRange(r, range) && matchesOutcome(r, outcome) && matchesOfficial(r, validatingOfficial)),
-    [records, range, outcome, validatingOfficial]
+    () =>
+      records.filter(
+        (r) =>
+          matchesRange(r, range) &&
+          matchesOutcome(r, outcome) &&
+          matchesOfficial(r, validatingOfficial) &&
+          (category === "all" || r.category === category) &&
+          (priority === "all" || (r.priority ?? NOT_SCORED) === priority) &&
+          (resolution === "all" || r.resolution === resolution)
+      ),
+    [records, range, outcome, validatingOfficial, category, priority, resolution]
   );
 
   // Tiles describe what's actually on screen. Showing the loaded-set counts
@@ -64,6 +92,15 @@ export function ValidationHistoryClient({
         onRangeChange={setRange}
         onOutcomeChange={setOutcome}
         onOfficialChange={setValidatingOfficial}
+        category={category}
+        categoryOptions={categoryOptions}
+        onCategoryChange={setCategory}
+        priority={priority}
+        priorityOptions={priorityOptions}
+        onPriorityChange={setPriority}
+        resolution={resolution}
+        resolutionOptions={resolutionOptions}
+        onResolutionChange={setResolution}
         records={filtered}
       />
       <HistoryTable records={filtered} isFiltered={isFiltered} />

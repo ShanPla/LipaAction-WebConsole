@@ -3,9 +3,11 @@
 import { cx, manilaTimestamp, REJECT_REASON_LABELS } from "@/lib/utils";
 import { downloadCsv } from "@/lib/downloadCsv";
 import { Button } from "@/components/ui/Button";
+import { PrintButton } from "@/components/ui/PrintButton";
 import { useToast } from "@/components/ui/Toast";
 import { useT, type MessageKey } from "@/lib/i18n";
-import type { ValidationRecord } from "@/types";
+import type { ResolutionStatus, ValidationRecord } from "@/types";
+import { NOT_SCORED, RESOLUTION_LABELS } from "./historyOptions";
 
 export type RangeFilter = "today" | "7d" | "all";
 export type OutcomeFilter = "all" | "Confirmed" | "Rejected";
@@ -38,6 +40,15 @@ export function HistoryFilters({
   onRangeChange,
   onOutcomeChange,
   onOfficialChange,
+  category,
+  categoryOptions,
+  onCategoryChange,
+  priority,
+  priorityOptions,
+  onPriorityChange,
+  resolution,
+  resolutionOptions,
+  onResolutionChange,
   records,
 }: {
   range: RangeFilter;
@@ -47,6 +58,16 @@ export function HistoryFilters({
   onRangeChange: (value: RangeFilter) => void;
   onOutcomeChange: (value: OutcomeFilter) => void;
   onOfficialChange: (value: string) => void;
+  category: string;
+  categoryOptions: string[];
+  onCategoryChange: (value: string) => void;
+  priority: string;
+  priorityOptions: string[];
+  onPriorityChange: (value: string) => void;
+  resolution: ResolutionStatus | "all";
+  // Empty when the agency rows couldn't be read, and the select is hidden.
+  resolutionOptions: ResolutionStatus[];
+  onResolutionChange: (value: ResolutionStatus | "all") => void;
   records: ValidationRecord[];
 }) {
   const { showToast } = useToast();
@@ -61,8 +82,9 @@ export function HistoryFilters({
     showToast(t("history.exported", { count: records.length }), "success");
   }
 
+  // print:hidden: a printed history shows the rows and tiles, not the controls.
   return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 print:hidden">
       <div className="flex flex-wrap items-center gap-1.5">
         {rangeOptions.map((opt) => (
           <button
@@ -110,11 +132,62 @@ export function HistoryFilters({
             ))}
           </select>
         )}
+
+        {categoryOptions.length > 1 && (
+          <select
+            aria-label={t("history.filterCategory")}
+            value={category}
+            onChange={(e) => onCategoryChange(e.target.value)}
+            className="min-h-11 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
+          >
+            <option value="all">{t("history.allCategories")}</option>
+            {categoryOptions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {priorityOptions.length > 1 && (
+          <select
+            aria-label={t("history.filterPriority")}
+            value={priority}
+            onChange={(e) => onPriorityChange(e.target.value)}
+            className="min-h-11 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
+          >
+            <option value="all">{t("history.allPriorities")}</option>
+            {priorityOptions.map((p) => (
+              <option key={p} value={p}>
+                {p === NOT_SCORED ? t("priority.unscored") : p}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {resolutionOptions.length > 0 && (
+          <select
+            aria-label={t("history.filterResolution")}
+            value={resolution}
+            onChange={(e) => onResolutionChange(e.target.value as ResolutionStatus | "all")}
+            className="min-h-11 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
+          >
+            <option value="all">{t("history.allResolutions")}</option>
+            {resolutionOptions.map((s) => (
+              <option key={s} value={s}>
+                {t(RESOLUTION_LABELS[s])}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
-      <Button variant="secondary" size="sm" onClick={handleExport}>
-        {t("history.export")}
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="secondary" size="sm" onClick={handleExport}>
+          {t("history.export")}
+        </Button>
+        <PrintButton section="history" />
+      </div>
     </div>
   );
 }
