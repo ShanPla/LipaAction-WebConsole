@@ -93,6 +93,15 @@ can be used instead. A signed-in user who opens `/login`
 is sent to the console. The signed-in official's name, role, and barangay are shown
 throughout the interface.
 
+A city account signs in with a second step (thesis A.5.1). After the emailed code, it is
+asked for a 6-digit code from an authenticator app on the administrator's phone (Google
+Authenticator, Microsoft Authenticator, or any app that reads the same codes). The first
+sign-in sets this up once: the page shows a QR code to scan, with a key to type instead,
+and the set-up is complete when a code from the app is accepted. No city page opens for
+a session that has not passed this step. Barangay sign-in is unchanged. A lost phone
+means asking the system's administrator to reset the account's second step in Supabase;
+the console cannot reset it. A reset there should also end the account's open sessions: a browser already past the step keeps the city pages until its token expires, up to an hour. Set-up belongs to whoever signs in first, so each city account's authenticator is set up on the day the account is handed over, with the system's administrator present.
+
 All times are shown in Philippine Standard Time regardless of where the server or the
 official's browser is set.
 
@@ -113,7 +122,7 @@ official's browser is set.
 | **Agency response** (`/city/response-times`) | Live, read-only. The thesis's per-agency response time view: for every routing in the last 30 days, per agency, how many reports it was sent, how many await acknowledgement, how many it is working on now, the median time to acknowledge and from acknowledgement to resolution (with the 95th percentile once an agency has 20 timings), and how many it resolved or returned out of scope. Below the table, the same two clocks per agency and report category, as two grids. Exports CSV and prints or saves a PDF through the browser. |
 | **Agencies** (`/city/agencies`) | Live, read-only. Every agency configured in the system, with its code and tier, and the report categories routing sends to it, lead categories marked. Adding agencies or changing where a category goes is not done here. |
 | **Access log** (`/city/access-log`) | Live, read-only, for the municipal administrator. Every recorded event on reports across the city (openings, decisions, routings and agency progress), newest first, with the official who acted named alongside their role and office, filterable by kind of event. Residents are never named, an event the database wrote by itself is shown as automatic, and no raw account identifier appears. Opening the page is itself recorded, and if that record can't be written the page shows nothing. |
-| **City settings** (`/city/settings`) | Live. The city account's own display name, which the access log shows beside what it opened, with its email read-only, and the console's language, kept in the browser as on the barangay side. No alert switches: those drive the barangay queue. |
+| **City settings** (`/city/settings`) | Live. The city account's own display name, which the access log shows beside what it opened, with its email read-only, the day its two-step sign-in was set up, and the console's language, kept in the browser as on the barangay side. No alert switches: those drive the barangay queue. |
 | **Audit Log** | Live. The barangay's own access trail: every report opening, validation, rejection and routing on its reports, newest first, filterable by kind and by date (today, the last 7 days). Read access comes through a database function that returns only the safe columns, not a table policy, so no official is named and the reporter is never in it — each row shows the time, the action, the role that did it, and the report. It loads the newest 500 events and says so. |
 
 All report data on the barangay pages is scoped to the signed-in official's own
@@ -190,10 +199,10 @@ to serve report details only through a function that records the read as it retu
 ```
 src/
   app/
-    login/                    Two-step email + code sign-in
+    login/                    Email, then emailed-code sign-in
     auth/callback/            Magic-link fallback handler
     not-authorized/
-    actions/                  Server Actions: report review, resident verification, sanction lifts, profile update, sign-out
+    actions/                  Server Actions: report review, resident verification, sanction lifts, two-step sign-in, profile update, sign-out
     queue/
     cluster-explorer/
     validation-history/
@@ -203,6 +212,7 @@ src/
     sanctions/                Active cooldowns and suspensions, and lifts (barangay admins)
     settings/
     city/                     City dashboard (municipal_admin), read-only
+      two-step/               The second sign-in step, and its set-up
       response-times/
       page.tsx                Server component: auth gate + data fetch
       <Name>Client.tsx        Client component: the page UI
@@ -327,10 +337,15 @@ In each case the console shows nothing rather than an approximation.
   overview, the incident map and per-agency response time are built, plus a city-wide
   report list, a read-only agency list and an access log. Not built: the false-route rate (defined over automatically routed reports; automatic routing is
   off), cross-barangay verification quality,
-  recalibration controls, agency management (adding, elevating or editing agencies), identity reveal, and
-  multi-factor sign-in.
+  recalibration controls, agency management (adding, elevating or editing agencies), and identity reveal.
   Response times are measured from when a barangay routed the report, since nothing
   routes automatically.
+- **Two-step sign-in is the city dashboard's, and the console's own check.** A city
+  session that skips the step gets no city page, but the same session could still read or change data
+  through the database's API, or the console's own action endpoints, until the backend also requires the step there, which is
+  planned once city accounts have set it up. Barangay accounts have no second step,
+  where the thesis recommends one. The console cannot reset an account's
+  authenticator; that is done in Supabase.
 - **Live updates need a websocket.** On a network that blocks them, the queue says so
   in its footer and falls back to a 30-second refresh.
 - **The city map is a snapshot of phone positions.** It loads when opened and doesn't

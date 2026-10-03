@@ -90,14 +90,29 @@ export function ProfileCard({ official }: { official: ConsoleUser }) {
             note={t("profile.askAdmin")}
           />
         )}
+        {/* A city account's second sign-in step. Always on where this is
+            shown: no city page opens without it. Read-only, like the email:
+            moving it to another phone means resetting it on the Auth side. */}
+        {!isBarangay && (
+          <FieldRow
+            label={t("profile.twoStep")}
+            value={
+              official.twoStepSince
+                ? t("profile.twoStepSince", { date: official.twoStepSince })
+                : t("profile.twoStepOn")
+            }
+            note={t("profile.twoStepNote")}
+          />
+        )}
       </div>
 
       {/* No [Change password] row — this system is passwordless (email OTP /
           magic-link only, shouldCreateUser: false, no signInWithPassword
           anywhere). A password-change affordance would imply a login path
-          that doesn't exist here. MFA status and role-grant history (who
-          granted this role, when) also aren't tracked anywhere in the
-          schema — intentionally not shown rather than fabricated. */}
+          that doesn't exist here. Role-grant history (who granted this role,
+          when) isn't tracked anywhere in the schema, and a barangay account
+          has no second sign-in step to report — intentionally not shown
+          rather than fabricated. */}
 
       {showNamePrompt && (
         <TextPromptModal

@@ -1580,6 +1580,19 @@ export const MESSAGES = {
     en: "Not permitted. A lift needs a barangay admin of the resident's own barangay, and a senior barangay admin for anything on the malicious track.",
     tl: "Hindi pinapayagan. Admin ng barangay ng residente ang kailangan sa pag-alis, at senior admin ng barangay para sa anumang nasa malicious track.",
   },
+
+  // --- City account: two-step sign-in (Settings) ----------------------------
+  // The two-step page itself is English, like the sign-in page it continues.
+  "profile.twoStep": { en: "Two-step sign-in", tl: "Dalawang-hakbang na pag-sign in" },
+  "profile.twoStepSince": {
+    en: "On: authenticator app, set up {date}",
+    tl: "Naka-on: authenticator app, na-set up noong {date}",
+  },
+  "profile.twoStepOn": { en: "On: authenticator app", tl: "Naka-on: authenticator app" },
+  "profile.twoStepNote": {
+    en: "Each sign-in asks for a code from the app. To move it to another phone, ask the system's administrator.",
+    tl: "Hinihingi ang code mula sa app sa bawat pag-sign in. Para ilipat ito sa ibang telepono, magtanong sa administrator ng sistema.",
+  },
 } satisfies Record<string, Entry>;
 
 export type MessageKey = keyof typeof MESSAGES;
