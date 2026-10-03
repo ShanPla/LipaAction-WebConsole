@@ -229,18 +229,15 @@ In each case the console shows nothing rather than an approximation.
 - **Routing is manual and one-way.** Nothing routes a validated report automatically;
   an official routes it, and the agencies are chosen by the category-to-agency mapping,
   not by the official. A category with no mapping is reported as needing barangay
-  review rather than sent anywhere. Routing cannot be undone from the console, and the
-  thesis's recall window for automatic routes is not implemented, because automatic
-  routing itself is not. The one place an official chooses the agencies is a report
-  that every agency closed as out of scope: the database returns it to the barangay as
-  validated, and the official picks other agencies for it. That return is a database
-  change scheduled for the next backend update; until it is live, such a report stays
-  routed, and the console says it is back with the barangay without offering to send
-  it elsewhere. The backend plans an automatic routing for high-confidence
-  emergencies that ships switched off; if it is ever switched on, a report it routes
-  appears under Routed to agencies marked Auto-routed, and one that every agency sends
-  back returns to the Emergency tab, marked as returned by the agencies, for a review
-  before another agency is chosen.
+  review rather than sent anywhere. Routing cannot be undone from the console. The one
+  place an official chooses the agencies is a report that every agency closed as out of
+  scope: the database returns it to the barangay as validated, and the official picks
+  other agencies for it from a list that leaves out the ones that sent it back. The
+  backend has an automatic routing for high-confidence emergencies, switched off until
+  the thesis's recall window exists, which is not implemented either; if it is ever
+  switched on, a report it routes appears under Routed to agencies marked Auto-routed,
+  and one that every agency sends back returns to the Emergency tab, marked as returned
+  by the agencies, for a review before another agency is chosen.
 - **Rejection categories are stored inside the reason text.** The database has one
   free-text reason per decision and no category column, so the category is saved as a
   short prefix (for example `[duplicate]`) that the console reads back. Rejections made
