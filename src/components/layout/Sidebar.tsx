@@ -24,10 +24,11 @@ const secondaryNav: NavItem[] = [
 ];
 
 // For barangay_admin and senior_barangay_admin only: the thesis gives Tier 1
-// verification to those roles (A.3). A barangay_official's sidebar doesn't
-// list the page, and the page sends that role back to the queue.
+// verification and sanction lifts to those roles (A.3). A barangay_official's
+// sidebar doesn't list the pages, and they send that role back to the queue.
 const residentNav: NavItem[] = [
   { href: "/verify-resident", label: "nav.verifyResident", icon: "verify" },
+  { href: "/sanctions", label: "nav.sanctions", icon: "sanctions" },
 ];
 
 const bottomNav: NavItem[] = [{ href: "/settings", label: "nav.settings", icon: "settings" }];

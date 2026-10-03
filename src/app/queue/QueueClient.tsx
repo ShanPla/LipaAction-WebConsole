@@ -27,6 +27,7 @@ import type { QueueReport, QueueTabId } from "@/types";
 import type { OfficialProfile } from "@/lib/auth";
 import type { QueueData } from "@/lib/data/queue";
 import type { RecentActivityData } from "@/lib/data/auditLog";
+import type { SanctionCounts } from "@/lib/data/sanctions";
 
 // Fallback cadence when the Realtime channel can't be established (network
 // that blocks websockets, or the subscription errors). The thesis gives
@@ -187,11 +188,15 @@ export function QueueClient({
   official,
   queueData,
   recentActivity = null,
+  sanctionCounts,
 }: {
   official: OfficialProfile;
   queueData: QueueData;
   // The barangay admin's recent-activity list; null for every other role.
   recentActivity?: RecentActivityData | null;
+  // The barangay admin's sanction cards: undefined for a barangay official,
+  // null when the count couldn't be read.
+  sanctionCounts?: SanctionCounts | null;
 }) {
   const [activeTab, setActiveTab] = useState<QueueTabId>("emergency");
   const [query, setQuery] = useState("");
@@ -767,6 +772,8 @@ export function QueueClient({
       <KpiHeader
         // Admin roles only (recentActivity is loaded for them alone).
         duplicateCount={recentActivity ? queueData.queueByTab.duplicates.length : undefined}
+        sanctionCounts={sanctionCounts}
+        showMaliciousTrack={official.role === "senior_barangay_admin"}
         summary={
           now === null
             ? queueData.kpiSummary

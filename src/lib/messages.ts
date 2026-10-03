@@ -615,12 +615,13 @@ export const MESSAGES = {
   },
   "reports.weeklyUnavailable": {
     en:
-      "Not available in this console. It counts false reports per reporter, which needs each " +
-      "reporter's identity and sanction history — data the barangay desk never reads.",
+      "Not generated in this console. It would list reporters by name beside the outcomes of " +
+      "their reports, and the console never sets a named resident beside a report. A resident's " +
+      "strikes are on the Sanctions page, for the barangay's admins.",
     tl:
-      "Hindi available sa console na ito. Binibilang nito ang maling ulat bawat nag-ulat, kaya " +
-      "kailangan nito ang pagkakakilanlan at kasaysayan ng parusa ng bawat isa — datos na hindi " +
-      "kailanman binabasa ng desk ng barangay.",
+      "Hindi ginagawa sa console na ito. Ililista nito ang mga nag-ulat ayon sa pangalan katabi ng " +
+      "kinalabasan ng kanilang mga ulat, at hindi kailanman itinatabi ng console ang pangalan ng " +
+      "residente sa isang ulat. Nasa page na Mga Parusa ang mga strike ng residente, para sa mga admin ng barangay.",
   },
   "print.button": { en: "Print or save as PDF", tl: "I-print o i-save bilang PDF" },
   "reports.resolution.title": {
@@ -1453,6 +1454,131 @@ export const MESSAGES = {
   "verify.toast.notEligible": {
     en: "This account can't be verified: it isn't a resident's account.",
     tl: "Hindi ma-verify ang account na ito: hindi ito account ng residente.",
+  },
+
+  // --- Sanctions (barangay admins) ------------------------------------------
+  "nav.sanctions": { en: "Sanctions", tl: "Mga Parusa" },
+  "banner.what.sanctions": { en: "The sanctions list", tl: "listahan ng parusa" },
+  "queue.kpi.sanctions": { en: "Sanctions to lift", tl: "Parusang maaaring alisin" },
+  "queue.kpi.sanctionsMalicious": { en: "Malicious-track sanctions", tl: "Parusa sa malicious track" },
+  "sanctions.intro": {
+    en:
+      "Active cooldowns and suspensions on residents of this barangay. They are applied automatically when an agency closes a resident's report as confirmed false. " +
+      "A resident whose appeal you accept can have theirs lifted here.",
+    tl:
+      "Mga aktibong cooldown at suspensiyon ng mga residente ng barangay na ito. Awtomatiko itong ipinapataw kapag isinara ng ahensya ang ulat ng residente bilang hindi totoo. " +
+      "Maaaring alisin dito ang parusa ng residenteng tinanggap mo ang apela.",
+  },
+  "sanctions.gate": {
+    en: "Inaccurate track: any barangay admin can lift. Malicious track: a senior barangay admin only.",
+    tl: "Inaccurate track: maaaring alisin ng sinumang admin ng barangay. Malicious track: senior admin ng barangay lamang.",
+  },
+  "sanctions.privacy": {
+    en: "The report behind a strike is not shown here, and a strike or a cooldown is dated by its day only, to keep a sanction from pointing at who filed a report.",
+    tl: "Hindi ipinapakita rito ang ulat na pinagmulan ng strike, at araw lamang ang petsa ng strike o cooldown, upang hindi maituro ng parusa kung sino ang nag-ulat.",
+  },
+  "sanctions.filter.label": { en: "Track to show", tl: "Track na ipapakita" },
+  "sanctions.filter.all": { en: "All", tl: "Lahat" },
+  "sanctions.track.inaccurate": { en: "Inaccurate track", tl: "Inaccurate track" },
+  "sanctions.track.malicious": { en: "Malicious track", tl: "Malicious track" },
+  "sanctions.kind.cooldown": { en: "Cooldown", tl: "Cooldown" },
+  "sanctions.kind.suspension": { en: "Suspension", tl: "Suspensiyon" },
+  "sanctions.endsOn": { en: "Ends {date}", tl: "Matatapos sa {date}" },
+  "sanctions.untilLifted": { en: "Until lifted", tl: "Hanggang alisin" },
+  "sanctions.suspendedOn": { en: "suspended {date}", tl: "sinuspinde noong {date}" },
+  "sanctions.cooldownAlso": { en: "Also in a cooldown ({track}), ending {date}.", tl: "May cooldown din ({track}), matatapos sa {date}." },
+  "sanctions.strikes": {
+    en: "Strikes: inaccurate {inaccurate}, malicious {malicious}",
+    tl: "Mga strike: inaccurate {inaccurate}, malicious {malicious}",
+  },
+  "sanctions.trustScore": { en: "Trust score {score}", tl: "Trust score {score}" },
+  "sanctions.action.lift": { en: "Lift", tl: "Alisin" },
+  "sanctions.action.liftLabel": { en: "Lift the sanction of {whoOf}", tl: "Alisin ang parusa {whoOf}" },
+  "sanctions.seniorOnly": {
+    en: "On the malicious track: only a senior barangay admin can lift this.",
+    tl: "Nasa malicious track: senior admin ng barangay lamang ang makakaalis nito.",
+  },
+  "sanctions.history.summary": { en: "Strikes and lifts ({count})", tl: "Mga strike at pag-alis ({count})" },
+  "sanctions.history.empty": { en: "No strike or lift on record.", tl: "Walang nakatalang strike o pag-alis." },
+  "sanctions.history.unavailable": {
+    en: "The history couldn't load. Refresh to try again.",
+    tl: "Hindi na-load ang kasaysayan. I-refresh para subukang muli.",
+  },
+  "sanctions.history.score": { en: "Trust score {before} to {after}", tl: "Trust score mula {before} naging {after}" },
+  "sanctions.history.strikes": {
+    en: "strikes then: inaccurate {inaccurate}, malicious {malicious}",
+    tl: "mga strike noon: inaccurate {inaccurate}, malicious {malicious}",
+  },
+  "sanctions.history.reason": { en: "Reason for the lift: {reason}", tl: "Dahilan ng pag-alis: {reason}" },
+  "sanctions.cause.inaccurate": { en: "Inaccurate report", tl: "Hindi tumpak na ulat" },
+  "sanctions.cause.malicious": { en: "Malicious report", tl: "Malisyosong ulat" },
+  "sanctions.cause.sanction_lifted": { en: "Sanction lifted", tl: "Inalis ang parusa" },
+  "sanctions.applied.none": { en: "no sanction", tl: "walang parusa" },
+  "sanctions.applied.cooldown": { en: "cooldown", tl: "cooldown" },
+  "sanctions.applied.suspension": { en: "suspension", tl: "suspensiyon" },
+  "sanctions.applied.lifted": { en: "lifted", tl: "inalis" },
+  "sanctions.empty.title": { en: "No active sanctions", tl: "Walang aktibong parusa" },
+  "sanctions.empty.body": {
+    en: "No resident of this barangay is in a cooldown or suspended right now.",
+    tl: "Walang residente ng barangay na ito ang nasa cooldown o suspendido ngayon.",
+  },
+  "sanctions.empty.filtered": {
+    en: "No active sanction on this track right now.",
+    tl: "Walang aktibong parusa sa track na ito ngayon.",
+  },
+  "sanctions.footerOne": { en: "1 sanctioned resident shown.", tl: "1 residenteng may parusa ang ipinapakita." },
+  "sanctions.footer": { en: "{count} sanctioned residents shown.", tl: "{count} residenteng may parusa ang ipinapakita." },
+  "sanctions.footerCapped": {
+    en: "Showing the first {limit} sanctioned residents, suspensions first.",
+    tl: "Ipinapakita ang unang {limit} residenteng may parusa, una ang mga suspensiyon.",
+  },
+  "sanctions.lift.title": { en: "Lift the sanction of {whoOf}", tl: "Alisin ang parusa {whoOf}" },
+  "sanctions.lift.description": {
+    en: "For a resident whose appeal you have heard and accepted. The reason is recorded with the lift.",
+    tl: "Para sa residenteng napakinggan at tinanggap mo ang apela. Itatala ang dahilan kasama ng pag-alis.",
+  },
+  "sanctions.lift.effects": { en: "What lifting does", tl: "Ang ginagawa ng pag-alis" },
+  "sanctions.lift.effect.score": {
+    en: "The trust score returns to 0.5, the neutral starting value.",
+    tl: "Babalik sa 0.5 ang trust score, ang neutral na panimulang halaga.",
+  },
+  "sanctions.lift.effect.ends": {
+    en: "The cooldown and any suspension end now.",
+    tl: "Matatapos na ngayon ang cooldown at anumang suspensiyon.",
+  },
+  "sanctions.lift.effect.strikesSuspension": {
+    en: "Lifting a suspension resets the strike count. The malicious count resets only when a senior barangay admin lifts.",
+    tl: "Ibinabalik sa zero ng pag-alis ng suspensiyon ang bilang ng strike. Ibinabalik lamang ang bilang sa malicious kapag senior admin ng barangay ang nag-alis.",
+  },
+  "sanctions.lift.effect.strikesCooldown": {
+    en: "The strike counts stay as they are: only lifting a suspension resets them.",
+    tl: "Mananatili ang bilang ng mga strike: pag-alis lamang ng suspensiyon ang nagbabalik nito sa zero.",
+  },
+  "sanctions.lift.effect.tier": {
+    en: "The resident's verification tier does not change.",
+    tl: "Hindi magbabago ang tier ng beripikasyon ng residente.",
+  },
+  "sanctions.lift.effect.recorded": {
+    en: "The lift is recorded with your reason.",
+    tl: "Itatala ang pag-alis kasama ng iyong dahilan.",
+  },
+  "sanctions.lift.actor": { en: "You are lifting as {name}, {role}.", tl: "Ikaw ang nag-aalis bilang {name}, {role}." },
+  "sanctions.lift.placeholder": {
+    en: "The appeal, what supports it, and your decision",
+    tl: "Ang apela, ang sumusuporta rito, at ang iyong pasya",
+  },
+  "sanctions.lift.confirm": { en: "Confirm lift", tl: "Kumpirmahin ang pag-alis" },
+  "sanctions.toast.lifted": {
+    en: "{who} is no longer sanctioned. The trust score is back to 0.5.",
+    tl: "Wala nang parusa {who}. Bumalik sa 0.5 ang trust score.",
+  },
+  "sanctions.toast.stale": {
+    en: "{who} has no active sanction any more. The list is up to date now.",
+    tl: "Wala nang aktibong parusa {who}. Napapanahon na ang listahan.",
+  },
+  "sanctions.toast.refused": {
+    en: "Not permitted. A lift needs a barangay admin of the resident's own barangay, and a senior barangay admin for anything on the malicious track.",
+    tl: "Hindi pinapayagan. Admin ng barangay ng residente ang kailangan sa pag-alis, at senior admin ng barangay para sa anumang nasa malicious track.",
   },
 } satisfies Record<string, Entry>;
 

@@ -4,7 +4,7 @@ The officials-facing web console for the LipaAction incident-reporting system, a
 specified in **Chapter 3, Section 3.7.3** of the LipaAction thesis (Major Revision,
 May 2026). Barangay officials use it to review, validate, and reject incident reports
 submitted by residents through the LipaAction mobile app, and barangay administrators
-use it to verify residents (Tier 1).
+use it to verify residents (Tier 1) and to lift the sanctions that false reports bring.
 
 The same console also carries a read-only city dashboard for the municipal
 administrator (**Section 3.7.5** and **Appendix A.5**): city-wide report activity per
@@ -85,9 +85,9 @@ Accounts are created by an administrator in Supabase.
 Every page checks the signed-in user's profile role on the server before rendering.
 Only `barangay_official`, `barangay_admin`, and `senior_barangay_admin` are admitted;
 a `municipal_admin` account is sent to the city dashboard at `/city`, whose pages admit
-only that role and send a barangay official back to their queue. Verify Resident admits
-only `barangay_admin` and `senior_barangay_admin`, and sends a `barangay_official` back
-to the queue. Any other role is
+only that role and send a barangay official back to their queue. Verify Resident and
+Sanctions admit only `barangay_admin` and `senior_barangay_admin`, and send a
+`barangay_official` back to the queue. Any other role is
 redirected to `/not-authorized`, which offers sign-out so a differently-scoped account
 can be used instead. A signed-in user who opens `/login`
 is sent to the console. The signed-in official's name, role, and barangay are shown
@@ -100,11 +100,12 @@ official's browser is set.
 
 | Page | Status |
 |------|--------|
-| **Queue** | Live. Shows the barangay's pending reports in four tabs — Emergency Fast-triage, Standard intake, Flagged duplicates, Recent validated — with a search box and a detail drawer showing the resident's full account and the classifier's reading of the report. Validate and Reject write to the database; rejection requires one of the thesis's reason categories (wrong category, already resolved, mistaken identity, not an emergency, duplicate, or other) plus an optional note, required for Other. Before a report is validated, its detail drawer shows which agencies routing would send it to. The drawer also shows a small street map, with coordinates, of where the reporter's phone was when they filed, except for a report whose resident withheld their identity or asked for discreet reporting, whose location is never read. A report whose resident asked for discreet handling is marked as such on its row, opens with a do-not-contact banner (Discreet report: do not call or text the reporter), and is flagged again in the routing confirmation. A report whose resident answered that the emergency had already resolved is marked Already resolved, review. A validated report is then routed to the agencies its category maps to, by hand, after a confirmation step; the Recent validated tab separates reports awaiting routing from those already with agencies, lists the latter by when they were routed, newest first, and shows each agency's progress (acknowledged, in progress, resolved, or closed with an outcome) as the agency records it, usually within a second. A report that every agency sends back as out of scope, once the database has returned it to the barangay, can be routed to other agencies the official chooses from a list that leaves out the ones that returned it. Opening a report's details is recorded in the access log, once per opening. On the Flagged duplicates tab, reports are shown in the groups duplicate detection made, each group with its categories and its own action to validate every report in it at once; the largest group also appears as a card on the Emergency tab. When a group mixes categories, the confirmation says so. The page updates live as reports change (a Supabase Realtime subscription, filtered to the barangay and enforced by Row-Level Security), falling back to a 30-second refresh if the live channel cannot connect. A report that arrives on its own is marked as new for a few seconds so it is not missed. The page can also chime when a new emergency arrives, and can raise a browser notification when an emergency has waited more than five minutes. If the data cannot be loaded it says so, rather than showing an empty queue. For a barangay admin or senior barangay admin, the tiles add the flagged-duplicates count, and a recent-activity list below the queue shows the barangay's five newest audit events by role, linking to the Audit Log, with shortcuts to Verify Resident and, for a senior barangay admin, to revoking an attestation, as the thesis's admin home does; its sanctions card waits for the Sanctions page. |
+| **Queue** | Live. Shows the barangay's pending reports in four tabs — Emergency Fast-triage, Standard intake, Flagged duplicates, Recent validated — with a search box and a detail drawer showing the resident's full account and the classifier's reading of the report. Validate and Reject write to the database; rejection requires one of the thesis's reason categories (wrong category, already resolved, mistaken identity, not an emergency, duplicate, or other) plus an optional note, required for Other. Before a report is validated, its detail drawer shows which agencies routing would send it to. The drawer also shows a small street map, with coordinates, of where the reporter's phone was when they filed, except for a report whose resident withheld their identity or asked for discreet reporting, whose location is never read. A report whose resident asked for discreet handling is marked as such on its row, opens with a do-not-contact banner (Discreet report: do not call or text the reporter), and is flagged again in the routing confirmation. A report whose resident answered that the emergency had already resolved is marked Already resolved, review. A validated report is then routed to the agencies its category maps to, by hand, after a confirmation step; the Recent validated tab separates reports awaiting routing from those already with agencies, lists the latter by when they were routed, newest first, and shows each agency's progress (acknowledged, in progress, resolved, or closed with an outcome) as the agency records it, usually within a second. A report that every agency sends back as out of scope, once the database has returned it to the barangay, can be routed to other agencies the official chooses from a list that leaves out the ones that returned it. Opening a report's details is recorded in the access log, once per opening. On the Flagged duplicates tab, reports are shown in the groups duplicate detection made, each group with its categories and its own action to validate every report in it at once; the largest group also appears as a card on the Emergency tab. When a group mixes categories, the confirmation says so. The page updates live as reports change (a Supabase Realtime subscription, filtered to the barangay and enforced by Row-Level Security), falling back to a 30-second refresh if the live channel cannot connect. A report that arrives on its own is marked as new for a few seconds so it is not missed. The page can also chime when a new emergency arrives, and can raise a browser notification when an emergency has waited more than five minutes. If the data cannot be loaded it says so, rather than showing an empty queue. For a barangay admin or senior barangay admin, the tiles add the flagged-duplicates count and the number of sanctions that any admin can lift, with a fifth tile for a senior barangay admin counting those on the malicious track; below the queue, shortcuts open Verify Resident and Sanctions (and, for a senior barangay admin, the residents whose attestation can be revoked), and a recent-activity list shows the barangay's five newest audit events by role, linking to the Audit Log, as the thesis's admin home does. |
 | **Cluster Explorer** | Live. Groups pending reports that the duplicate-detection service has marked as the same incident (a shared `cluster_id`, written back since October 2026). The service compares reports from the same barangay filed within 72 hours of each other, weighing place, time and category, so a group can mix categories. The queue's Flagged duplicates tab shows the same groups, and a group can be validated as one action. The grouping can't be changed from the console. |
 | **Validation History** | Live. Reviewed reports (validated or rejected) with the reviewing official, timestamp, rejection category and note, and, for a confirmed report, what became of it since (not routed yet, with agencies, resolved, confirmed false, closed as a duplicate, or returned out of scope). Filters by date range, verdict, official, category, priority and that resolution outcome, over the rows loaded. Exports the visible rows to CSV, and prints or saves them as a PDF through the browser. |
 | **Verify Resident** (`/verify-resident`) | Live, for `barangay_admin` and `senior_barangay_admin`. Tier 1 verification (thesis A.3.9): the barangay's attestation, under RA 7160 Section 389(b), that a resident lives there. Lists the barangay's residents by name, with the last four digits of each one's phone number, the day they registered, and their tier, under three groups (not yet verified, verified, all), with a search by name, by a full phone number, or by a number's last four digits. A resident whose profile carries no name is listed, and named in the dialogs, by the ending of their phone number. Verify asks how residency was established (in person, a field visit, or the barangay's own records) and for the official's own statement, neither preselected, and moves the account to Tier 1; the row then shows who attested, how and when. A senior barangay admin can revoke an attestation with a required reason, which returns the account to Tier 0 and stays on the row. Both go through the backend's functions, which enforce the roles and the barangay. |
-| **Reports** | Live. Two of the thesis's barangay reports, each exportable as CSV and printable or savable as a PDF through the browser. The Daily Queue Summary (#12): the reports submitted on a chosen day (today by default), by category, counted by where each stands now — awaiting review, validated, or rejected. The Monthly Resolution Time by Agency (#16): for the routings of the barangay's reports that agencies closed in a chosen month, each agency's median time from routing to resolution (with the 95th percentile once it has 20 timings), with reports returned out of scope counted apart. The rest of the thesis's barangay catalogue is listed with the reason each isn't generated: the weekly false-report rate per reporter (#14) and the monthly resident engagement summary (#17) need reporters' identities, which the console never reads; weekly verification activity (#13), which counts the verifications made on the Verify Resident page, is not built yet; the weekly safety-net trigger summary (#15) needs events nothing records; and monthly recall usage (#18) has nothing to count while automatic routing is off. |
+| **Sanctions** (`/sanctions`) | Live, for `barangay_admin` and `senior_barangay_admin`. The barangay's active cooldowns and suspensions (thesis A.3.4), which the backend applies when an agency closes a resident's report as confirmed false. One card per sanctioned resident: the track (inaccurate or malicious) and kind, the day a cooldown ends or that a suspension stands until lifted, both strike counts, the trust score, and the resident's strikes and lifts so far, by day. Filters by who may lift: the malicious-track filter holds everything only a senior barangay admin can lift. Lift takes a required reason, shows what the lift will do (the trust score back to 0.5, the cooldown and suspension ended, the tier unchanged) and under whose name, and goes through the backend's function. Anything on the malicious track can be lifted only by a senior barangay admin; for a barangay admin the card says so in place of the button. The report behind a strike is never shown. |
+| **Reports** | Live. Two of the thesis's barangay reports, each exportable as CSV and printable or savable as a PDF through the browser. The Daily Queue Summary (#12): the reports submitted on a chosen day (today by default), by category, counted by where each stands now — awaiting review, validated, or rejected. The Monthly Resolution Time by Agency (#16): for the routings of the barangay's reports that agencies closed in a chosen month, each agency's median time from routing to resolution (with the 95th percentile once it has 20 timings), with reports returned out of scope counted apart. The rest of the thesis's barangay catalogue is listed with the reason each isn't generated: the weekly false-report rate per reporter (#14) and the monthly resident engagement summary (#17) would set named residents beside the outcomes of their reports, which the console never does; weekly verification activity (#13), which counts the verifications made on the Verify Resident page, is not built yet; the weekly safety-net trigger summary (#15) needs events nothing records; and monthly recall usage (#18) has nothing to count while automatic routing is off. |
 | **Settings** | Profile is live (name, role, barangay, email, phone); the display name is editable. Language and alert preferences are saved in the browser on the current device. The interface language switches the console between English and Tagalog — the same choice as the EN/TL switch at the top right of every page; the alert preferences drive the Queue page's chime and browser notification. Senior barangay administrators default to Tagalog, as the thesis specifies. The bilingual-emphasis setting is recorded but does not yet change any screen, and says so. |
 | **City overview** (`/city`) | Live, read-only, for the municipal administrator. City-wide tiles (reports today, the 7-day daily average, reports awaiting review, Critical ones among them, and emergencies waiting more than five minutes), then one row per barangay: its last 7 days as daily bars, today's count, what awaits review now however old, and how many of the week's reports were validated or rejected. No decision or routing controls. Prints or saves as a PDF through the browser. |
 | **City map** (`/city/map`) | Live, read-only. Reports still open (awaiting review, validated, or with agencies) from the last 7 days, as dots on an OpenStreetMap street map coloured by priority, each where the reporter's phone was when they filed. A report whose resident withheld their identity or asked for discreet reporting is never placed on the map: it is counted under its barangay beside the map, as are reports sent without a location. Every dot is also listed in a table below the map. Counts by priority sit above the map and cover every open report, the ones kept off it included, and the dots and the table can be narrowed by priority and category. A dot, or Details in the table, opens the report in the city report list, whose drawer records the opening in the access log. |
@@ -146,7 +147,7 @@ only places that read a report's location, and only for reports whose resident n
 withheld their identity nor asked for discreet reporting; for those, the location is never
 read at all, and on the city map the report is only counted under its barangay.
 
-Verify Resident is the one barangay page that names residents, because an official
+Verify Resident names residents (as Sanctions does, below), because an official
 cannot attest that a person lives in the barangay without knowing who the person is. It
 is open to the two administrator roles only, and it reads a resident's name, the last
 four digits of their phone number (the full number never reaches the browser), their
@@ -161,13 +162,23 @@ admin's browser beside the name, because the write needs it; the queue's live up
 carry the same id on each report (see Known limitations), so the two could be joined
 outside the screen until the backend change already asked for is made.
 
+Sanctions names residents for the same reason: an appeal is heard from a person. What it
+keeps to itself is the report behind each strike. The thesis's panel shows that report
+and the agency's reason for closing it as false; the console reads neither, because
+either one beside a name would say who filed the report, which no other screen does and
+which a resident who withheld their identity was promised would not happen. For the same
+reason a strike is dated by its day, a cooldown is shown by the day it ends rather than the
+moment, and the entries for a resident's valid reports are not read. At pilot
+volume this narrows the link without closing it: a strike's day can still be set beside
+the reports an agency closed as false that day.
+
 What the log does not cover yet: the queue list itself shows each report's category and
 the opening line of its description before any view is logged, the Validation History
 CSV export writes no audit record, and viewing the city map writes none either, though
-each dot is where a resident was when they reported. Opening the Verify Resident list
-writes no access record either; each attestation and revocation is recorded by the
-backend function that performs it. All four are recorded as open questions for the
-backend and data-protection review.
+each dot is where a resident was when they reported. Opening the Verify Resident list or
+the Sanctions list writes no access record either; each attestation, revocation and lift
+is recorded by the backend function that performs it. All of these are recorded as open
+questions for the backend and data-protection review.
 
 One limit is structural: the console records an opening, but the database does not
 require one. An official's own session can read the same reports through the database's
@@ -182,13 +193,14 @@ src/
     login/                    Two-step email + code sign-in
     auth/callback/            Magic-link fallback handler
     not-authorized/
-    actions/                  Server Actions: report review, resident verification, profile update, sign-out
+    actions/                  Server Actions: report review, resident verification, sanction lifts, profile update, sign-out
     queue/
     cluster-explorer/
     validation-history/
     audit-log/
     reports/
     verify-resident/          Tier 1 verification (barangay admins)
+    sanctions/                Active cooldowns and suspensions, and lifts (barangay admins)
     settings/
     city/                     City dashboard (municipal_admin), read-only
       response-times/
@@ -203,6 +215,7 @@ src/
     audit-log/
     reports/
     verify-resident/
+    sanctions/
     settings/
     city/
   lib/
@@ -246,6 +259,12 @@ In each case the console shows nothing rather than an approximation.
   name, and such a resident is found by their number. There is no QR step and no photo
   cross-check. A revoked resident can be verified again; the earlier revocation and its
   reason stay on the row.
+- **Sanctions shows no cause report.** The thesis's detail panel names the report that
+  triggered a strike and the agency's reason; the console shows the strike's track, its
+  day and its effect on the trust score, and nothing that points at a report (see
+  Privacy). An official hears what the appeal is about from the resident. Sanctions are
+  applied by the backend when an agency closes a report as confirmed false; the console
+  only lists and lifts them, and cannot apply one.
 - **Cluster data.** The console shows which reports the duplicate-detection service
   grouped, not why: no centroid, radius, or per-report proximity signal is shown, and
   the spatial panel is a labelled schematic rather than a map with invented positions.

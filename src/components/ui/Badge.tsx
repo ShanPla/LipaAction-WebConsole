@@ -74,13 +74,14 @@ export function Badge({
   tone = "neutral",
 }: {
   children: React.ReactNode;
-  tone?: "neutral" | "brand" | "success" | "warning";
+  tone?: "neutral" | "brand" | "success" | "warning" | "danger";
 }) {
   const tones: Record<string, string> = {
     neutral: "bg-ink-100 text-ink-700",
     brand: "bg-brand-100 text-brand-700",
     success: "bg-brand-100 text-brand-700",
     warning: "bg-priority-highBg text-priority-high",
+    danger: "bg-priority-criticalBg text-priority-critical",
   };
   return (
     <span

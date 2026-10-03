@@ -11,6 +11,7 @@ import {
   Menu,
   PhoneOff,
   Search,
+  ShieldAlert,
   SlidersHorizontal,
   Timer,
   UserCheck,
@@ -35,7 +36,8 @@ export type IconName =
   | "agencies"
   | "timer"
   | "map"
-  | "verify";
+  | "verify"
+  | "sanctions";
 
 /**
  * The console's icons, from Lucide (lucide-react, ISC licence).
@@ -62,6 +64,7 @@ const ICONS: Record<IconName, LucideIcon> = {
   timer: Timer, // how long agencies take
   map: MapGlyph, // where open reports are
   verify: UserCheck, // attesting that a resident lives in the barangay
+  sanctions: ShieldAlert, // cooldowns and suspensions on residents' accounts
 };
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {

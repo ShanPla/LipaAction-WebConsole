@@ -276,7 +276,7 @@ export async function getResidents(
 }
 
 /** The last four digits of a phone number, or null when it has fewer. */
-function phoneEnding(phone: string | null): string | null {
+export function phoneEnding(phone: string | null): string | null {
   const digits = (phone ?? "").replace(/\D/g, "");
   return digits.length >= 4 ? digits.slice(-4) : null;
 }
