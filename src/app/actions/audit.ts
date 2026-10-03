@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { DATA_EXPORTED, isExportKind, MAX_EXPORT_ROWS, type ExportRecordOutcome } from "@/lib/exports";
 import { isUuid } from "@/lib/utils";
 
 /**
@@ -65,5 +66,54 @@ export async function logReportView(reportId: string): Promise<ViewLogOutcome> {
   // must be findable in the host's logs, and the message can carry the
   // caller's input back in.
   console.error("[log_report_view] not logged", JSON.stringify({ outcome, report: reportId, status, code: error.code }));
+  return outcome;
+}
+
+/**
+ * Records that the signed-in official is exporting data: a CSV file, or a
+ * print that the browser can save as a PDF.
+ *
+ * The thesis's access trail covers every read and export of personal
+ * information (FR-22, report #34). An export is the moment data leaves the
+ * console for a file nobody can log again, so it is recorded first, and the
+ * caller goes ahead only on `recorded`: unlike a report drawer, which stays
+ * open when its view can't be logged because a desk must not be locked out
+ * of an emergency, an export can wait.
+ *
+ * Written through log_audit as `data_exported`, with no report id and with
+ * metadata of exactly { what, rows }, which is the shape the backend accepts.
+ * `what` must be one of the console's own export names, since this is a
+ * public endpoint and the trail should not hold whatever a caller sent.
+ *
+ * The record says an export was started from this account. It cannot say
+ * what was then done with the file, and printing through the browser's own
+ * menu instead of the console's button bypasses it.
+ */
+export async function recordExport(what: string, rows: number): Promise<ExportRecordOutcome> {
+  if (!isExportKind(what) || !Number.isInteger(rows) || rows < 0 || rows > MAX_EXPORT_ROWS) return "invalid";
+
+  const supabase = createClient();
+  const { error, status } = await supabase.rpc("log_audit", {
+    p_action: DATA_EXPORTED,
+    p_report_id: null,
+    p_metadata: { what, rows },
+  });
+
+  if (!error) return "recorded";
+
+  // The same reading as everywhere: no HTTP answer is the network, a 401 or
+  // a PGRST30x is the session, 42501 is this role refused. Anything else,
+  // including an action name the backend doesn't recognise, is a failure.
+  const outcome: ExportRecordOutcome =
+    status === 0
+      ? "unreachable"
+      : status === 401 || (error.code ?? "").startsWith("PGRST30")
+        ? "session-expired"
+        : error.code === "42501"
+          ? "refused"
+          : "failed";
+
+  // Structured fields only, never error.message.
+  console.error("[data_exported] not recorded", JSON.stringify({ outcome, what, rows, status, code: error.code }));
   return outcome;
 }

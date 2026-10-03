@@ -4,6 +4,7 @@ import { cx, manilaTimestamp, REJECT_REASON_LABELS } from "@/lib/utils";
 import { downloadCsv } from "@/lib/downloadCsv";
 import { Button } from "@/components/ui/Button";
 import { PrintButton } from "@/components/ui/PrintButton";
+import { useRecordedExport } from "@/components/ui/useRecordedExport";
 import { useToast } from "@/components/ui/Toast";
 import { useT, type MessageKey } from "@/lib/i18n";
 import type { ResolutionStatus, ValidationRecord } from "@/types";
@@ -72,12 +73,16 @@ export function HistoryFilters({
 }) {
   const { showToast } = useToast();
   const t = useT();
+  const { record, busy } = useRecordedExport();
 
-  function handleExport() {
+  // The file names the validating officials, so the export is written to the
+  // access trail first, and the file is made only if that succeeded.
+  async function handleExport() {
     if (records.length === 0) {
       showToast(t("history.exportNothing"), "info");
       return;
     }
+    if (!(await record("validation_history_csv", records.length))) return;
     exportCsv(records);
     showToast(t("history.exported", { count: records.length }), "success");
   }
@@ -183,10 +188,11 @@ export function HistoryFilters({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="secondary" size="sm" onClick={handleExport}>
-          {t("history.export")}
+        <Button variant="secondary" size="sm" disabled={busy} onClick={handleExport}>
+          {busy ? t("common.working") : t("history.export")}
         </Button>
-        <PrintButton section="history" />
+        <PrintButton section="history" record={{ what: "validation_history_print", rows: records.length }} />
+        <p className="basis-full text-right text-[11px] text-ink-500">{t("export.recordedNote")}</p>
       </div>
     </div>
   );

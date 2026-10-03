@@ -624,6 +624,11 @@ export const MESSAGES = {
       "residente sa isang ulat. Nasa page na Mga Parusa ang mga strike ng residente, para sa mga admin ng barangay.",
   },
   "print.button": { en: "Print or save as PDF", tl: "I-print o i-save bilang PDF" },
+  "print.nothing": { en: "Nothing to print with these filters", tl: "Walang mai-pi-print sa mga filter na ito" },
+  "print.changed": {
+    en: "The page changed while the print was being recorded, so nothing was printed. Try again.",
+    tl: "Nagbago ang page habang itinatala ang pag-print, kaya walang na-print. Subukang muli.",
+  },
   "reports.resolution.title": {
     en: "Monthly Resolution Time by Agency",
     tl: "Buwanang Oras ng Paglutas bawat Ahensya",
@@ -1019,6 +1024,7 @@ export const MESSAGES = {
   },
   "city.access.filter": { en: "Kind of event", tl: "Uri ng pangyayari" },
   "city.access.kind.routing": { en: "Routing and agencies", tl: "Pagpasa at mga ahensya" },
+  "city.access.kind.exports": { en: "Exports", tl: "Mga export" },
   "city.access.kind.other": { en: "Other", tl: "Iba pa" },
   "city.access.tile.officials": { en: "Officials in these events", tl: "Mga opisyal sa mga pangyayaring ito" },
   "city.access.caption": {
@@ -1042,8 +1048,8 @@ export const MESSAGES = {
     tl: "{count} ang ipinapakita, pinakabago muna. Ang mga pangalan at tanggapan ay ayon sa kasalukuyan; ang tungkulin ay ang naitala kasama ng bawat pangyayari.",
   },
   "city.access.capped": {
-    en: "Only the newest {limit} are read; choose a kind of event to see older ones.",
-    tl: "Ang pinakabagong {limit} lamang ang nababasa; pumili ng uri ng pangyayari para makita ang mas luma.",
+    en: "Only the newest {limit} are read; choose a kind of event or a range of dates to see older ones.",
+    tl: "Ang pinakabagong {limit} lamang ang nababasa; pumili ng uri ng pangyayari o saklaw ng petsa para makita ang mas luma.",
   },
   "city.access.notRecorded.title": {
     en: "The access log can't be shown right now",
@@ -1593,6 +1599,57 @@ export const MESSAGES = {
     en: "Each sign-in asks for a code from the app. To move it to another phone, ask the system's administrator.",
     tl: "Hinihingi ang code mula sa app sa bawat pag-sign in. Para ilipat ito sa ibang telepono, magtanong sa administrator ng sistema.",
   },
+
+  // --- Recorded exports ------------------------------------------------------
+  // {nothing} is one of the two export.nothing.* phrases.
+  "export.recordedNote": {
+    en: "Exports and prints made with the buttons on this page are recorded in the access trail first.",
+    tl: "Itinatala muna sa talaan ng access ang mga export at print na ginawa gamit ang mga button sa page na ito.",
+  },
+  "export.nothing.file": { en: "nothing was downloaded", tl: "walang na-download" },
+  "export.nothing.print": { en: "nothing was printed", tl: "walang na-print" },
+  "export.failed": {
+    en: "This export couldn't be recorded in the access trail, so {nothing}. Try again.",
+    tl: "Hindi naitala sa talaan ng access ang export na ito, kaya {nothing}. Subukang muli.",
+  },
+  "export.refused": {
+    en: "Not permitted: this account can't record an export, so {nothing}.",
+    tl: "Hindi pinapayagan: hindi makapagtala ng export ang account na ito, kaya {nothing}.",
+  },
+  "export.sessionExpired": {
+    en: "Your session expired, so the export wasn't recorded and {nothing}. Sign in again.",
+    tl: "Nag-expire ang iyong session, kaya hindi naitala ang export at {nothing}. Mag-sign in muli.",
+  },
+  "export.unreachable": {
+    en: "Couldn't reach the server to record the export, so {nothing}. Check your connection, then try again.",
+    tl: "Hindi maabot ang server para itala ang export, kaya {nothing}. Tingnan ang iyong koneksyon, saka subukang muli.",
+  },
+  "export.noAnswer": {
+    en: "Couldn't confirm the export was recorded, so {nothing}. Check your connection, then try again.",
+    tl: "Hindi makumpirma kung naitala ang export, kaya {nothing}. Tingnan ang iyong koneksyon, saka subukang muli.",
+  },
+  "audit.exported": { en: "Exported {count} events as CSV", tl: "Na-export ang {count} pangyayari bilang CSV" },
+  "city.access.action.exported": { en: "Data exported", tl: "Nag-export ng datos" },
+  "city.access.range.from": { en: "From", tl: "Mula" },
+  "city.access.range.to": { en: "To", tl: "Hanggang" },
+  "city.access.range.apply": { en: "Show these dates", tl: "Ipakita ang mga petsang ito" },
+  "city.access.range.clear": { en: "Clear dates", tl: "Alisin ang mga petsa" },
+  "city.access.range.footer": { en: "Dates: {from} to {to}.", tl: "Mga petsa: {from} hanggang {to}." },
+  "city.access.range.open": { en: "any", tl: "kahit kailan" },
+  "city.access.emptyRange": {
+    en: "No recorded events match these dates and this kind of event.",
+    tl: "Walang naitalang pangyayari na tumutugma sa mga petsa at uri ng pangyayaring ito.",
+  },
+  // On an opening of the access log: which view was opened. On an export:
+  // what was exported ({what} is one of export.kind.*) and how many rows.
+  "city.access.detail.view": { en: "View: {view}", tl: "Tanaw: {view}" },
+  "city.access.detail.export": { en: "{what} · {count} rows", tl: "{what} · {count} hilera" },
+  "city.access.detail.exportOne": { en: "{what} · 1 row", tl: "{what} · 1 hilera" },
+  "export.kind.validation_history_csv": { en: "Validation History, CSV", tl: "Kasaysayan ng Pag-validate, CSV" },
+  "export.kind.validation_history_print": { en: "Validation History, print", tl: "Kasaysayan ng Pag-validate, print" },
+  "export.kind.audit_log_csv": { en: "Audit Log, CSV", tl: "Talaan ng Audit, CSV" },
+  "export.kind.access_log_csv": { en: "Access log, CSV", tl: "Talaan ng access, CSV" },
+  "export.kind.access_log_print": { en: "Access log, print", tl: "Talaan ng access, print" },
 } satisfies Record<string, Entry>;
 
 export type MessageKey = keyof typeof MESSAGES;

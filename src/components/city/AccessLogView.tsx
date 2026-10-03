@@ -1,19 +1,28 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { PrintButton } from "@/components/ui/PrintButton";
 import { Tile } from "@/components/ui/Tile";
-import { cx } from "@/lib/utils";
+import { useToast } from "@/components/ui/Toast";
+import { useRecordedExport } from "@/components/ui/useRecordedExport";
+import { downloadCsv } from "@/lib/downloadCsv";
+import { DATA_EXPORTED, type ExportKind } from "@/lib/exports";
+import { cx, manilaTimestamp, ownValue } from "@/lib/utils";
 import { useT, type MessageKey, type Translate } from "@/lib/i18n";
-import { ACCESS_LOG_KINDS, ACCESS_LOG_OPENED, REPORT_ACTIONS, type AccessLogKind } from "@/lib/accessLog";
+import { accessLogCsvRows } from "./accessLogCsv";
+import { ACCESS_LOG_KINDS, ACCESS_LOG_OPENED, REPORT_ACTIONS, isAccessLogKind, type AccessLogKind } from "@/lib/accessLog";
 // Type-only imports from a server-only module — erased at compile time.
-import type { AccessLogData, AccessLogEntry } from "@/lib/data/cityAccessLog";
+import type { AccessLogData, AccessLogDetail, AccessLogEntry } from "@/lib/data/cityAccessLog";
 
 const KIND_LABELS: Record<AccessLogKind, MessageKey> = {
   all: "audit.filter.all",
   openings: "audit.filter.openings",
   decisions: "audit.filter.decisions",
   routing: "city.access.kind.routing",
+  exports: "city.access.kind.exports",
   other: "city.access.kind.other",
 };
 
@@ -32,6 +41,7 @@ const ACTION_LABELS: Record<string, MessageKey> = {
   report_status_changed: "audit.action.report_status_changed",
   identity_reveal: "audit.action.identity_reveal",
   [ACCESS_LOG_OPENED]: "city.access.action.opened",
+  [DATA_EXPORTED]: "city.access.action.exported",
 };
 
 const ACTION_TONES: Record<string, "neutral" | "brand" | "warning"> = {
@@ -57,26 +67,91 @@ const ROLE_LABELS: Record<string, MessageKey> = {
   resident: "role.resident",
 };
 
+// What each of this console's exports is called in the trail, in words. The
+// type makes a new export a compile error until it has a name here. Another
+// console can record a name this one doesn't know; that shows as itself.
+const EXPORT_LABELS: Record<ExportKind, MessageKey> = {
+  validation_history_csv: "export.kind.validation_history_csv",
+  validation_history_print: "export.kind.validation_history_print",
+  audit_log_csv: "export.kind.audit_log_csv",
+  access_log_csv: "export.kind.access_log_csv",
+  access_log_print: "export.kind.access_log_print",
+};
+
+/** The page's address for a kind and a date range, defaults left out. */
+function accessLogHref(kind: AccessLogKind, from: string | null, to: string | null): string {
+  const params = new URLSearchParams();
+  if (kind !== "all") params.set("kind", kind);
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const qs = params.toString();
+  return qs ? `/city/access-log?${qs}` : "/city/access-log";
+}
+
 /**
  * The city access log: each recorded event with the official behind it.
- * The kind filter lives in the URL, so the server does the narrowing over the
- * whole trail, not over a window already loaded, and each view is recorded.
+ * The kind and the date range live in the URL, so the server does the
+ * narrowing over the whole trail, not over a window already loaded, and each
+ * view is recorded. Neither is personal data: a kind of event and two days.
+ *
+ * The export and the print are the thesis's RA 10173 Data Access Log for
+ * data-protection requests (A.5.7). They name officials, so each is written
+ * to the trail before it happens, and doesn't happen otherwise.
  */
 export function AccessLogView({ data }: { data: AccessLogData }) {
   const t = useT();
   const router = useRouter();
+  const { showToast } = useToast();
+  const { record, busy } = useRecordedExport();
+  const [from, setFrom] = useState(data.from ?? "");
+  const [to, setTo] = useState(data.to ?? "");
+
+  // The boxes follow the range the server actually used: it drops a day
+  // that doesn't exist and turns a backwards range around. Every fresh
+  // render resets them, so a value the server dropped doesn't linger.
+  useEffect(() => {
+    setFrom(data.from ?? "");
+    setTo(data.to ?? "");
+  }, [data.from, data.to, data.renderId]);
 
   function choose(kind: AccessLogKind) {
-    router.push(kind === "all" ? "/city/access-log" : `/city/access-log?kind=${kind}`);
+    router.push(accessLogHref(kind, data.from, data.to));
+  }
+
+  function applyRange(e: React.FormEvent) {
+    e.preventDefault();
+    router.push(accessLogHref(data.kind, from || null, to || null));
+  }
+
+  async function handleExport() {
+    if (data.entries.length === 0) {
+      showToast(t("history.exportNothing"), "info");
+      return;
+    }
+    if (!(await record("access_log_csv", data.entries.length))) return;
+    // Dated in Manila: toISOString() is UTC, and would name a file made
+    // before 8am for the previous day.
+    const day = manilaTimestamp(new Date().toISOString()).slice(0, 10);
+    downloadCsv(`access-log-${data.kind}-${day}.csv`, accessLogCsvRows(data, ACTION_LABELS, ROLE_LABELS));
+    showToast(t("audit.exported", { count: data.entries.length }), "success");
   }
 
   return (
-    <section aria-labelledby="city-access-title" className="mb-6">
-      <div className="mb-3">
-        <h2 id="city-access-title" className="text-sm font-semibold text-ink-900">
-          {t("city.access.title")}
-        </h2>
-        <p className="text-xs text-ink-500">{t("city.access.intro")}</p>
+    <section aria-labelledby="city-access-title" data-printable="access-log" className="mb-6">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 id="city-access-title" className="text-sm font-semibold text-ink-900">
+            {t("city.access.title")}
+          </h2>
+          <p className="text-xs text-ink-500">{t("city.access.intro")}</p>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 print:hidden">
+          <Button variant="secondary" size="sm" disabled={busy || data.loadFailed} onClick={handleExport}>
+            {busy ? t("common.working") : t("history.export")}
+          </Button>
+          <PrintButton section="access-log" record={{ what: "access_log_print", rows: data.entries.length }} />
+          <p className="basis-full text-right text-[11px] text-ink-500">{t("export.recordedNote")}</p>
+        </div>
       </div>
 
       <div className="mb-3 flex flex-wrap gap-3">
@@ -86,7 +161,40 @@ export function AccessLogView({ data }: { data: AccessLogData }) {
         <Tile label={t("city.access.tile.officials")} value={data.summary.officials} />
       </div>
 
-      <div role="group" aria-label={t("city.access.filter")} className="mb-4 flex flex-wrap gap-2">
+      {/* Two days and an explicit button: a date box fires on every keystroke
+          of a typed year, and each load of this page writes a record. */}
+      <form onSubmit={applyRange} className="mb-3 flex flex-wrap items-end gap-2 print:hidden">
+        <label className="text-xs font-medium text-ink-500">
+          <span className="mb-1 block">{t("city.access.range.from")}</span>
+          <input
+            type="date"
+            value={from}
+            max={to || undefined}
+            onChange={(e) => setFrom(e.target.value)}
+            className="min-h-11 rounded-md border border-ink-100 bg-white px-3 text-sm text-ink-900 focus:border-brand-500 focus:outline-none"
+          />
+        </label>
+        <label className="text-xs font-medium text-ink-500">
+          <span className="mb-1 block">{t("city.access.range.to")}</span>
+          <input
+            type="date"
+            value={to}
+            min={from || undefined}
+            onChange={(e) => setTo(e.target.value)}
+            className="min-h-11 rounded-md border border-ink-100 bg-white px-3 text-sm text-ink-900 focus:border-brand-500 focus:outline-none"
+          />
+        </label>
+        <Button variant="secondary" size="sm" type="submit">
+          {t("city.access.range.apply")}
+        </Button>
+        {(data.from || data.to) && (
+          <Button variant="ghost" size="sm" type="button" onClick={() => router.push(accessLogHref(data.kind, null, null))}>
+            {t("city.access.range.clear")}
+          </Button>
+        )}
+      </form>
+
+      <div role="group" aria-label={t("city.access.filter")} className="mb-4 flex flex-wrap gap-2 print:hidden">
         {ACCESS_LOG_KINDS.map((kind) => (
           <button
             key={kind}
@@ -109,13 +217,21 @@ export function AccessLogView({ data }: { data: AccessLogData }) {
         !data.loadFailed && (
           <div className="rounded-card border border-ink-100 bg-white px-4 py-10 text-center shadow-panel">
             <p className="text-sm text-ink-500">
-              {t(data.kind === "all" ? "city.access.empty" : "city.access.emptyFiltered")}
+              {/* With dates chosen, [none recorded yet] would be untrue: there
+                  may be events outside them. */}
+              {t(
+                data.from || data.to
+                  ? "city.access.emptyRange"
+                  : data.kind === "all"
+                    ? "city.access.empty"
+                    : "city.access.emptyFiltered"
+              )}
             </p>
           </div>
         )
       ) : (
-        <div className="overflow-x-auto rounded-card border border-ink-100 bg-white shadow-panel">
-          <table className="w-full min-w-[760px] text-left text-sm">
+        <div className="overflow-x-auto rounded-card border border-ink-100 bg-white shadow-panel print:overflow-visible">
+          <table className="w-full min-w-[760px] text-left text-sm print:min-w-0">
             <caption className="sr-only">{t("city.access.caption")}</caption>
             <thead>
               <tr className="border-b border-ink-100 bg-ink-50 text-[11px] uppercase tracking-wide text-ink-500">
@@ -141,6 +257,7 @@ export function AccessLogView({ data }: { data: AccessLogData }) {
                       <Badge tone={ACTION_TONES[entry.action] ?? "neutral"}>
                         {actionKey ? t(actionKey) : entry.action}
                       </Badge>
+                      {entry.detail && <p className="mt-1 text-[11px] text-ink-500">{detailLine(entry.detail, t)}</p>}
                     </td>
                     <td className="px-4 py-2.5">{reportCell(entry, t)}</td>
                   </tr>
@@ -153,6 +270,8 @@ export function AccessLogView({ data }: { data: AccessLogData }) {
 
       <p className="mt-3 text-xs text-ink-500">
         {t("city.access.footer", { count: data.entries.length })}
+        {(data.from || data.to) &&
+          ` ${t("city.access.range.footer", { from: data.from ?? t("city.access.range.open"), to: data.to ?? t("city.access.range.open") })}`}
         {data.capped && ` ${t("city.access.capped", { limit: data.limit })}`}
       </p>
     </section>
@@ -176,6 +295,22 @@ function actorCell(entry: AccessLogEntry, namesUnavailable: boolean, t: Translat
       {office && <p className="text-[11px] text-ink-500">{office}</p>}
     </div>
   );
+}
+
+// What a console-written event adds: the view of this log that was opened,
+// or what was exported and how many rows.
+function detailLine(detail: AccessLogDetail, t: Translate): string {
+  if (detail.type === "view") {
+    return t("city.access.detail.view", {
+      view: isAccessLogKind(detail.filter) ? t(KIND_LABELS[detail.filter]) : detail.filter,
+    });
+  }
+  const key = ownValue(EXPORT_LABELS as Record<string, MessageKey>, detail.what);
+  const what = key ? t(key) : detail.what;
+  if (detail.rows === null) return what;
+  return detail.rows === 1
+    ? t("city.access.detail.exportOne", { what })
+    : t("city.access.detail.export", { what, count: detail.rows });
 }
 
 function reportCell(entry: AccessLogEntry, t: Translate) {

@@ -274,6 +274,22 @@ export function ownValue<T>(record: Record<string, T>, key: string): T | undefin
 }
 
 /**
+ * The instant a Manila calendar day starts, from `YYYY-MM-DD` as a date input
+ * or a URL sends it, or null when that isn't a real day. The round trip
+ * catches days that don't exist: some engines roll 2026-02-31 over to March
+ * instead of refusing it.
+ */
+export function manilaDayStart(day: unknown): number | null {
+  if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  // No day of this system is before 2000, and a bound that old is one the
+  // database refuses instead of ignoring.
+  if (Number(day.slice(0, 4)) < 2000) return null;
+  const start = Date.parse(`${day}T00:00:00+08:00`);
+  if (Number.isNaN(start)) return null;
+  return new Date(start + MANILA_OFFSET_MS).toISOString().slice(0, 10) === day ? start : null;
+}
+
+/**
  * A calendar date in Manila, `Oct 2, 2026`, for values where the day is what
  * matters and the hour would only add noise. Manila like every other time on
  * the console; an unparseable value passes through rather than becoming

@@ -11,12 +11,12 @@ export const dynamic = "force-dynamic";
 export default async function CityAccessLogPage({
   searchParams,
 }: {
-  searchParams: { kind?: string | string[] };
+  searchParams: { kind?: string | string[]; from?: string | string[]; to?: string | string[] };
 }) {
   const admin = await requireCityAdmin();
-  // The filter arrives in the URL; the loader proves it before use.
+  // The filters arrive in the URL; the loader proves each before use.
   const kind = typeof searchParams.kind === "string" ? searchParams.kind : undefined;
-  const data = await openCityAccessLog(kind);
+  const data = await openCityAccessLog(kind, searchParams.from, searchParams.to);
   return (
     <LanguageProvider role={admin.role}>
       <AccessLogClient admin={admin} data={data} />

@@ -6,8 +6,13 @@ import { DataUnavailableBanner } from "@/components/layout/DataUnavailableBanner
 import { useT } from "@/lib/i18n";
 import { AuditSummaryTiles } from "@/components/audit-log/AuditSummaryTiles";
 import { AUDIT_FILTERS, AuditFilters, type AuditFilterId, type AuditRange } from "@/components/audit-log/AuditFilters";
-import { startOfManilaDay } from "@/lib/utils";
-import { AuditTable } from "@/components/audit-log/AuditTable";
+import { manilaTimestamp, startOfManilaDay } from "@/lib/utils";
+import { ACTION_LABELS, AuditTable, ROLE_LABELS } from "@/components/audit-log/AuditTable";
+import { auditCsvRows } from "@/components/audit-log/auditCsv";
+import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
+import { useRecordedExport } from "@/components/ui/useRecordedExport";
+import { downloadCsv } from "@/lib/downloadCsv";
 import type { OfficialProfile } from "@/lib/auth";
 // Type-only import from a server-only module — erased at compile time.
 import type { AuditLogData } from "@/lib/data/auditLog";
@@ -23,6 +28,8 @@ export function AuditLogClient({
   const { entries, summary, limit, loadFailed, refusal } = auditData;
   const [filter, setFilter] = useState<AuditFilterId>("all");
   const [range, setRange] = useState<AuditRange>("all");
+  const { showToast } = useToast();
+  const { record, busy } = useRecordedExport();
 
   const shown = useMemo(() => {
     const actions: readonly string[] = AUDIT_FILTERS[filter];
@@ -31,6 +38,22 @@ export function AuditLogClient({
     );
   }, [entries, filter, range]);
   const narrowed = filter !== "all" || range !== "all";
+
+  // The thesis's export of the log for data-protection requests (A.3.7). It
+  // is the trail itself leaving the console, so the export is recorded in
+  // the trail first, and the file is made only if that succeeded.
+  async function handleExport() {
+    if (shown.length === 0) {
+      showToast(t("history.exportNothing"), "info");
+      return;
+    }
+    if (!(await record("audit_log_csv", shown.length))) return;
+    // Dated in Manila: toISOString() is UTC, and would name a file made
+    // before 8am for the previous day.
+    const day = manilaTimestamp(new Date().toISOString()).slice(0, 10);
+    downloadCsv(`audit-log-${day}.csv`, auditCsvRows(shown, ACTION_LABELS, ROLE_LABELS));
+    showToast(t("audit.exported", { count: shown.length }), "success");
+  }
 
   return (
     <AppShell breadcrumb={[official.barangayName, t("nav.auditLog")]} official={official}>
@@ -60,6 +83,12 @@ export function AuditLogClient({
 
           <AuditSummaryTiles summary={summary} />
           <AuditFilters active={filter} onChange={setFilter} range={range} onRangeChange={setRange} />
+          <div className="mb-3 flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+            <p className="text-[11px] text-ink-500">{t("export.recordedNote")}</p>
+            <Button variant="secondary" size="sm" disabled={busy || loadFailed} onClick={handleExport}>
+              {busy ? t("common.working") : t("history.export")}
+            </Button>
+          </div>
           <AuditTable entries={shown} filtered={narrowed} />
 
           {/* Never [the audit trail]: the function returns at most `limit`
