@@ -1052,6 +1052,11 @@ export const MESSAGES = {
     tl: "Hindi na-load ang mapa. Saklaw pa rin ng mga bilang at listahan sa ibaba ang bawat bukas na ulat.",
   },
   "city.map.legend": { en: "Priority", tl: "Priyoridad" },
+  "city.map.filteredNote": {
+    en: "Showing {shown} of {total} reports on the map. The counts cover every open report.",
+    tl: "Ipinapakita ang {shown} sa {total} ulat sa mapa. Saklaw ng mga bilang ang bawat bukas na ulat.",
+  },
+  "city.map.openHint": { en: "Click to open its details", tl: "I-click para buksan ang detalye" },
   "city.map.byBarangay": { en: "By barangay", tl: "Bawat barangay" },
   "city.map.col.mapped": { en: "On the map", tl: "Nasa mapa" },
   "city.map.col.withheld": { en: "Identity withheld", tl: "Itinago ang pagkakakilanlan" },
@@ -1120,6 +1125,10 @@ export const MESSAGES = {
   "city.reports.col.open": { en: "Open", tl: "Buksan" },
   "city.reports.open": { en: "Details", tl: "Detalye" },
   "city.reports.agenciesUnavailable": { en: "Couldn't load", tl: "Hindi ma-load" },
+  "city.reports.openMissing": {
+    en: "The report you opened isn't in this list, which covers the last {days} days, newest {limit} first.",
+    tl: "Wala sa listahang ito ang ulat na binuksan mo; saklaw nito ang nakaraang {days} araw, ang pinakabagong {limit}.",
+  },
   "city.reports.empty": {
     en: "No reports were filed in the last {days} days.",
     tl: "Walang ulat na naisampa sa nakaraang {days} araw.",

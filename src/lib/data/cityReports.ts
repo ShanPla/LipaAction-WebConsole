@@ -53,6 +53,9 @@ export interface CityReportsData {
   barangays: { id: string; name: string }[];
   barangay: string | null; // the filter applied, a barangay id
   status: CityStatusFilter;
+  // A report to open on arrival (?open=<id>, from the city map). A proven
+  // uuid or null; the page opens it only if it is in the list.
+  open: string | null;
   windowDays: number;
   limit: number;
   capped: boolean;
@@ -116,9 +119,11 @@ interface RawRouting {
  */
 export async function getCityReports(
   requestedBarangay: string | undefined,
-  requestedStatus: string | undefined
+  requestedStatus: string | undefined,
+  requestedOpen?: string
 ): Promise<CityReportsData> {
   const barangay = isUuid(requestedBarangay) ? requestedBarangay : null;
+  const open = isUuid(requestedOpen) ? requestedOpen : null;
   const status: CityStatusFilter =
     // An own key, not `in`: [toString] is `in` every object.
     requestedStatus && Object.prototype.hasOwnProperty.call(CITY_STATUS_FILTERS, requestedStatus)
@@ -149,7 +154,7 @@ export async function getCityReports(
     .filter((b) => b.name && b.name.trim())
     .map((b) => ({ id: b.id, name: (b.name as string).trim() }));
 
-  const base = { barangays, barangay, status, windowDays: WINDOW_DAYS, limit: LIST_LIMIT };
+  const base = { barangays, barangay, status, open, windowDays: WINDOW_DAYS, limit: LIST_LIMIT };
 
   if (reportsRes.error || !reportsRes.data) {
     console.error("[city-reports] load failed", reportsRes.error?.code, reportsRes.error?.message);

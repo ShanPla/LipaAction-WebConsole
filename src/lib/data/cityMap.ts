@@ -36,10 +36,21 @@ export interface MapBarangayCount {
   unlocated: number;
 }
 
+// Open reports by priority, over every open report, the ones kept off the map
+// included: the paper's KPI cards above the map (A.5.2).
+export interface PriorityCounts {
+  Critical: number;
+  High: number;
+  Medium: number;
+  Low: number;
+  unscored: number;
+}
+
 export interface CityMapData {
   points: MapPoint[];
   barangays: MapBarangayCount[];
   totals: { open: number; mapped: number; withheld: number; discreet: number; unlocated: number };
+  byPriority: PriorityCounts;
   windowDays: number;
   limit: number;
   capped: boolean;
@@ -62,6 +73,7 @@ interface RawKeptOff {
   incident_barangay_id: string | null;
   identity_withheld: boolean | null;
   discreet_reporting: boolean | null;
+  priority_name: ReportPriority;
 }
 
 /**
@@ -96,7 +108,8 @@ export async function getCityMap(): Promise<CityMapData> {
       .limit(LIMIT),
     supabase
       .from("incident_reports")
-      .select("incident_barangay_id, identity_withheld, discreet_reporting")
+      // Priority for the counts above the map; still never geom.
+      .select("incident_barangay_id, identity_withheld, discreet_reporting, priority_name")
       .or("identity_withheld.is.null,identity_withheld.eq.true,discreet_reporting.is.true")
       .in("status", OPEN_STATUSES)
       .gte("created_at", since)
@@ -126,6 +139,7 @@ export async function getCityMap(): Promise<CityMapData> {
       points: [],
       barangays: [],
       totals: { open: 0, mapped: 0, withheld: 0, discreet: 0, unlocated: 0 },
+      byPriority: { Critical: 0, High: 0, Medium: 0, Low: 0, unscored: 0 },
       capped: false,
       loadFailed: true,
     };
@@ -183,6 +197,13 @@ export async function getCityMap(): Promise<CityMapData> {
     return (a.name ?? "").localeCompare(b.name ?? "");
   });
 
+  const byPriority: PriorityCounts = { Critical: 0, High: 0, Medium: 0, Low: 0, unscored: 0 };
+  for (const r of [...located, ...keptOff]) {
+    const tier = r.priority_name;
+    if (tier === "Critical" || tier === "High" || tier === "Medium" || tier === "Low") byPriority[tier] += 1;
+    else byPriority.unscored += 1;
+  }
+
   const mapped = points.length;
   const unlocated = located.length - mapped;
   return {
@@ -190,6 +211,7 @@ export async function getCityMap(): Promise<CityMapData> {
     points,
     barangays,
     totals: { open: located.length + keptOff.length, mapped, withheld, discreet: keptOff.length - withheld, unlocated },
+    byPriority,
     capped: located.length === LIMIT || keptOff.length === LIMIT,
     loadFailed: false,
   };

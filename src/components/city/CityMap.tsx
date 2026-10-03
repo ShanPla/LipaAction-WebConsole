@@ -1,9 +1,13 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Map as LeafletMap } from "leaflet";
 import { PriorityBadge } from "@/components/ui/Badge";
+import { Tile } from "@/components/ui/Tile";
+import { buttonClassName } from "@/components/ui/Button";
 import { statusLabel } from "@/components/queue/useReportReview";
 import { useT, type Translate } from "@/lib/i18n";
 // Type-only imports from a server-only module — erased at compile time.
@@ -29,16 +33,24 @@ const LEGEND_DOT: Record<string, string> = {
   Low: "bg-priority-low",
 };
 
+// The priority filter's value for a report the model hasn't scored.
+const UNSCORED = "unscored";
+
+// Where a dot or a row leads: the report's drawer in the city report list,
+// which records the opening in the access log like any other.
+const reportHref = (id: string) => `/city/reports?open=${id}`;
+
 /**
  * The city map: open reports from the last week as dots on OpenStreetMap,
  * with counts per barangay beside it and the same reports as a table below.
  *
- * Read-only, and opens no report: a dot's label names the category, the
- * priority, the stage, the barangay and the time, nothing the resident
- * wrote, so nothing here needs an access-log entry. A report whose resident
- * withheld their identity, or asked for discreet reporting, never reaches
- * this component with a position; it exists here only as a number in the
- * barangay counts.
+ * Read-only. A dot's label names the category, the priority, the stage, the
+ * barangay and the time, nothing the resident wrote, so the map itself needs
+ * no access-log entry; clicking a dot, or Details in the table, opens the
+ * report in the city report list, whose drawer records the opening. A report
+ * whose resident withheld their identity, or asked for discreet reporting,
+ * never reaches this component with a position; it exists here only as a
+ * number in the barangay counts and the priority counts.
  *
  * The table is the map's text equivalent: the dots can't be reached by
  * keyboard or read by a screen reader, so everything they show is listed.
@@ -46,6 +58,21 @@ const LEGEND_DOT: Record<string, string> = {
 export function CityMap({ data }: { data: CityMapData }) {
   const t = useT();
   const { points, barangays, totals, loadFailed } = data;
+  // The thesis's map filters (A.5.2), over the dots already loaded. The
+  // barangay and priority counts keep describing every open report.
+  const [priority, setPriority] = useState("all");
+  const [category, setCategory] = useState("all");
+  const categoryOptions = useMemo(() => [...new Set(points.map((p) => p.category))].sort(), [points]);
+  const shown = useMemo(
+    () =>
+      points.filter(
+        (p) =>
+          (priority === "all" || (p.priority ?? UNSCORED) === priority) &&
+          (category === "all" || p.category === category)
+      ),
+    [points, priority, category]
+  );
+  const byPriority = data.byPriority ?? { Critical: 0, High: 0, Medium: 0, Low: 0, unscored: 0 };
 
   return (
     <section aria-labelledby="city-map-title" className="mb-6">
@@ -55,6 +82,55 @@ export function CityMap({ data }: { data: CityMapData }) {
         </h2>
         <p className="text-xs text-ink-500">{t("city.map.intro", { days: data.windowDays })}</p>
       </div>
+
+      {!loadFailed && (
+        <div className="mb-3 flex flex-wrap gap-3">
+          <Tile label="Critical" value={byPriority.Critical} accent="critical" />
+          <Tile label="High" value={byPriority.High} />
+          <Tile label="Medium" value={byPriority.Medium} />
+          <Tile label="Low" value={byPriority.Low} />
+          <Tile label={t("priority.unscored")} value={byPriority.unscored} />
+        </div>
+      )}
+
+      {points.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <select
+            aria-label={t("history.filterPriority")}
+            value={priority}
+            onChange={(e) => setPriority(e.target.value)}
+            className="min-h-11 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
+          >
+            <option value="all">{t("history.allPriorities")}</option>
+            {["Critical", "High", "Medium", "Low"].map((tier) => (
+              <option key={tier} value={tier}>
+                {tier}
+              </option>
+            ))}
+            <option value={UNSCORED}>{t("priority.unscored")}</option>
+          </select>
+          {categoryOptions.length > 1 && (
+            <select
+              aria-label={t("history.filterCategory")}
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="min-h-11 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
+            >
+              <option value="all">{t("history.allCategories")}</option>
+              {categoryOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          )}
+          {shown.length !== points.length && (
+            <p role="status" className="text-xs text-ink-500">
+              {t("city.map.filteredNote", { shown: shown.length, total: points.length })}
+            </p>
+          )}
+        </div>
+      )}
 
       {!loadFailed && totals.open === 0 && (
         <div className="mb-4 rounded-card border border-ink-100 bg-white px-4 py-6 text-center shadow-panel">
@@ -69,7 +145,7 @@ export function CityMap({ data }: { data: CityMapData }) {
 
       <div className="mb-4 grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <MapCanvas points={points} />
+          <MapCanvas points={shown} />
         </div>
         <aside className="flex flex-col gap-4">
           <Legend />
@@ -77,7 +153,7 @@ export function CityMap({ data }: { data: CityMapData }) {
         </aside>
       </div>
 
-      {points.length > 0 && <PointList points={points} />}
+      {shown.length > 0 && <PointList points={shown} />}
 
       <p className="mt-3 text-xs text-ink-500">
         {t("city.map.footer", { time: formatTime(data.asOf) })}
@@ -93,6 +169,7 @@ export function CityMap({ data }: { data: CityMapData }) {
  */
 function MapCanvas({ points }: { points: MapPoint[] }) {
   const t = useT();
+  const router = useRouter();
   const container = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
 
@@ -128,6 +205,7 @@ function MapCanvas({ points }: { points: MapPoint[] }) {
             // An element, not an HTML string: Leaflet would parse a string as
             // markup, and these labels carry database values.
             .bindTooltip(dotLabel(p, t))
+            .on("click", () => router.push(reportHref(p.id)))
             .addTo(map);
         }
 
@@ -147,7 +225,7 @@ function MapCanvas({ points }: { points: MapPoint[] }) {
       cancelled = true;
       map?.remove();
     };
-  }, [points, t]);
+  }, [points, t, router]);
 
   return (
     // isolate: Leaflet stacks its panes at z-index 400 and up, which would
@@ -179,7 +257,10 @@ function dotLabel(p: MapPoint, t: Translate): HTMLElement {
   first.textContent = [p.category, priorityText(p, t), statusLabel(p.status, t)].join(" · ");
   const second = document.createElement("div");
   second.textContent = `${p.barangayName ?? t("city.unnamedBarangay")} · ${formatTimestamp(p.submittedAt)}`;
-  box.append(first, second);
+  const third = document.createElement("div");
+  third.style.fontStyle = "italic";
+  third.textContent = t("city.map.openHint");
+  box.append(first, second, third);
   return box;
 }
 
@@ -265,6 +346,9 @@ function PointList({ points }: { points: MapPoint[] }) {
               <th scope="col" className="px-4 py-2.5 font-semibold">{t("reports.col.category")}</th>
               <th scope="col" className="px-4 py-2.5 font-semibold">{t("drawer.priority")}</th>
               <th scope="col" className="px-4 py-2.5 font-semibold">{t("drawer.status")}</th>
+              <th scope="col" className="px-4 py-2.5 font-semibold">
+                <span className="sr-only">{t("city.reports.col.open")}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -277,6 +361,18 @@ function PointList({ points }: { points: MapPoint[] }) {
                   <PriorityBadge priority={p.priority} score={p.priorityScore} />
                 </td>
                 <td className="px-4 py-2.5 text-xs text-ink-700">{statusLabel(p.status, t)}</td>
+                <td className="px-4 py-2.5 text-right">
+                  {/* The keyboard's way into a report, as the dot is the
+                      pointer's. Opening it is recorded on the reports page. */}
+                  <Link
+                    href={reportHref(p.id)}
+                    prefetch={false}
+                    aria-label={t("row.viewDetails", { id: p.id })}
+                    className={buttonClassName("secondary", "sm")}
+                  >
+                    {t("city.reports.open")}
+                  </Link>
+                </td>
               </tr>
             ))}
           </tbody>

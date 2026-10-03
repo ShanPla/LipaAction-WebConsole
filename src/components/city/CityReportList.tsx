@@ -33,8 +33,19 @@ const STAGES: { value: CityStatusFilter; label: MessageKey }[] = [
 export function CityReportList({ data }: { data: CityReportsData }) {
   const t = useT();
   const router = useRouter();
-  const [openId, setOpenId] = useState<string | null>(null);
+  // A report named in the URL (from the city map) opens on arrival, if it is
+  // in this list. Its drawer records the opening like any other.
+  const [openId, setOpenId] = useState<string | null>(() =>
+    data.open && data.reports.some((r) => r.id === data.open) ? data.open : null
+  );
   const open = data.reports.find((r) => r.id === openId) ?? null;
+  const openMissing = data.open !== null && !data.loadFailed && !data.reports.some((r) => r.id === data.open);
+
+  function closeDrawer() {
+    setOpenId(null);
+    // Off the URL once closed, so a reload doesn't open it again unasked.
+    if (data.open) navigate({});
+  }
 
   function navigate(next: { barangay?: string | null; status?: CityStatusFilter }) {
     const barangay = next.barangay !== undefined ? next.barangay : data.barangay;
@@ -92,6 +103,12 @@ export function CityReportList({ data }: { data: CityReportsData }) {
           ))}
         </div>
       </div>
+
+      {openMissing && (
+        <p role="note" className="mb-3 text-xs text-ink-700">
+          {t("city.reports.openMissing", { days: data.windowDays, limit: data.limit })}
+        </p>
+      )}
 
       {data.reports.length === 0 ? (
         !data.loadFailed && (
@@ -161,7 +178,7 @@ export function CityReportList({ data }: { data: CityReportsData }) {
         {data.capped && ` ${t("city.reports.capped", { limit: data.limit })}`}
       </p>
 
-      {open && <CityReportDrawer report={open} onClose={() => setOpenId(null)} />}
+      {open && <CityReportDrawer report={open} onClose={closeDrawer} />}
     </section>
   );
 }
