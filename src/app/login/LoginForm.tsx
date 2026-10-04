@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { AuthError } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/Button";
@@ -47,6 +47,11 @@ function verifyErrorMessage(error: AuthError): string {
   return "That code is incorrect or has expired. Check the email, or request a new code below.";
 }
 
+// For a code that was handed over, not emailed: there is no email to check,
+// and asking for a new code here would cancel the one that was given.
+const GIVEN_CODE_REJECTED =
+  "That code is incorrect or has expired. Check it with the person who gave it to you, and that the email address above is yours.";
+
 function sendCodeErrorMessage(error: AuthError): string {
   if (isNetworkError(error)) return "Couldn't reach the sign-in service. Check your connection, then try again.";
   if (error.code === "over_email_send_rate_limit" || error.code === "over_request_rate_limit" || error.status === 429) {
@@ -65,6 +70,10 @@ export function LoginForm() {
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  // True when the official came to the code step with a code already in
+  // hand, so no code was sent and the copy must not say one was.
+  const [codeGiven, setCodeGiven] = useState(false);
+  const emailForm = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (searchParams.get("error") === "auth_callback_failed") {
@@ -115,7 +124,21 @@ export function LoginForm() {
     // showing that refusal told anyone typing into this public form which
     // emails belong to LipaAction officials. The code step's copy says a code
     // is on its way only if the address has an account.
+    setCodeGiven(false);
     setStatus("idle");
+    setStep("code");
+  }
+
+  // Straight to the code step, sending nothing. An administrator can make a
+  // sign-in code on the server and hand it to an official whose address the
+  // email service cannot reach. Requesting a code here first would fail for
+  // such an address, and would cancel the code that was handed over.
+  function handleHaveCode() {
+    // The browser's own check of the email box, with its own message.
+    if (emailForm.current && !emailForm.current.reportValidity()) return;
+    setCodeGiven(true);
+    setStatus("idle");
+    setErrorMessage("");
     setStep("code");
   }
 
@@ -145,7 +168,8 @@ export function LoginForm() {
       // Every failure used to read [incorrect] — including a dropped
       // connection or a rate limit, which sent officials retyping a code that
       // was right all along.
-      setErrorMessage(verifyErrorMessage(error));
+      // otp_expired is the answer to a wrong code and an expired one alike.
+      setErrorMessage(codeGiven && error.code === "otp_expired" ? GIVEN_CODE_REJECTED : verifyErrorMessage(error));
       return;
     }
 
@@ -179,7 +203,7 @@ export function LoginForm() {
         </div>
 
         {step === "email" && (
-          <form onSubmit={handleSendCode}>
+          <form ref={emailForm} onSubmit={handleSendCode}>
             <label className="mb-1.5 block text-xs font-medium text-ink-700" htmlFor="email">
               Work email
             </label>
@@ -216,6 +240,15 @@ export function LoginForm() {
               {status === "loading" ? "Sending code…" : "Send sign-in code"}
             </Button>
 
+            <button
+              type="button"
+              onClick={handleHaveCode}
+              disabled={status === "loading"}
+              className="mt-2 flex min-h-11 w-full items-center justify-center text-xs font-medium text-brand-600 hover:underline"
+            >
+              I already have a code
+            </button>
+
             <p className="mt-4 text-center text-[11px] text-ink-500">
               For barangay officials and city administrators only. Agency staff use the agency
               console, and residents use the LipaAction mobile app.
@@ -234,10 +267,17 @@ export function LoginForm() {
                 Worded conditionally on purpose: this step is reached for
                 every address, known or not, so the page can't be used to
                 test which emails belong to officials. */}
-            <p className="mb-3 text-xs text-ink-500">
-              If <span className="font-medium text-ink-700">{email}</span> has a console account,
-              a sign-in code is on its way. Type the code here — you don&apos;t need to click the link in the email.
-            </p>
+            {codeGiven ? (
+              <p className="mb-3 text-xs text-ink-500">
+                Signing in as <span className="font-medium text-ink-700">{email}</span>. Type the code you were
+                given. No new code is sent.
+              </p>
+            ) : (
+              <p className="mb-3 text-xs text-ink-500">
+                If <span className="font-medium text-ink-700">{email}</span> has a console account,
+                a sign-in code is on its way. Type the code here — you don&apos;t need to click the link in the email.
+              </p>
+            )}
 
             <label className="mb-1.5 block text-xs font-medium text-ink-700" htmlFor="code">
               Sign-in code
@@ -248,7 +288,7 @@ export function LoginForm() {
               inputMode="numeric"
               autoComplete="one-time-code"
               required
-              placeholder="Enter the code from your email"
+              placeholder={codeGiven ? "Enter the code you were given" : "Enter the code from your email"}
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
               aria-invalid={status === "error"}
@@ -277,7 +317,7 @@ export function LoginForm() {
               onClick={handleResend}
               className="mt-2 flex min-h-11 w-full items-center justify-center text-xs font-medium text-brand-600 hover:underline"
             >
-              Use a different email or resend code
+              {codeGiven ? "Use a different email" : "Use a different email or resend code"}
             </button>
           </form>
         )}

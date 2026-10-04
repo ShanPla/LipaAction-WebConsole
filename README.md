@@ -77,6 +77,9 @@ makes crosses the Pacific twice. If the Supabase project is ever moved, move thi
 
 Login is passwordless. An official enters their email, receives a one-time code, and
 types it back into the same tab. Clicking the link in the email works as a fallback.
+An official whose address the email service cannot reach can be given a code made by an
+administrator on the server: [I already have a code] on the sign-in page goes straight
+to the code box and sends nothing, so the code that was handed over stays valid.
 
 Only pre-provisioned accounts can sign in — the login form is configured with
 `shouldCreateUser: false`, so an unknown email address does not create an account.
