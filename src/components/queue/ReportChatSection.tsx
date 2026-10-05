@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
-import { MAX_MESSAGE_LENGTH, type SendOutcome } from "@/lib/reportChat";
+import { getChatLock } from "@/app/actions/reportChat";
+import { callAction } from "@/lib/callAction";
+import { MAX_MESSAGE_LENGTH, type ChatLock, type SendOutcome } from "@/lib/reportChat";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { useReportChat } from "./useReportChat";
@@ -14,6 +16,7 @@ const OUTCOME_KEY = {
   discreet: "chat.err.discreet",
   closed: "chat.err.closed",
   "rate-limited": "chat.err.rateLimited",
+  "daily-cap": "chat.err.dailyCap",
   "not-accepting": "chat.err.notAccepting",
   refused: "chat.err.refused",
   "no-barangay": "chat.err.noBarangay",
@@ -48,7 +51,22 @@ export function ReportChatSection({ reportId }: { reportId: string }) {
   // Set once a send says the thread no longer takes messages, so the
   // composer stops offering what the backend will refuse.
   const [locked, setLocked] = useState(false);
+  // When the thread locks, read up front so a closed report's composer is
+  // disabled before anyone types, and an upcoming lock is announced.
+  const [lock, setLock] = useState<ChatLock>({ kind: "unknown" });
   const endRef = useRef<HTMLLIElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void callAction(() => getChatLock(reportId)).then((result) => {
+      if (cancelled || !result) return;
+      setLock(result);
+      if (result.kind === "locked") setLocked(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [reportId]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView?.({ block: "end" });
@@ -79,6 +97,11 @@ export function ReportChatSection({ reportId }: { reportId: string }) {
         {t("chat.title")}
       </p>
       <p className="mb-2 text-xs text-ink-500">{t("chat.closeWarning")}</p>
+      {lock.kind === "locks" && (
+        <p role="note" className="mb-2 text-xs font-medium text-ink-700">
+          {t("chat.lockNotice", { date: formatTime(lock.at) })}
+        </p>
+      )}
 
       {state === "loading" && <p className="text-sm text-ink-500">{t("chat.loading")}</p>}
       {state === "failed" && <p className="text-sm text-priority-medium">{t("chat.loadFailed")}</p>}

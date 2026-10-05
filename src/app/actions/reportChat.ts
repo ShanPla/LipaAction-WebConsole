@@ -3,17 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { REPORT_CHAT_LIVE } from "@/lib/features";
-import { categoryLabel, isUuid } from "@/lib/utils";
+import { isUuid } from "@/lib/utils";
 import {
   MAX_MESSAGE_LENGTH,
-  PREVIOUS_REPORT_LIMIT,
-  type PreviousReport,
-  type ReporterContext,
+  type ChatLock,
   type SendOutcome,
 } from "@/lib/reportChat";
 
 /*
- * The report chat's writes, and the one read that must stay on the server.
+ * The report chat's writes, and the lock-time read.
  *
  * Every function here is a public POST endpoint, as in reports.ts: each
  * proves the shape of its input before any call, and each refuses before
@@ -47,6 +45,7 @@ function transportOutcome(status: number, error: { code?: string }): "unreachabl
  *
  * 55000 is the function's answer for a thread that can't take a message:
  * a discreet report (no thread at all), too many messages in ten minutes,
+ * 100 messages on the report in 24 hours (daily_cap),
  * and, with a change the backend owner has announced, a thread that closed
  * 3 days after its report was closed. That last token isn't fixed yet, so
  * any token naming [closed] reads as closed, and a 55000 with a token this
@@ -77,6 +76,7 @@ export async function sendReportMessage(reportId: string, body: string): Promise
   if (error.code === "22023") return "invalid";
   if (error.code === "55000") {
     if (token.includes("discreet")) return "discreet";
+    if (token.includes("daily_cap")) return "daily-cap";
     if (token.includes("rate_limited")) return "rate-limited";
     if (token.includes("closed")) return "closed";
     // Codes and ids only, never the message: it is authored in another repo.
@@ -128,113 +128,34 @@ export async function markReportMessagesRead(reportId: string): Promise<boolean>
 }
 
 /**
- * What the drawer's Reporter section shows: the reporter's home barangay
- * and trust score, and their earlier reports in this barangay.
+ * When a report's chat becomes read-only, so the drawer can lock the
+ * composer up front and show the date, instead of learning it from a
+ * refused send. report_chat_locks_at() returns NULL while the report is
+ * open, and a timestamp (3 days after it was closed) otherwise; a time in
+ * the past means the chat is already read-only.
  *
- * On the server, not in the browser, for one reason: it needs the report's
- * user_id to find the profile and the earlier reports, and that id must not
- * reach the page. The desk's role can read it (incident_reports has a
- * table-level grant), but no screen of this console carries it.
- *
- * A report filed with identity withheld stops at the first read. Nothing
- * about its reporter is looked up, and a missing flag counts as withheld,
- * as on the map.
- *
- * Everything is read under the official's own session, and nothing here
- * asks for more than row-level security already gives:
- *  - the profile is readable only when the reporter is registered in the
- *    official's barangay (profiles_select_barangay). When it isn't, the
- *    section says so. The name and the phone number are never selected.
- *  - the earlier reports are the ones filed in the same barangay as this
- *    report, which is the desk's own (ir_select_barangay). Reports the
- *    resident filed with identity withheld are left out of the list:
- *    listing them here would tie them to this reporter.
+ * Any failure answers "unknown": the composer stays usable and the send's
+ * own refusal still decides, so this read can never block a message the
+ * backend would accept.
  */
-export async function getReporterContext(reportId: string): Promise<ReporterContext> {
-  if (!REPORT_CHAT_LIVE || !isUuid(reportId)) return { kind: "unavailable" };
+export async function getChatLock(reportId: string): Promise<ChatLock> {
+  if (!REPORT_CHAT_LIVE || !isUuid(reportId)) return { kind: "unknown" };
 
   const supabase = createClient();
-  const { data: report, error: reportError } = await supabase
-    .from("incident_reports")
-    .select("id, user_id, identity_withheld, incident_barangay_id")
-    .eq("id", reportId)
-    .maybeSingle();
+  const { data, error, status } = await supabase.rpc("report_chat_locks_at", {
+    p_report_id: reportId,
+  });
 
-  if (reportError) {
-    console.error("[reporterContext] report read failed", reportError.code, reportError.message);
-    return { kind: "unavailable" };
+  if (error) {
+    console.error(
+      "[report_chat_locks_at] not read",
+      JSON.stringify({ report: reportId, status, code: error.code })
+    );
+    return { kind: "unknown" };
   }
-  if (!report) return { kind: "unavailable" };
-  if (report.identity_withheld !== false) return { kind: "withheld" };
-  if (!isUuid(report.user_id) || !isUuid(report.incident_barangay_id)) return { kind: "unavailable" };
-
-  const [profileRes, previousRes] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("trust_score, barangays ( name )")
-      .eq("id", report.user_id)
-      // profiles holds officials too.
-      .eq("role", "resident")
-      .maybeSingle(),
-    supabase
-      .from("incident_reports")
-      .select("id, category, status, created_at")
-      .eq("user_id", report.user_id)
-      .eq("incident_barangay_id", report.incident_barangay_id)
-      .eq("identity_withheld", false)
-      .neq("id", reportId)
-      .order("created_at", { ascending: false })
-      // One more than is shown: the only way to know more exist.
-      .limit(PREVIOUS_REPORT_LIMIT + 1),
-  ]);
-
-  if (profileRes.error) {
-    console.error("[reporterContext] profile read failed", profileRes.error.code, profileRes.error.message);
-  }
-  if (previousRes.error) {
-    console.error("[reporterContext] earlier reports failed", previousRes.error.code, previousRes.error.message);
-  }
-
-  const rawProfile = profileRes.error
-    ? null
-    : (profileRes.data as {
-        trust_score: number | string | null;
-        barangays: { name: string } | { name: string }[] | null;
-      } | null);
-
-  const rawPrevious = previousRes.error
-    ? null
-    : ((previousRes.data ?? []) as { id: string; category: string; status: string; created_at: string }[]);
-
-  return {
-    kind: "reporter",
-    profile: rawProfile
-      ? { homeBarangay: barangayName(rawProfile.barangays), trustScore: toScore(rawProfile.trust_score) }
-      : null,
-    previous: rawPrevious
-      ? rawPrevious.slice(0, PREVIOUS_REPORT_LIMIT).map(
-          (r): PreviousReport => ({
-            id: r.id,
-            category: categoryLabel(r.category),
-            status: r.status,
-            submittedAt: r.created_at,
-          })
-        )
-      : null,
-    previousCapped: rawPrevious !== null && rawPrevious.length > PREVIOUS_REPORT_LIMIT,
-  };
-}
-
-// Supabase's join comes back as an array even for a to-one relationship
-// unless the FK is marked unique (see requireBarangayOfficial).
-function barangayName(joined: { name: string } | { name: string }[] | null): string | null {
-  const name = Array.isArray(joined) ? joined[0]?.name : joined?.name;
-  return typeof name === "string" && name.trim().length > 0 ? name.trim() : null;
-}
-
-// PostgREST returns a numeric column as a number or as a string.
-function toScore(value: number | string | null): number | null {
-  if (value === null) return null;
-  const score = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(score) ? score : null;
+  if (data === null || data === undefined) return { kind: "open" };
+  if (typeof data !== "string") return { kind: "unknown" };
+  const at = new Date(data).getTime();
+  if (!Number.isFinite(at)) return { kind: "unknown" };
+  return at <= Date.now() ? { kind: "locked" } : { kind: "locks", at: new Date(at).toISOString() };
 }

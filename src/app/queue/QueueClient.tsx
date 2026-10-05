@@ -899,6 +899,7 @@ export function QueueClient({
 
       {selected && selectedReport && (
         <ReportDetailPanel
+          key={selected.id}
           report={selectedReport}
           onClose={() => setSelected(null)}
           onResolved={(verdict) =>

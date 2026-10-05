@@ -1839,6 +1839,14 @@ export const MESSAGES = {
     en: "Too many messages. Try again in a few minutes.",
     tl: "Masyadong maraming mensahe. Subukan muli pagkalipas ng ilang minuto.",
   },
+  "chat.err.dailyCap": {
+    en: "Daily limit reached: 100 messages per report in 24 hours. Try again tomorrow.",
+    tl: "Naabot na ang limitasyon sa isang araw: 100 mensahe bawat ulat sa loob ng 24 oras. Subukan muli bukas.",
+  },
+  "chat.lockNotice": {
+    en: "The report is closed. This chat becomes read-only on {date}.",
+    tl: "Sarado na ang ulat. Magiging read-only ang chat na ito sa {date}.",
+  },
   "chat.err.notAccepting": {
     en: "This chat is not taking messages.",
     tl: "Hindi tumatanggap ng mensahe ang chat na ito.",

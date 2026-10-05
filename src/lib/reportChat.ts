@@ -81,6 +81,7 @@ export type SendOutcome =
   | "discreet"
   | "closed"
   | "rate-limited"
+  | "daily-cap"
   | "not-accepting"
   | "refused"
   | "no-barangay"
@@ -89,35 +90,16 @@ export type SendOutcome =
   | "off"
   | "failed";
 
-/** One of the reporter's earlier reports, as the Reporter section lists it. */
-export interface PreviousReport {
-  id: string;
-  // Display form, as on a queue row.
-  category: string;
-  status: string;
-  submittedAt: string;
-}
-
-export const PREVIOUS_REPORT_LIMIT = 10;
-
 /**
- * What the drawer may show about who filed a report.
+ * When a report's chat becomes read-only (report_chat_locks_at).
  *
- * - withheld: filed with identity withheld. Nothing about the reporter is
- *   read for these, so nothing can be shown by mistake.
- * - unavailable: the read failed, or the chat isn't switched on.
- * - reporter: profile is null when this desk can't read it (row-level
- *   security lets a desk read only residents registered in its own
- *   barangay); previous is null when the list couldn't be read.
- *
- * Never a name, a phone number or the reporter's account id.
+ * - open: the report is still open; no lock time yet.
+ * - locks: it closes at `at` (ISO), 3 days after the report was closed.
+ * - locked: that time has passed.
+ * - unknown: the read failed; the send's own refusal decides.
  */
-export type ReporterContext =
-  | { kind: "withheld" }
-  | { kind: "unavailable" }
-  | {
-      kind: "reporter";
-      profile: { homeBarangay: string | null; trustScore: number | null } | null;
-      previous: PreviousReport[] | null;
-      previousCapped: boolean;
-    };
+export type ChatLock =
+  | { kind: "open" }
+  | { kind: "locks"; at: string }
+  | { kind: "locked" }
+  | { kind: "unknown" };
