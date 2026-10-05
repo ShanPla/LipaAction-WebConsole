@@ -160,7 +160,7 @@ export function CityReportDrawer({ report, onClose }: { report: CityReport; onCl
           <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
             {t("drawer.section.routing")}
           </p>
-          <AgencySection routing={report.routing} />
+          <AgencySection routing={report.routing} resolvedAtBarangay={report.resolvedAtBarangay} />
         </div>
 
         <footer className="sticky bottom-0 border-t border-ink-100 bg-white px-5 py-3">
@@ -171,8 +171,15 @@ export function CityReportDrawer({ report, onClose }: { report: CityReport; onCl
   );
 }
 
-function AgencySection({ routing }: { routing: AgencyRouting[] | null }) {
+function AgencySection({
+  routing,
+  resolvedAtBarangay,
+}: {
+  routing: AgencyRouting[] | null;
+  resolvedAtBarangay: boolean;
+}) {
   const t = useT();
+  if (resolvedAtBarangay) return <p className="text-sm text-ink-700">{t("city.drawer.resolvedAtBarangay")}</p>;
   if (routing === null) return <p className="text-sm text-ink-500">{t("city.drawer.agenciesUnavailable")}</p>;
   if (routing.length === 0) return <p className="text-sm text-ink-700">{t("city.drawer.notRouted")}</p>;
   const { current, earlier } = splitRouting(routing);

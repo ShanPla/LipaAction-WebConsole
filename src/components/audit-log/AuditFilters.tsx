@@ -11,7 +11,8 @@ import { useT, type MessageKey } from "@/lib/i18n";
  */
 export const AUDIT_FILTERS = {
   all: [],
-  decisions: ["report_validated", "report_rejected"],
+  // Resolving at the barangay is the desk's own decision on a report.
+  decisions: ["report_validated", "report_rejected", "report_resolved_at_barangay"],
   routings: ["report_routed_manual", "report_auto_routed"],
   openings: ["report_viewed"],
 } as const;

@@ -18,12 +18,16 @@ export const DUPLICATE_WRITEBACK_LIVE: boolean = true;
 
 /**
  * Whether the backend lets a barangay desk close an Other-report itself,
- * without sending it to an agency (resolve_report_at_barangay). The function
- * was asked of the backend owner on 2026-10-05 and doesn't exist yet, so the
- * [Resolve at barangay] button stays hidden and the action refuses: a button
- * that can only fail is worse than none. Set this to true on the day the
- * backend owner confirms the function is live, after checking its name,
- * arguments and error codes against resolveAtBarangay in
- * src/app/actions/reports.ts.
+ * without sending it to an agency (resolve_report_at_barangay). The backend
+ * owner agreed the contract on 2026-10-05 and is building it; until it is on
+ * prod the [Resolve at barangay] button stays hidden and the action refuses:
+ * a button that can only fail is worse than none.
+ *
+ * The flag also guards two reads. incident_reports.barangay_resolved_at and
+ * the barangay_resolutions table arrive with the same migration, and a
+ * select that names a column that doesn't exist yet fails the whole page,
+ * so Validation History and the city report list ask for them only when
+ * this is true. Set it to true on the day the backend owner says the
+ * migration is on prod, never before.
  */
 export const BARANGAY_RESOLVE_LIVE: boolean = false;

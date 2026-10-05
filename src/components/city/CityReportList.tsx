@@ -186,6 +186,8 @@ export function CityReportList({ data }: { data: CityReportsData }) {
 // [Bureau of Fire Protection +1 · Acknowledged], from the agencies holding
 // the report now; ones that sent it back before a re-route aren't counted.
 function agencySummary(r: CityReport, t: Translate): string {
+  // Before the agency rows: this report never had any, by design.
+  if (r.resolvedAtBarangay) return t("history.resolution.resolvedAtBarangay");
   if (r.routing === null) return t("city.reports.agenciesUnavailable");
   if (r.routing.length === 0) return "—";
   const { current } = splitRouting(r.routing);

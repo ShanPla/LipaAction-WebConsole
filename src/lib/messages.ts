@@ -869,6 +869,7 @@ export const MESSAGES = {
   "audit.action.report_auto_routed": { en: "Routed automatically", tl: "Awtomatikong naipasa" },
   "audit.action.routing_in_progress": { en: "In progress at an agency", tl: "Inaasikaso ng ahensya" },
   "audit.action.report_resolved_by_agencies": { en: "Resolved by agencies", tl: "Nalutas ng mga ahensya" },
+  "audit.action.report_resolved_at_barangay": { en: "Resolved at the barangay", tl: "Nalutas sa barangay" },
   "audit.action.report_returned_to_barangay": { en: "Returned to barangay", tl: "Ibinalik sa barangay" },
   // Shown only on the city access log, which reads the whole trail.
   "audit.action.report_status_changed": { en: "Status changed", tl: "Nabago ang status" },
@@ -1186,6 +1187,10 @@ export const MESSAGES = {
     tl: "Pagtingin lamang. Nasa barangay ang pagpapasya at pagpasa.",
   },
   "city.drawer.notRouted": { en: "Not routed to any agency.", tl: "Hindi pa naipasa sa anumang ahensya." },
+  "city.drawer.resolvedAtBarangay": {
+    en: "Resolved at the barangay. It was not sent to any agency.",
+    tl: "Nalutas sa barangay. Hindi ito ipinasa sa anumang ahensya.",
+  },
   "city.drawer.agenciesUnavailable": {
     en: "Couldn't load the agencies for this report.",
     tl: "Hindi ma-load ang mga ahensya para sa ulat na ito.",

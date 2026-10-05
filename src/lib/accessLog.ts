@@ -23,7 +23,7 @@ export type AccessLogKind = (typeof ACCESS_LOG_KINDS)[number];
  */
 export const KIND_ACTIONS: Record<"openings" | "decisions" | "routing" | "exports", readonly string[]> = {
   openings: ["report_viewed"],
-  decisions: ["report_validated", "report_rejected"],
+  decisions: ["report_validated", "report_rejected", "report_resolved_at_barangay"],
   routing: [
     "report_routed_manual",
     "report_auto_routed",

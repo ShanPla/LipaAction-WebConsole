@@ -486,13 +486,25 @@ async function sendAndRecord(
       }
     } else if (insertError) {
       console.error("[routeReport] insert failed", insertError.code, insertError.message);
-      return {
-        success: false,
-        message:
-          insertError.code === "42501"
-            ? "Not permitted — this report isn't in your barangay's scope."
-            : ROUTE_FAILED,
-      };
+      if (insertError.code !== "42501") return { success: false, message: ROUTE_FAILED };
+      // 42501 is also the answer when the report was resolved at the
+      // barangay between this action's first read and its insert: no agency
+      // row may be added to a resolved report. One read tells that apart
+      // from a report outside this barangay; a failed read keeps the
+      // general message.
+      const { data: now } = await supabase
+        .from("incident_reports")
+        .select("status")
+        .eq("id", reportId)
+        .maybeSingle();
+      if (now?.status === "resolved") {
+        revalidatePath("/queue");
+        return {
+          success: false,
+          message: "This report was just resolved at the barangay, so it wasn't sent to any agency.",
+        };
+      }
+      return { success: false, message: "Not permitted — this report isn't in your barangay's scope." };
     }
   }
 
@@ -624,15 +636,47 @@ async function insertRemainingIndividually(
 const RESOLVE_FAILED = "Something went wrong. The report wasn't resolved — try again.";
 
 /**
+ * Console-owned text for a refusal by resolve_report_at_barangay(), or null
+ * for one the contract doesn't name. Chosen by the token in details where
+ * there is one; a token this console hasn't seen falls back to its code.
+ */
+function resolveRefusal(error: { code?: string; details?: string | null }): string | null {
+  const token = error.details ?? "";
+  if (error.code === "22023") return "The note wasn't accepted. Write what was done, in 1,000 characters or fewer.";
+  if (error.code === "42501") {
+    if (token.includes("not_other_report")) return "Emergency reports go to an agency. Use Route to agency.";
+    if (token.includes("out_of_scope")) return NOT_IN_BARANGAY;
+    if (token.includes("no_barangay")) {
+      return "Your account isn't assigned to a barangay, so it can't resolve reports. Ask an administrator.";
+    }
+    return "Not permitted — your account can't resolve reports at the barangay.";
+  }
+  if (error.code === "55000") {
+    if (token.includes("agency_holds")) {
+      return "An agency already has this report, so it can't be resolved at the barangay.";
+    }
+    return "Someone else already routed or resolved this report.";
+  }
+  return null;
+}
+
+/**
  * Closes a validated Other-report at the barangay, without sending it to any
  * agency: the desk handled it itself. Emergencies never take this path; they
  * always go to an agency.
  *
  * The write is one backend function, resolve_report_at_barangay(p_report_id,
- * p_note), asked of the backend owner on 2026-10-05: it sets the status and
- * writes the audit row together, so there is no part-way state to finish, as
- * there is with routing's separate steps. Until it is live
- * BARANGAY_RESOLVE_LIVE is false and this action refuses before any read.
+ * p_note), agreed with the backend owner on 2026-10-05: in one transaction
+ * it locks the report, sets the status and a resolved-at marker, saves the
+ * note and writes the audit row, so there is no part-way state to finish,
+ * as there is with routing's separate steps. It returns 'resolved', or
+ * 'already_resolved' when the same official repeats the same note; both
+ * mean the report is resolved. Until it is live BARANGAY_RESOLVE_LIVE is
+ * false and this action refuses before any read.
+ *
+ * Its refusals carry a stable token in the error's details, and that token
+ * is what the answer is chosen by, never the message text. One difference
+ * from review_report(): a report in the wrong state is 55000, not 42501.
  *
  * The checks before the call repeat what the function is asked to enforce.
  * They are here so the official gets a specific answer (already routed, not
@@ -712,15 +756,12 @@ export async function resolveAtBarangay(reportId: string, note: string): Promise
   if (error) {
     const transport = transportMessage(httpStatus, error);
     if (transport) return { success: false, message: transport };
-    // The same codes as review_report(), as asked of the backend owner.
-    if (error.code === "42501") {
-      return { success: false, message: "Not permitted — wrong barangay, or the report can't be resolved here." };
-    }
-    if (error.code === "55000") {
-      revalidatePath("/queue");
-      return { success: false, message: "Someone else already routed or resolved this report." };
-    }
-    console.error("[resolveAtBarangay] refused", error.code, error.message);
+    const message = resolveRefusal(error);
+    // 55000: the report changed since the page loaded, so show where it
+    // stands now.
+    if (error.code === "55000") revalidatePath("/queue");
+    if (message) return { success: false, message };
+    console.error("[resolveAtBarangay] refused", error.code, error.details, error.message);
     return { success: false, message: RESOLVE_FAILED };
   }
 

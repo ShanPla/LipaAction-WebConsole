@@ -203,6 +203,10 @@ export interface ValidationRecord {
   // whole text, shown as it stands.
   reasonCode?: RejectReasonCode | null;
   reasonNote?: string;
+  // What the desk wrote when it resolved the report itself
+  // (barangay_resolutions.note). Absent on every other report, and when the
+  // notes couldn't be read.
+  resolutionNote?: string;
   // What became of a confirmed report after the desk (A.3.7's resolution
   // outcome), from its agency rows. null on a rejected report, which never
   // reaches an agency, and when the agency rows couldn't be read.
@@ -216,7 +220,8 @@ export interface ValidationRecord {
  */
 export type ResolutionStatus =
   | "notRouted"
-  // Closed by the desk itself, with no agency (resolveAtBarangay).
+  // Closed by the desk itself, with no agency (resolveAtBarangay): the
+  // report carries incident_reports.barangay_resolved_at.
   | "resolvedAtBarangay"
   | "withAgencies"
   | "resolved"

@@ -164,8 +164,13 @@ export async function getRecentAuditActivity(): Promise<RecentActivityData> {
 function summarise(entries: AuditLogEntry[]): AuditSummary {
   return {
     totalEvents: entries.length,
-    decisions: entries.filter((e) => e.action === "report_validated" || e.action === "report_rejected")
-      .length,
+    // The same three as the Decisions chip in AuditFilters.
+    decisions: entries.filter(
+      (e) =>
+        e.action === "report_validated" ||
+        e.action === "report_rejected" ||
+        e.action === "report_resolved_at_barangay"
+    ).length,
     // An automatic routing counts as a routing, as the Routings chip in
     // AuditFilters does (it can't be imported from there: that is a client
     // module and this one is server-only).

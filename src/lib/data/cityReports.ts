@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { categoryLabel, isUuid, startOfManilaDay } from "@/lib/utils";
+import { BARANGAY_RESOLVE_LIVE } from "@/lib/features";
 import type { AgencyRouting, ReportPriority } from "@/types";
 
 // Which reports a status filter keeps. Kept in step with PENDING_STATUSES in
@@ -45,6 +46,9 @@ export interface CityReport {
   // Primary agency first. null when agency_routing couldn't be read, which
   // is not the same as [not routed].
   routing: AgencyRouting[] | null;
+  // Closed by the barangay desk itself, with no agency. Such a report is
+  // resolved with no agency rows, which must not read as [not routed].
+  resolvedAtBarangay: boolean;
 }
 
 export interface CityReportsData {
@@ -66,6 +70,15 @@ export interface CityReportsData {
 // city-wide, and the first two lead to a person. Nothing below may add them.
 const REPORT_COLUMNS =
   "id, incident_barangay_id, category, description, priority_name, priority_score, confidence_band, status, entry_tier, identity_withheld, discreet_reporting, severity_self_rating, anyone_hurt, is_ongoing, safety_net_confirmation, has_photo, has_video, created_at, reviewed_at, sub_category";
+
+// barangay_resolved_at arrives with the resolve-at-barangay migration;
+// naming it before then would fail the list.
+// Typed as a plain string: the list is built at run time, and the client's
+// select parser only reads a literal. The rows are shaped by hand below
+// either way.
+const reportColumns: string = BARANGAY_RESOLVE_LIVE
+  ? `${REPORT_COLUMNS}, barangay_resolved_at`
+  : REPORT_COLUMNS;
 
 const WINDOW_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -95,6 +108,8 @@ interface RawReport {
   created_at: string;
   reviewed_at: string | null;
   sub_category: string | null;
+  // Only selected once the backend's migration is live (see the query).
+  barangay_resolved_at?: string | null;
 }
 
 interface RawRouting {
@@ -134,7 +149,7 @@ export async function getCityReports(
   const supabase = createClient();
   let query = supabase
     .from("incident_reports")
-    .select(REPORT_COLUMNS)
+    .select(reportColumns)
     .gte("created_at", since)
     .order("created_at", { ascending: false })
     .limit(LIST_LIMIT);
@@ -161,7 +176,7 @@ export async function getCityReports(
     return { ...base, reports: [], capped: false, loadFailed: true };
   }
 
-  const raw = reportsRes.data as RawReport[];
+  const raw = reportsRes.data as unknown as RawReport[];
   const routing = await loadRouting(raw.map((r) => r.id));
   const names = new Map(barangays.map((b) => [b.id, b.name]));
 
@@ -189,6 +204,7 @@ export async function getCityReports(
       submittedAt: r.created_at,
       reviewedAt: r.reviewed_at,
       routing: routing === null ? null : routing.get(r.id) ?? [],
+      resolvedAtBarangay: Boolean(r.barangay_resolved_at),
     })
   );
 

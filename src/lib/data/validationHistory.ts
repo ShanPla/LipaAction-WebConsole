@@ -1,9 +1,13 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { categoryLabel, displayName, parseRejectReason, reporterLabel } from "@/lib/utils";
+import { BARANGAY_RESOLVE_LIVE } from "@/lib/features";
 import type { ResolutionStatus, ValidationRecord, ValidationSummary } from "@/types";
 
 interface RawReviewedReport {
+  // Set by resolve_report_at_barangay() alone. Only selected once the
+  // backend's migration is live (see the query), so absent before then.
+  barangay_resolved_at?: string | null;
   id: string;
   category: string;
   priority_name: "Low" | "Medium" | "High" | "Critical" | null;
@@ -32,6 +36,11 @@ export interface ValidationHistoryData {
   resolutionUnavailable: boolean;
 }
 
+interface RawResolutionNote {
+  report_id: string;
+  note: string | null;
+}
+
 interface RawOutcome {
   incident_report_id: string;
   resolved_at: string | null;
@@ -39,6 +48,18 @@ interface RawOutcome {
 }
 
 const HISTORY_LIMIT = 50;
+
+const HISTORY_COLUMNS =
+  "id, category, priority_name, status, entry_tier, identity_withheld, reviewed_by, reviewed_at, review_reason, created_at";
+
+// barangay_resolved_at arrives with the resolve-at-barangay migration.
+// Naming it before then would fail the query, and so the page.
+// Typed as a plain string: the list is built at run time, and the client's
+// select parser only reads a literal. The rows are shaped by hand below
+// either way.
+const historyColumns: string = BARANGAY_RESOLVE_LIVE
+  ? `${HISTORY_COLUMNS}, barangay_resolved_at`
+  : HISTORY_COLUMNS;
 
 /**
  * Fetches this barangay's reviewed reports (validated — including those since
@@ -62,8 +83,7 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
   const { data, error } = await supabase
     .from("incident_reports")
     .select(
-      "id, category, priority_name, status, entry_tier, identity_withheld, reviewed_by, reviewed_at, review_reason, created_at"
-    )
+historyColumns)
     .eq("incident_barangay_id", barangayId)
     // A validated report doesn't stop being validated when it's routed or
     // resolved — it moves on. Filtering on status = 'validated' alone made
@@ -87,7 +107,7 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
     return failedValidationHistoryData();
   }
 
-  const rows = data as RawReviewedReport[];
+  const rows = data as unknown as RawReviewedReport[];
 
   const reviewerIds = [
     ...new Set(rows.map((r) => r.reviewed_by).filter((id): id is string => Boolean(id))),
@@ -95,8 +115,12 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
   // Confirmed reports only: a rejected one never reaches an agency.
   const confirmedIds = rows.filter((r) => r.status !== "rejected").map((r) => r.id);
 
-  // Both lookups at once. Each failure costs only its own column.
-  const [reviewersRes, outcomesRes] = await Promise.all([
+  // Reports the desk closed itself. Their notes sit in their own table,
+  // readable by this barangay's desk only.
+  const barangayResolvedIds = rows.filter((r) => r.barangay_resolved_at).map((r) => r.id);
+
+  // The lookups at once. Each failure costs only its own column.
+  const [reviewersRes, outcomesRes, notesRes] = await Promise.all([
     reviewerIds.length > 0
       ? supabase.from("profiles").select("id, full_name").in("id", reviewerIds)
       : Promise.resolve({ data: [] as { id: string; full_name: string | null }[], error: null }),
@@ -106,7 +130,20 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
           .select("incident_report_id, resolved_at, resolution_outcome")
           .in("incident_report_id", confirmedIds)
       : Promise.resolve({ data: [] as RawOutcome[], error: null }),
+    barangayResolvedIds.length > 0
+      ? supabase.from("barangay_resolutions").select("report_id, note").in("report_id", barangayResolvedIds)
+      : Promise.resolve({ data: [] as RawResolutionNote[], error: null }),
   ]);
+
+  // A failed read leaves the notes out; the outcome line still says the
+  // barangay resolved it, from the marker on the report.
+  if (notesRes.error) {
+    console.error("[validation-history] resolution notes failed", notesRes.error.code, notesRes.error.message);
+  }
+  const notesByReport = new Map<string, string>();
+  for (const n of (notesRes.data ?? []) as RawResolutionNote[]) {
+    if (n.note) notesByReport.set(n.report_id, n.note);
+  }
 
   const reviewerNames = new Map<string, string>();
   // If this lookup fails, the names are UNKNOWN, not absent. It used to drop
@@ -131,7 +168,13 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
   }
 
   const records = rows.map((r) =>
-    toValidationRecord(r, reviewerNames, namesUnavailable, resolutionUnavailable ? null : resolutionOf(r, outcomesByReport.get(r.id) ?? []))
+    toValidationRecord(
+      r,
+      reviewerNames,
+      namesUnavailable,
+      resolutionOf(r, resolutionUnavailable ? null : outcomesByReport.get(r.id) ?? []),
+      notesByReport.get(r.id)
+    )
   );
 
   const summary: ValidationSummary = {
@@ -151,15 +194,18 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
 }
 
 /**
- * What became of a confirmed report, from its agency rows: still held while
- * any agency hasn't closed it; once all have, the strongest outcome any of
- * them recorded, with [returned] only when every one sent it back.
+ * What became of a confirmed report. One the desk closed itself says so
+ * from the marker the backend sets (barangay_resolved_at), never inferred
+ * from a resolved report having no agency rows. Otherwise, from its agency
+ * rows: still held while any agency hasn't closed it; once all have, the
+ * strongest outcome any of them recorded, with [returned] only when every
+ * one sent it back. outcomes is null when the agency rows couldn't be read.
  */
-function resolutionOf(r: RawReviewedReport, outcomes: RawOutcome[]): ResolutionStatus | null {
+function resolutionOf(r: RawReviewedReport, outcomes: RawOutcome[] | null): ResolutionStatus | null {
   if (r.status === "rejected") return null;
-  // Resolved with no agency row: the desk closed it itself. Agencies resolve
-  // through their own rows, so a resolved report has none only on that path.
-  if (outcomes.length === 0) return r.status === "resolved" ? "resolvedAtBarangay" : "notRouted";
+  if (r.barangay_resolved_at) return "resolvedAtBarangay";
+  if (outcomes === null) return null;
+  if (outcomes.length === 0) return "notRouted";
   if (outcomes.some((o) => !o.resolved_at)) return "withAgencies";
   const has = (outcome: string) => outcomes.some((o) => o.resolution_outcome === outcome);
   if (has("resolved")) return "resolved";
@@ -172,7 +218,8 @@ function toValidationRecord(
   r: RawReviewedReport,
   reviewerNames: Map<string, string>,
   namesUnavailable: boolean,
-  resolution: ResolutionStatus | null
+  resolution: ResolutionStatus | null,
+  resolutionNote: string | undefined
 ): ValidationRecord {
   const parsedReason = r.review_reason ? parseRejectReason(r.review_reason) : null;
   return {
@@ -208,6 +255,7 @@ function toValidationRecord(
     reasonCode: parsedReason?.code ?? null,
     reasonNote: parsedReason?.note,
     resolution,
+    resolutionNote,
   };
 }
 

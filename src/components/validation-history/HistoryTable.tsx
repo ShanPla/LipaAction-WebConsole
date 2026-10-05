@@ -84,6 +84,12 @@ export function HistoryTable({
                 {record.resolution && (
                   <p className="mt-1 text-[11px] text-ink-500">{t(RESOLUTION_LABELS[record.resolution])}</p>
                 )}
+                {/* What the desk wrote when it closed the report itself. */}
+                {record.resolutionNote && (
+                  <p className="mt-1 max-w-[220px] whitespace-pre-wrap text-xs leading-snug text-ink-500">
+                    {record.resolutionNote}
+                  </p>
+                )}
                 {record.reason && (
                   <div className="mt-1 max-w-[220px] text-xs leading-snug text-ink-500">
                     {record.reasonCode && (
