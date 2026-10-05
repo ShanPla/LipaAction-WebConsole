@@ -20,6 +20,8 @@ import { useReportRouting } from "./useReportRouting";
 import { AgencyPickerModal } from "./AgencyPickerModal";
 import { useBarangayResolve } from "./useBarangayResolve";
 import { ResolveNoteModal } from "./ResolveNoteModal";
+import { ReportChatSection } from "./ReportChatSection";
+import { REPORT_CHAT_LIVE } from "@/lib/features";
 import {
   agencyProgressLabel,
   canResolveAtBarangay,
@@ -268,6 +270,10 @@ export function ReportDetailPanel({
               <RoutingSection state={routeState} />
             </>
           )}
+
+          {/* No thread exists for a discreet report (the backend refuses it),
+              so none is offered. Off entirely until REPORT_CHAT_LIVE. */}
+          {REPORT_CHAT_LIVE && !d.discreetReporting && <ReportChatSection reportId={report.id} />}
         </div>
 
         {/* Past review, the drawer's action is routing — the same one the
