@@ -261,6 +261,7 @@ export function ReportRow({
                 variant="primary"
                 size="sm"
                 data-validate-button
+                data-report-id={report.id}
                 disabled={isPending}
                 onClick={validate}
               >

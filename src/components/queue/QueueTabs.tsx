@@ -27,10 +27,14 @@ export function QueueTabs({
   tabs,
   activeTab,
   onChange,
+  trailing,
 }: {
   tabs: { id: QueueTabId; label: string; count: number }[];
   activeTab: QueueTabId;
   onChange: (id: QueueTabId) => void;
+  // Right-aligned control on the same row (the sort select). Kept outside
+  // the tablist so the tabs stay its only children.
+  trailing?: React.ReactNode;
 }) {
   const buttonRefs = useRef<Partial<Record<QueueTabId, HTMLButtonElement | null>>>({});
   const t = useT();
@@ -63,11 +67,8 @@ export function QueueTabs({
   }
 
   return (
-    <div
-      role="tablist"
-      aria-label={t("queue.tabsLabel")}
-      className="mb-4 flex items-center gap-1 border-b border-ink-100"
-    >
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 border-b border-ink-100">
+      <div role="tablist" aria-label={t("queue.tabsLabel")} className="flex flex-wrap items-center gap-1">
       {tabs.map((tab, index) => {
         const active = tab.id === activeTab;
         return (
@@ -109,6 +110,8 @@ export function QueueTabs({
           </button>
         );
       })}
+      </div>
+      {trailing}
     </div>
   );
 }

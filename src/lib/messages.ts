@@ -151,6 +151,18 @@ export const MESSAGES = {
     en: "Ranked by priority score, then longest waiting",
     tl: "Nakaayos ayon sa iskor ng priyoridad, saka sa pinakamatagal nang naghihintay",
   },
+  "queue.footer.rankedNewest": {
+    en: "Sorted by newest first",
+    tl: "Nakaayos ayon sa pinakabago muna",
+  },
+  "queue.footer.rankedOldest": {
+    en: "Sorted by oldest first",
+    tl: "Nakaayos ayon sa pinakaluma muna",
+  },
+  "queue.sort.label": { en: "Sort", tl: "Ayusin" },
+  "queue.sort.priority": { en: "Priority", tl: "Priyoridad" },
+  "queue.sort.newest": { en: "Newest first", tl: "Pinakabago muna" },
+  "queue.sort.oldest": { en: "Oldest first", tl: "Pinakaluma muna" },
   "queue.footer.live": {
     en: "Live — updates as reports change",
     tl: "Live — nag-a-update habang nagbabago ang mga ulat",

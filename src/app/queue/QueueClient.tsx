@@ -23,6 +23,7 @@ import { isReviewable, type Verdict } from "@/components/queue/useReportReview";
 import { everyAgencyReturned } from "@/components/queue/routing";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
+import { QUEUE_SORTS, isQueueSort, sortReports, type QueueSort } from "@/lib/queue/sortReports";
 import type { QueueReport, QueueTabId } from "@/types";
 import type { OfficialProfile } from "@/lib/auth";
 import type { QueueData } from "@/lib/data/queue";
@@ -200,6 +201,7 @@ export function QueueClient({
 }) {
   const [activeTab, setActiveTab] = useState<QueueTabId>("emergency");
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<QueueSort>("priority");
   const { showToast } = useToast();
   const t = useT();
 
@@ -210,13 +212,18 @@ export function QueueClient({
   const rows = useMemo(() => {
     const tabRows = queueData.queueByTab[activeTab];
     const trimmed = query.trim().toLowerCase();
-    if (trimmed.length === 0) return tabRows;
-    return tabRows.filter((report) =>
-      [report.id, report.category, report.summary].some((field) =>
-        field.toLowerCase().includes(trimmed)
-      )
-    );
-  }, [queueData.queueByTab, activeTab, query]);
+    const matched =
+      trimmed.length === 0
+        ? tabRows
+        : tabRows.filter((report) =>
+            [report.id, report.category, report.summary].some((field) =>
+              field.toLowerCase().includes(trimmed)
+            )
+          );
+    // Recent validated is ordered by review time server-side and has no sort
+    // control; the pending tabs sort client-side over what is already loaded.
+    return activeTab === "validated" ? matched : sortReports(matched, sort);
+  }, [queueData.queueByTab, activeTab, query, sort]);
 
   const unfilteredCount = queueData.queueByTab[activeTab].length;
   const isFiltered = query.trim().length > 0;
@@ -708,7 +715,21 @@ export function QueueClient({
    * to open a report for validation when no such view existed.
    */
   function handleValidateNext() {
-    const target = listRef.current?.querySelector<HTMLButtonElement>("[data-validate-button]");
+    // Always the top report in PRIORITY order, whatever the list is sorted
+    // by: a date sort must not let the desk skip an urgent report. Under the
+    // default sort the first button in the DOM already is that report.
+    const buttons = Array.from(
+      listRef.current?.querySelectorAll<HTMLButtonElement>("[data-validate-button]") ?? []
+    );
+    let target: HTMLButtonElement | undefined = buttons[0];
+    if (sort !== "priority" && buttons.length > 0) {
+      const byId = new Map(buttons.map((b) => [b.dataset.reportId, b]));
+      const top = sortReports(
+        rows.filter((r) => byId.has(r.id)),
+        "priority"
+      )[0];
+      target = (top && byId.get(top.id)) || buttons[0];
+    }
     if (!target) {
       showToast(t("queue.nothingToValidate"), "info");
       return;
@@ -802,7 +823,31 @@ export function QueueClient({
         />
       )}
 
-      <QueueTabs tabs={queueData.queueTabMeta} activeTab={activeTab} onChange={setActiveTab} />
+      <QueueTabs
+        tabs={queueData.queueTabMeta}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        trailing={
+          activeTab === "validated" ? null : (
+            <label className="flex items-center gap-2 text-xs font-medium text-ink-700">
+              {t("queue.sort.label")}
+              <select
+                value={sort}
+                onChange={(e) => {
+                  if (isQueueSort(e.target.value)) setSort(e.target.value);
+                }}
+                className="min-h-11 rounded-md border border-ink-100 bg-white px-3 text-sm text-ink-900 focus:border-brand-500 focus:outline-none"
+              >
+                {QUEUE_SORTS.map((s) => (
+                  <option key={s} value={s}>
+                    {t(`queue.sort.${s}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )
+        }
+      />
 
       {activeTab === "validated" && queueData.validatedUnavailable && (
         <p role="status" className="mb-2 text-xs text-priority-medium">
@@ -883,7 +928,13 @@ export function QueueClient({
             scores Critical, so without this the order looks arbitrary among
             identical red badges. Recent validated is ordered by review time,
             so it doesn't get the line. */}
-        {activeTab !== "validated" && ` · ${t("queue.footer.ranked")}`}
+        {activeTab !== "validated" && ` · ${t(
+          sort === "newest"
+            ? "queue.footer.rankedNewest"
+            : sort === "oldest"
+              ? "queue.footer.rankedOldest"
+              : "queue.footer.ranked"
+        )}`}
         {" · "}
         {freshness === "live" && t("queue.footer.live")}
         {freshness === "polling" && t("queue.footer.polling", { seconds: REFRESH_INTERVAL_MS / 1000 })}
