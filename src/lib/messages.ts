@@ -1770,6 +1770,107 @@ export const MESSAGES = {
     en: "Exported verification quality as CSV",
     tl: "Na-export ang kalidad ng pag-verify bilang CSV",
   },
+  // --- Report chat (behind REPORT_CHAT_LIVE) ---
+  "chat.title": {
+    en: "Message the reporter",
+    tl: "Mensahe sa nag-ulat",
+  },
+  "chat.closeWarning": {
+    en: "Text only. Three days after the report is closed, this chat becomes read-only. Messages are kept with the report.",
+    tl: "Teksto lamang. Tatlong araw matapos maisara ang ulat, magiging read-only ang chat na ito. Mananatili ang mga mensahe sa ulat.",
+  },
+  "chat.loading": {
+    en: "Loading messages...",
+    tl: "Kinukuha ang mga mensahe...",
+  },
+  "chat.loadFailed": {
+    en: "Messages could not be loaded.",
+    tl: "Hindi makuha ang mga mensahe.",
+  },
+  "chat.notLive": {
+    en: "Live updates are off; refreshing every 30 seconds.",
+    tl: "Walang live update; nagre-refresh bawat 30 segundo.",
+  },
+  "chat.capped": {
+    en: "Only the newest messages are shown.",
+    tl: "Ang pinakabagong mga mensahe lamang ang ipinapakita.",
+  },
+  "chat.empty": {
+    en: "No messages yet.",
+    tl: "Wala pang mensahe.",
+  },
+  "chat.fromDesk": {
+    en: "Barangay desk",
+    tl: "Barangay desk",
+  },
+  "chat.fromReporter": {
+    en: "Reporter",
+    tl: "Nag-ulat",
+  },
+  "chat.read": {
+    en: "Read",
+    tl: "Nabasa",
+  },
+  "chat.composerLabel": {
+    en: "Message to the reporter",
+    tl: "Mensahe sa nag-ulat",
+  },
+  "chat.send": {
+    en: "Send",
+    tl: "Ipadala",
+  },
+  "chat.readOnly": {
+    en: "This chat is read-only because the report was closed more than 3 days ago.",
+    tl: "Read-only na ang chat dahil mahigit 3 araw nang naisara ang ulat.",
+  },
+  "chat.err.invalid": {
+    en: "Write 1 to 1000 characters.",
+    tl: "Sumulat ng 1 hanggang 1000 character.",
+  },
+  "chat.err.discreet": {
+    en: "A discreet report has no chat.",
+    tl: "Walang chat ang discreet na ulat.",
+  },
+  "chat.err.closed": {
+    en: "This chat is read-only now.",
+    tl: "Read-only na ang chat na ito.",
+  },
+  "chat.err.rateLimited": {
+    en: "Too many messages. Try again in a few minutes.",
+    tl: "Masyadong maraming mensahe. Subukan muli pagkalipas ng ilang minuto.",
+  },
+  "chat.err.notAccepting": {
+    en: "This chat is not taking messages.",
+    tl: "Hindi tumatanggap ng mensahe ang chat na ito.",
+  },
+  "chat.err.refused": {
+    en: "You cannot message on this report.",
+    tl: "Hindi ka maaaring magpadala ng mensahe sa ulat na ito.",
+  },
+  "chat.err.noBarangay": {
+    en: "Your account has no barangay assigned.",
+    tl: "Walang nakatalagang barangay ang account mo.",
+  },
+  "chat.err.sessionExpired": {
+    en: "Your session expired. Sign in again.",
+    tl: "Nag-expire ang session mo. Mag-sign in muli.",
+  },
+  "chat.err.unreachable": {
+    en: "No connection. The message was not sent.",
+    tl: "Walang koneksyon. Hindi naipadala ang mensahe.",
+  },
+  "chat.err.off": {
+    en: "Chat is not switched on.",
+    tl: "Hindi pa naka-on ang chat.",
+  },
+  "chat.err.failed": {
+    en: "The message was not sent.",
+    tl: "Hindi naipadala ang mensahe.",
+  },
+  "chat.err.noAnswer": {
+    en: "No answer from the server. The message may or may not have been sent; check the thread.",
+    tl: "Walang sagot ang server. Maaaring naipadala o hindi; tingnan ang thread.",
+  },
 } satisfies Record<string, Entry>;
 
 export type MessageKey = keyof typeof MESSAGES;

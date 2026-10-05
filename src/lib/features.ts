@@ -34,3 +34,20 @@ export const DUPLICATE_WRITEBACK_LIVE: boolean = true;
  * to exist before the switch.
  */
 export const BARANGAY_RESOLVE_LIVE: boolean = true;
+
+/**
+ * Whether the backend has the report chat: the report_messages table and
+ * the functions send_report_message() and mark_report_messages_read(). The
+ * backend owner built them on 2026-10-06 and has not put them on prod yet.
+ *
+ * While this is false the console asks for none of it. The drawer shows no
+ * chat and no Reporter section, the queue reads no unread messages and
+ * joins no message channel, and the three actions in
+ * src/app/actions/reportChat.ts refuse before any read. A select on a table
+ * that doesn't exist yet fails, and a composer that can only fail is worse
+ * than none.
+ *
+ * Never set it to true before the backend owner confirms the migration is
+ * on prod.
+ */
+export const REPORT_CHAT_LIVE: boolean = false;
