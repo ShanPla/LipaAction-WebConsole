@@ -27,7 +27,10 @@ export const DUPLICATE_WRITEBACK_LIVE: boolean = true;
  * the barangay_resolutions table arrive with the same migration, and a
  * select that names a column that doesn't exist yet fails the whole page,
  * so Validation History and the city report list ask for them only when
- * this is true. Set it to true on the day the backend owner says the
- * migration is on prod, never before.
+ * this is true. Never set it to true before the migration is on prod.
+ *
+ * On since 2026-10-05: the backend owner confirmed the migration is on prod
+ * (17:33 Manila), and the column, the table and the function were each seen
+ * to exist before the switch.
  */
-export const BARANGAY_RESOLVE_LIVE: boolean = false;
+export const BARANGAY_RESOLVE_LIVE: boolean = true;
