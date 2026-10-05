@@ -8,6 +8,7 @@ export const NOT_SCORED = "not-scored";
 // The resolution outcomes, in the order a report moves through them.
 export const RESOLUTION_ORDER: ResolutionStatus[] = [
   "notRouted",
+  "resolvedAtBarangay",
   "withAgencies",
   "resolved",
   "confirmedFalse",
@@ -17,6 +18,7 @@ export const RESOLUTION_ORDER: ResolutionStatus[] = [
 
 export const RESOLUTION_LABELS: Record<ResolutionStatus, MessageKey> = {
   notRouted: "history.resolution.notRouted",
+  resolvedAtBarangay: "history.resolution.resolvedAtBarangay",
   withAgencies: "history.resolution.withAgencies",
   resolved: "history.resolution.resolved",
   confirmedFalse: "history.resolution.confirmedFalse",

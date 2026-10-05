@@ -10,7 +10,10 @@ import { useT } from "@/lib/i18n";
 import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
 import { useReportRouting } from "./useReportRouting";
 import { AgencyPickerModal } from "./AgencyPickerModal";
+import { useBarangayResolve } from "./useBarangayResolve";
+import { ResolveNoteModal } from "./ResolveNoteModal";
 import {
+  canResolveAtBarangay,
   downstreamSummary,
   everyAgencyReturned,
   isAutoRouted,
@@ -49,7 +52,20 @@ export function ReportRow({
   );
   const routing = useReportRouting(report.id);
   const state = routingState(report);
+  const barangayResolve = useBarangayResolve(report.id);
   const t = useT();
+  // One write at a time: routing and resolving both end the report's stay
+  // in this list, and neither can be undone.
+  const busy = routing.isPending || barangayResolve.isPending;
+
+  // An Other-report the desk may close itself, beside the routing action it
+  // can take instead.
+  const resolveButton = (variant: "primary" | "secondary") =>
+    canResolveAtBarangay(report, state) && (
+      <Button variant={variant} size="sm" disabled={busy} onClick={barangayResolve.openPrompt}>
+        {t("resolve.button")}
+      </Button>
+    );
 
   if (resolvedAs) {
     return (
@@ -69,14 +85,12 @@ export function ReportRow({
     switch (state.kind) {
       case "ready":
         return (
-          <Button
-            variant="primary"
-            size="sm"
-            disabled={routing.isPending}
-            onClick={routing.openConfirm}
-          >
-            {t("routing.routeToAgency")}
-          </Button>
+          <>
+            {resolveButton("secondary")}
+            <Button variant="primary" size="sm" disabled={busy} onClick={routing.openConfirm}>
+              {t("routing.routeToAgency")}
+            </Button>
+          </>
         );
       case "incomplete":
         return (
@@ -118,9 +132,13 @@ export function ReportRow({
         );
       case "no-mapping":
         return (
-          <span className="max-w-[14rem] text-right text-xs font-medium text-priority-medium">
-            {t("row.noMapping")}
-          </span>
+          <>
+            <span className="max-w-[14rem] text-right text-xs font-medium text-priority-medium">
+              {t("row.noMapping")}
+            </span>
+            {/* With no agency to send it to, resolving is the one action. */}
+            {resolveButton("primary")}
+          </>
         );
       case "unavailable":
         return (
@@ -271,6 +289,15 @@ export function ReportRow({
           busy={routing.isPending}
           onCancel={routing.cancelConfirm}
           onConfirm={routing.route}
+        />
+      )}
+
+      {barangayResolve.isPrompting && (
+        <ResolveNoteModal
+          reportId={report.id}
+          busy={barangayResolve.isPending}
+          onCancel={barangayResolve.cancelPrompt}
+          onConfirm={barangayResolve.resolve}
         />
       )}
 

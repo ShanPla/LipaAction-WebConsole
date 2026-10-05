@@ -15,3 +15,15 @@
  * and the first real clusters appeared in Inosluban.
  */
 export const DUPLICATE_WRITEBACK_LIVE: boolean = true;
+
+/**
+ * Whether the backend lets a barangay desk close an Other-report itself,
+ * without sending it to an agency (resolve_report_at_barangay). The function
+ * was asked of the backend owner on 2026-10-05 and doesn't exist yet, so the
+ * [Resolve at barangay] button stays hidden and the action refuses: a button
+ * that can only fail is worse than none. Set this to true on the day the
+ * backend owner confirms the function is live, after checking its name,
+ * arguments and error codes against resolveAtBarangay in
+ * src/app/actions/reports.ts.
+ */
+export const BARANGAY_RESOLVE_LIVE: boolean = false;

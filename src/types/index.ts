@@ -214,7 +214,15 @@ export interface ValidationRecord {
  * or closed — resolved, confirmed false or a duplicate by an agency, or sent
  * back as out of scope by every agency that had it.
  */
-export type ResolutionStatus = "notRouted" | "withAgencies" | "resolved" | "confirmedFalse" | "duplicate" | "returned";
+export type ResolutionStatus =
+  | "notRouted"
+  // Closed by the desk itself, with no agency (resolveAtBarangay).
+  | "resolvedAtBarangay"
+  | "withAgencies"
+  | "resolved"
+  | "confirmedFalse"
+  | "duplicate"
+  | "returned";
 
 export interface ValidationSummary {
   total: number;

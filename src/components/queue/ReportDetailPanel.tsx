@@ -18,8 +18,11 @@ import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useR
 import { LocationPreview } from "./LocationPreview";
 import { useReportRouting } from "./useReportRouting";
 import { AgencyPickerModal } from "./AgencyPickerModal";
+import { useBarangayResolve } from "./useBarangayResolve";
+import { ResolveNoteModal } from "./ResolveNoteModal";
 import {
   agencyProgressLabel,
+  canResolveAtBarangay,
   everyAgencyReturned,
   isAutoRouted,
   isReturnedToBarangay,
@@ -73,14 +76,19 @@ export function ReportDetailPanel({
   // report after each refresh, so this re-renders from the server's answer.
   const routing = useReportRouting(report.id);
   const routeState = routingState(report);
+  // Resolving at the barangay closes the drawer, like a decision: the report
+  // leaves every queue tab, and the copy held here would still offer the
+  // buttons.
+  const barangayResolve = useBarangayResolve(report.id, onClose);
+  const mayResolve = canResolveAtBarangay(report, routeState);
   const { showToast } = useToast();
   const t = useT();
 
   // Disabled while a prompt is stacked on top — the reject reason or the
   // routing confirmation — so Escape backs out one layer at a time, and
   // while a write is in flight.
-  const stacked = isRejecting || routing.isConfirming;
-  const writing = isPending || routing.isPending;
+  const stacked = isRejecting || routing.isConfirming || barangayResolve.isPrompting;
+  const writing = isPending || routing.isPending || barangayResolve.isPending;
   useDismissOnEscape(onClose, !stacked && !writing);
 
   // The scrim and the close button honour the same rule as Escape: not while
@@ -277,13 +285,20 @@ export function ReportDetailPanel({
               </Button>
             </>
           ) : routeState.kind === "ready" || routeState.kind === "incomplete" ? (
-            <Button
-              variant="primary"
-              size="sm"
-              disabled={routing.isPending}
-              onClick={routing.openConfirm}
-            >
-              {t(routeState.kind === "ready" ? "routing.routeToAgency" : "routing.finish")}
+            <>
+              {mayResolve && (
+                <Button variant="secondary" size="sm" disabled={writing} onClick={barangayResolve.openPrompt}>
+                  {t("resolve.button")}
+                </Button>
+              )}
+              <Button variant="primary" size="sm" disabled={writing} onClick={routing.openConfirm}>
+                {t(routeState.kind === "ready" ? "routing.routeToAgency" : "routing.finish")}
+              </Button>
+            </>
+          ) : mayResolve ? (
+            // No agency is mapped: resolving is the one action left.
+            <Button variant="primary" size="sm" disabled={writing} onClick={barangayResolve.openPrompt}>
+              {t("resolve.button")}
             </Button>
           ) : routeState.kind === "returned" && routeState.options && routeState.options.length > 0 ? (
             <Button
@@ -316,6 +331,15 @@ export function ReportDetailPanel({
           busy={routing.isPending}
           onCancel={routing.cancelConfirm}
           onConfirm={routing.route}
+        />
+      )}
+
+      {barangayResolve.isPrompting && (
+        <ResolveNoteModal
+          reportId={report.id}
+          busy={barangayResolve.isPending}
+          onCancel={barangayResolve.cancelPrompt}
+          onConfirm={barangayResolve.resolve}
         />
       )}
 

@@ -2,6 +2,7 @@ import type { AgencyRouting, QueueReport, RoutingOption, RoutingPlanEntry } from
 // Type-only: the helpers below take a Translate function rather than calling
 // a hook, so they stay plain functions the row and the drawer can share.
 import type { Translate } from "@/lib/i18n";
+import { BARANGAY_RESOLVE_LIVE } from "@/lib/features";
 
 /**
  * Where a report stands with respect to agencies — one reading shared by the
@@ -53,6 +54,20 @@ export function routingState(report: QueueReport): RoutingState {
   }
 
   return { kind: "none" };
+}
+
+/**
+ * Whether the desk may close this report itself instead of routing it: a
+ * validated Other-report that no agency has held. Emergencies always go to
+ * an agency, and a report with agency rows keeps its routing actions.
+ * resolveAtBarangay on the server checks the same things again.
+ */
+export function canResolveAtBarangay(report: QueueReport, state: RoutingState): boolean {
+  return (
+    BARANGAY_RESOLVE_LIVE &&
+    report.details.entryTier === "other_reports" &&
+    (state.kind === "ready" || state.kind === "no-mapping")
+  );
 }
 
 /**

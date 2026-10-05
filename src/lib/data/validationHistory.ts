@@ -157,7 +157,9 @@ export async function getValidationHistory(barangayId: string): Promise<Validati
  */
 function resolutionOf(r: RawReviewedReport, outcomes: RawOutcome[]): ResolutionStatus | null {
   if (r.status === "rejected") return null;
-  if (outcomes.length === 0) return "notRouted";
+  // Resolved with no agency row: the desk closed it itself. Agencies resolve
+  // through their own rows, so a resolved report has none only on that path.
+  if (outcomes.length === 0) return r.status === "resolved" ? "resolvedAtBarangay" : "notRouted";
   if (outcomes.some((o) => !o.resolved_at)) return "withAgencies";
   const has = (outcome: string) => outcomes.some((o) => o.resolution_outcome === outcome);
   if (has("resolved")) return "resolved";

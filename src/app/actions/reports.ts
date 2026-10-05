@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 // Constants live in utils, not here: a "use server" file may export only
 // async functions, and ReasonPromptModal needs the same limit.
 import { isUuid, MAX_REASON_LENGTH, parseRejectReason } from "@/lib/utils";
+import { BARANGAY_RESOLVE_LIVE } from "@/lib/features";
 
 /*
  * Every function in this file is a public POST endpoint. Its arguments are
@@ -618,6 +619,113 @@ async function insertRemainingIndividually(
 
   const after = await routedAgencyIds(supabase, reportId);
   return after !== null && [...plan.keys()].every((agencyId) => after.has(agencyId));
+}
+
+const RESOLVE_FAILED = "Something went wrong. The report wasn't resolved — try again.";
+
+/**
+ * Closes a validated Other-report at the barangay, without sending it to any
+ * agency: the desk handled it itself. Emergencies never take this path; they
+ * always go to an agency.
+ *
+ * The write is one backend function, resolve_report_at_barangay(p_report_id,
+ * p_note), asked of the backend owner on 2026-10-05: it sets the status and
+ * writes the audit row together, so there is no part-way state to finish, as
+ * there is with routing's separate steps. Until it is live
+ * BARANGAY_RESOLVE_LIVE is false and this action refuses before any read.
+ *
+ * The checks before the call repeat what the function is asked to enforce.
+ * They are here so the official gets a specific answer (already routed, not
+ * an Other-report) rather than one refusal code for all of them, and because
+ * this is a public endpoint whatever the buttons show.
+ *
+ * Only a report no agency has ever held. One that an agency holds, or that
+ * agencies sent back, keeps its routing actions: closing it here would hide
+ * what the agencies did with it behind [resolved].
+ */
+export async function resolveAtBarangay(reportId: string, note: string): Promise<UpdateResult> {
+  if (!BARANGAY_RESOLVE_LIVE) {
+    return { success: false, message: "Resolving at the barangay isn't available yet." };
+  }
+  if (!isUuid(reportId) || typeof note !== "string") {
+    return { success: false, message: INVALID_REQUEST };
+  }
+  const trimmed = note.trim();
+  if (trimmed.length === 0) {
+    return { success: false, message: "Add a note saying what was done." };
+  }
+  if (trimmed.length > MAX_REASON_LENGTH) {
+    return { success: false, message: `A note can be at most ${MAX_REASON_LENGTH} characters.` };
+  }
+
+  const supabase = createClient();
+
+  // As in routeReport: the session check only decides how to read an empty
+  // result.
+  const [session, reportRes] = await Promise.all([
+    sessionState(supabase),
+    supabase.from("incident_reports").select("id, status, entry_tier").eq("id", reportId).maybeSingle(),
+  ]);
+
+  if (session !== "active") {
+    return { success: false, message: SESSION_MESSAGE[session] };
+  }
+
+  const { data: report, error: reportError } = reportRes;
+  if (reportError) {
+    console.error("[resolveAtBarangay] read failed", reportError.code, reportError.message);
+    return { success: false, message: RESOLVE_FAILED };
+  }
+  if (!report) {
+    return { success: false, message: NOT_IN_BARANGAY };
+  }
+  if (report.status === "routed" || report.status === "resolved") {
+    revalidatePath("/queue");
+    return {
+      success: false,
+      message: "Already routed or resolved — another official may have handled it first.",
+    };
+  }
+  if (report.status !== "validated") {
+    return { success: false, message: "Only validated reports can be resolved at the barangay." };
+  }
+  if (report.entry_tier !== "other_reports") {
+    return { success: false, message: "Emergency reports go to an agency. Use Route to agency." };
+  }
+
+  const rows = await routingRows(supabase, reportId);
+  if (rows === null) return { success: false, message: RESOLVE_FAILED };
+  if (rows.length > 0) {
+    revalidatePath("/queue");
+    return {
+      success: false,
+      message:
+        "An agency already has this report, so it can't be resolved at the barangay. Refresh to see where it stands.",
+    };
+  }
+
+  const { error, status: httpStatus } = await supabase.rpc("resolve_report_at_barangay", {
+    p_report_id: reportId,
+    p_note: trimmed,
+  });
+
+  if (error) {
+    const transport = transportMessage(httpStatus, error);
+    if (transport) return { success: false, message: transport };
+    // The same codes as review_report(), as asked of the backend owner.
+    if (error.code === "42501") {
+      return { success: false, message: "Not permitted — wrong barangay, or the report can't be resolved here." };
+    }
+    if (error.code === "55000") {
+      revalidatePath("/queue");
+      return { success: false, message: "Someone else already routed or resolved this report." };
+    }
+    console.error("[resolveAtBarangay] refused", error.code, error.message);
+    return { success: false, message: RESOLVE_FAILED };
+  }
+
+  revalidatePath("/queue");
+  return { success: true };
 }
 
 export interface BulkValidateResult {
