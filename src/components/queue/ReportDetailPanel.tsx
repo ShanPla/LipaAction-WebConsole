@@ -22,6 +22,7 @@ import { useBarangayResolve } from "./useBarangayResolve";
 import { ResolveNoteModal } from "./ResolveNoteModal";
 import { ReportChatSection } from "./ReportChatSection";
 import { REPORT_CHAT_LIVE } from "@/lib/features";
+import { isChatOffered } from "@/lib/reportChat";
 import {
   agencyProgressLabel,
   canResolveAtBarangay,
@@ -59,10 +60,14 @@ export function ReportDetailPanel({
   report,
   onClose,
   onResolved,
+  focusChat = false,
 }: {
   report: QueueReport;
   onClose: () => void;
   onResolved: (verdict: Verdict) => void;
+  // Opened from a row's [Chat] button: land on the thread's composer. The
+  // footer's Validate and Reject are the same ones the row has.
+  focusChat?: boolean;
 }) {
   const { isPending, isRejecting, openReject, cancelReject, validate, reject } = useReportReview(
     report.id,
@@ -273,7 +278,9 @@ export function ReportDetailPanel({
 
           {/* No thread exists for a discreet report (the backend refuses it),
               so none is offered. Off entirely until REPORT_CHAT_LIVE. */}
-          {REPORT_CHAT_LIVE && !d.discreetReporting && <ReportChatSection reportId={report.id} />}
+          {isChatOffered(REPORT_CHAT_LIVE, d.discreetReporting) && (
+            <ReportChatSection reportId={report.id} focusComposer={focusChat} />
+          )}
         </div>
 
         {/* Past review, the drawer's action is routing — the same one the

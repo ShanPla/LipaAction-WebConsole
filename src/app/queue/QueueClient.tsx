@@ -233,6 +233,8 @@ export function QueueClient({
   // row or from the detail drawer, and both surfaces have to agree.
   const [resolved, setResolved] = useState<Record<string, Verdict>>({});
   const [selected, setSelected] = useState<QueueReport | null>(null);
+  // True when the drawer was opened from a row's [Chat] button.
+  const [chatFocus, setChatFocus] = useState(false);
 
   // The drawer shows the freshest copy of the selected report, not the
   // snapshot taken when it was clicked. Routing keeps the drawer open and
@@ -762,7 +764,14 @@ export function QueueClient({
         justArrived={arrivedIds.has(report.id)}
         now={now}
         onResolved={(verdict) => setResolved((prev) => ({ ...prev, [report.id]: verdict }))}
-        onOpenDetails={() => setSelected(report)}
+        onOpenDetails={() => {
+          setChatFocus(false);
+          setSelected(report);
+        }}
+        onOpenChat={() => {
+          setChatFocus(true);
+          setSelected(report);
+        }}
       />
     );
   }
@@ -952,6 +961,7 @@ export function QueueClient({
         <ReportDetailPanel
           key={selected.id}
           report={selectedReport}
+          focusChat={chatFocus}
           onClose={() => setSelected(null)}
           onResolved={(verdict) =>
             setResolved((prev) => ({ ...prev, [selected.id]: verdict }))

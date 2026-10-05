@@ -7,6 +7,8 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ReasonPromptModal } from "@/components/ui/ReasonPromptModal";
 import { cx, reportsAlreadyResolved, timeAgo } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
+import { REPORT_CHAT_LIVE } from "@/lib/features";
+import { isChatOffered } from "@/lib/reportChat";
 import { isReviewable, statusLabel, useReportReview, type Verdict } from "./useReportReview";
 import { useReportRouting } from "./useReportRouting";
 import { AgencyPickerModal } from "./AgencyPickerModal";
@@ -38,6 +40,7 @@ export function ReportRow({
   now = null,
   onResolved,
   onOpenDetails,
+  onOpenChat,
 }: {
   report: QueueReport;
   resolvedAs?: Verdict;
@@ -45,6 +48,9 @@ export function ReportRow({
   now?: number | null;
   onResolved: (verdict: Verdict) => void;
   onOpenDetails: () => void;
+  // Opens the detail drawer on the chat, where Validate and Reject are also
+  // offered.
+  onOpenChat: () => void;
 }) {
   const { isPending, isRejecting, openReject, cancelReject, validate, reject } = useReportReview(
     report.id,
@@ -252,6 +258,17 @@ export function ReportRow({
               decided report. */}
           {isReviewable(report.details.status) ? (
             <>
+              {isChatOffered(REPORT_CHAT_LIVE, report.details.discreetReporting) && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={onOpenChat}
+                  aria-label={t("row.chatLabel", { id: report.id })}
+                >
+                  {t("row.chat")}
+                </Button>
+              )}
               <Button variant="secondary" size="sm" disabled={isPending} onClick={openReject}>
                 {t("review.reject")}
               </Button>

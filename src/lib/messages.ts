@@ -1783,6 +1783,8 @@ export const MESSAGES = {
     tl: "Na-export ang kalidad ng pag-verify bilang CSV",
   },
   // --- Report chat (behind REPORT_CHAT_LIVE) ---
+  "row.chat": { en: "Chat", tl: "Chat" },
+  "row.chatLabel": { en: "Chat with the reporter of {id}", tl: "Makipag-chat sa nag-ulat ng {id}" },
   "chat.title": {
     en: "Message the reporter",
     tl: "Mensahe sa nag-ulat",
