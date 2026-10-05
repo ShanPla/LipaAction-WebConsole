@@ -1893,6 +1893,18 @@ export const MESSAGES = {
     en: "No answer from the server. The message may or may not have been sent; check the thread.",
     tl: "Walang sagot ang server. Maaaring naipadala o hindi; tingnan ang thread.",
   },
+  "popup.tabsLabel": {
+    en: "Report sections",
+    tl: "Mga seksyon ng ulat",
+  },
+  "popup.tab.chat": {
+    en: "Chat",
+    tl: "Chat",
+  },
+  "popup.tab.details": {
+    en: "Details",
+    tl: "Detalye",
+  },
 } satisfies Record<string, Entry>;
 
 export type MessageKey = keyof typeof MESSAGES;
