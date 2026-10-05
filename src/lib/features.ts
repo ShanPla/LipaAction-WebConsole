@@ -38,7 +38,7 @@ export const BARANGAY_RESOLVE_LIVE: boolean = true;
 /**
  * Whether the backend has the report chat: the report_messages table and
  * the functions send_report_message() and mark_report_messages_read(). The
- * backend owner built them on 2026-10-06 and has not put them on prod yet.
+ * backend owner built them on 2026-10-06 and put them on prod the same night (migration 20261124090000, checked read-only: RLS on, 3 policies).
  *
  * While this is false the console asks for none of it. The drawer shows no
  * chat and no Reporter section, the queue reads no unread messages and
@@ -50,4 +50,4 @@ export const BARANGAY_RESOLVE_LIVE: boolean = true;
  * Never set it to true before the backend owner confirms the migration is
  * on prod.
  */
-export const REPORT_CHAT_LIVE: boolean = false;
+export const REPORT_CHAT_LIVE: boolean = true;
