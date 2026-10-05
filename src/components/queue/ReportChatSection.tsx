@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { getChatLock } from "@/app/actions/reportChat";
 import { callAction } from "@/lib/callAction";
 import { MAX_MESSAGE_LENGTH, type ChatLock, type SendOutcome } from "@/lib/reportChat";
 import { Button } from "@/components/ui/Button";
+import { buildThreadItems } from "@/lib/chatThreadView";
 import { useToast } from "@/components/ui/Toast";
 import { useReportChat } from "./useReportChat";
 
@@ -37,20 +38,44 @@ function formatTime(iso: string): string {
   });
 }
 
+function formatClock(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    timeZone: "Asia/Manila",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function formatDay(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    timeZone: "Asia/Manila",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+// The composer grows with what is typed, up to about six lines, then scrolls.
+const COMPOSER_MAX_PX = 144;
+
 /**
- * The text thread between this report's reporter and the desk. Rendered by
- * the drawer only while REPORT_CHAT_LIVE is true, and never for a discreet
- * report (which has no thread): the drawer decides that, this component
- * assumes a thread may exist.
+ * The text thread between this report's reporter and the desk, laid out like
+ * a web messenger: the thread scrolls, the composer stays pinned under it.
+ * Rendered by the report pop-up only while REPORT_CHAT_LIVE is true, and
+ * never for a discreet report (which has no thread): the pop-up decides
+ * that, this component assumes a thread may exist.
+ *
+ * It fills the height its parent gives it (the pop-up's chat column), so it
+ * must sit in a flex column with a bounded height.
  */
 export function ReportChatSection({
   reportId,
   focusComposer = false,
 }: {
   reportId: string;
-  // Set when the drawer was opened from a row's [Chat] button: the official
-  // came to write, so the thread scrolls into view and the composer is
-  // focused.
+  // Set when the pop-up was opened from a row's [Chat] button: the official
+  // came to write, so the composer is focused.
   focusComposer?: boolean;
 }) {
   const t = useT();
@@ -63,16 +88,14 @@ export function ReportChatSection({
   // When the thread locks, read up front so a closed report's composer is
   // disabled before anyone types, and an upcoming lock is announced.
   const [lock, setLock] = useState<ChatLock>({ kind: "unknown" });
-  const endRef = useRef<HTMLLIElement>(null);
-  const sectionRef = useRef<HTMLElement>(null);
+  const threadRef = useRef<HTMLUListElement>(null);
   const draftRef = useRef<HTMLTextAreaElement>(null);
+  const items = useMemo(() => buildThreadItems(messages), [messages]);
 
-  // Runs before the drawer's focus trap claims the dialog itself, which only
+  // Runs before the dialog's focus trap claims the dialog itself, which only
   // does so when nothing inside has focus.
   useEffect(() => {
-    if (!focusComposer) return;
-    sectionRef.current?.scrollIntoView?.({ block: "start" });
-    draftRef.current?.focus({ preventScroll: true });
+    if (focusComposer) draftRef.current?.focus({ preventScroll: true });
   }, [focusComposer]);
 
   useEffect(() => {
@@ -87,9 +110,20 @@ export function ReportChatSection({
     };
   }, [reportId]);
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView?.({ block: "end" });
-  }, [messages.length]);
+  // Newest message in view. Scrolls the thread itself, not the page:
+  // scrollIntoView would also move the pop-up's other scroll areas.
+  useLayoutEffect(() => {
+    const el = threadRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages.length, state]);
+
+  // Auto-grow: reset, then fit to content.
+  useLayoutEffect(() => {
+    const el = draftRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, COMPOSER_MAX_PX)}px`;
+  }, [draft, locked]);
 
   const trimmed = draft.trim();
   const canSend = !isSending && !locked && trimmed.length > 0 && trimmed.length <= MAX_MESSAGE_LENGTH;
@@ -111,81 +145,105 @@ export function ReportChatSection({
   };
 
   return (
-    <section ref={sectionRef} aria-labelledby="report-chat-title" className="mt-5">
-      <p id="report-chat-title" className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-        {t("chat.title")}
-      </p>
-      <p className="mb-2 text-xs text-ink-500">{t("chat.closeWarning")}</p>
-      {lock.kind === "locks" && (
-        <p role="note" className="mb-2 text-xs font-medium text-ink-700">
-          {t("chat.lockNotice", { date: formatTime(lock.at) })}
+    <section aria-labelledby="report-chat-title" className="flex min-h-0 flex-1 flex-col">
+      <div className="border-b border-ink-100 px-4 py-2">
+        <p id="report-chat-title" className="text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+          {t("chat.title")}
         </p>
-      )}
+        <p className="text-xs text-ink-500">{t("chat.closeWarning")}</p>
+        {lock.kind === "locks" && (
+          <p role="note" className="mt-1 text-xs font-medium text-ink-700">
+            {t("chat.lockNotice", { date: formatTime(lock.at) })}
+          </p>
+        )}
+        {state === "ready" && !live && <p className="mt-1 text-xs text-ink-500">{t("chat.notLive")}</p>}
+        {state === "ready" && capped && <p className="mt-1 text-xs text-ink-500">{t("chat.capped")}</p>}
+      </div>
 
-      {state === "loading" && <p className="text-sm text-ink-500">{t("chat.loading")}</p>}
-      {state === "failed" && <p className="text-sm text-priority-medium">{t("chat.loadFailed")}</p>}
+      {state === "loading" && <p className="flex-1 px-4 py-3 text-sm text-ink-500">{t("chat.loading")}</p>}
+      {state === "failed" && <p className="flex-1 px-4 py-3 text-sm text-priority-medium">{t("chat.loadFailed")}</p>}
       {state === "ready" && (
-        <>
-          {!live && <p className="mb-2 text-xs text-ink-500">{t("chat.notLive")}</p>}
-          {capped && <p className="mb-2 text-xs text-ink-500">{t("chat.capped")}</p>}
-          <ul className="mb-3 flex max-h-72 flex-col gap-2 overflow-y-auto" aria-live="polite">
-            {messages.length === 0 && <li className="text-sm text-ink-500">{t("chat.empty")}</li>}
-            {messages.map((m) => {
-              const fromDesk = m.side === "barangay";
+        <ul
+          ref={threadRef}
+          className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-4 py-3"
+          aria-live="polite"
+        >
+          {messages.length === 0 && <li className="m-auto text-sm text-ink-500">{t("chat.empty")}</li>}
+          {items.map((item) => {
+            if (item.kind === "day") {
               return (
-                <li
-                  key={m.id}
-                  className={`max-w-[85%] rounded-md px-3 py-2 text-sm ${
-                    fromDesk ? "self-end bg-brand-500 text-white" : "self-start bg-ink-100 text-ink-900"
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                  <p className={`mt-1 text-[11px] ${fromDesk ? "text-white/80" : "text-ink-500"}`}>
-                    {t(fromDesk ? "chat.fromDesk" : "chat.fromReporter")} · {formatTime(m.createdAt)}
-                    {fromDesk && m.readAt ? ` · ${t("chat.read")}` : ""}
-                  </p>
+                <li key={`day-${item.key}`} className="my-3 text-center text-[11px] font-medium text-ink-500">
+                  {formatDay(item.iso)}
                 </li>
               );
-            })}
-            <li ref={endRef} aria-hidden="true" />
-          </ul>
-        </>
+            }
+            const { message: m, side, showMeta } = item;
+            const fromDesk = side === "desk";
+            return (
+              <li key={m.id} className={`flex flex-col ${fromDesk ? "items-end" : "items-start"} ${showMeta ? "mb-2" : ""}`}>
+                <p
+                  className={`max-w-[75%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${
+                    fromDesk ? "bg-brand-500 text-white" : "bg-ink-100 text-ink-900"
+                  }`}
+                >
+                  {m.body}
+                </p>
+                {showMeta && (
+                  <p className="mt-0.5 px-1 text-[11px] text-ink-500">
+                    {t(fromDesk ? "chat.fromDesk" : "chat.fromReporter")} · {formatClock(m.createdAt)}
+                    {fromDesk && m.readAt ? ` · ${t("chat.read")}` : ""}
+                  </p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
 
-      {locked ? (
-        <p role="note" className="text-sm text-ink-700">
-          {t("chat.readOnly")}
-        </p>
-      ) : (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void submit();
-          }}
-        >
-          <label htmlFor="report-chat-draft" className="sr-only">
-            {t("chat.composerLabel")}
-          </label>
-          <textarea
-            id="report-chat-draft"
-            ref={draftRef}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            maxLength={MAX_MESSAGE_LENGTH}
-            rows={3}
-            disabled={isSending}
-            className="w-full rounded-md border border-ink-100 px-3 py-2 text-sm text-ink-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
-          />
-          <div className="mt-1 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-ink-500">
+      <div className="border-t border-ink-100 px-4 py-3">
+        {locked ? (
+          <p role="note" className="text-sm text-ink-700">
+            {t("chat.readOnly")}
+          </p>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submit();
+            }}
+          >
+            <label htmlFor="report-chat-draft" className="sr-only">
+              {t("chat.composerLabel")}
+            </label>
+            <div className="flex items-end gap-2">
+              <textarea
+                id="report-chat-draft"
+                ref={draftRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  // Enter sends, Shift+Enter is a new line. Not while an
+                  // input method is composing: Enter then confirms the text.
+                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    void submit();
+                  }
+                }}
+                maxLength={MAX_MESSAGE_LENGTH}
+                rows={1}
+                readOnly={isSending}
+                className="min-h-11 flex-1 resize-none rounded-2xl border border-ink-100 bg-ink-50 px-4 py-2.5 text-sm text-ink-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+              <Button type="submit" variant="primary" size="sm" disabled={!canSend}>
+                {t("chat.send")}
+              </Button>
+            </div>
+            <p className="mt-1 text-right text-[11px] text-ink-500">
               {draft.length}/{MAX_MESSAGE_LENGTH}
-            </span>
-            <Button type="submit" variant="primary" size="sm" disabled={!canSend}>
-              {t("chat.send")}
-            </Button>
-          </div>
-        </form>
-      )}
+            </p>
+          </form>
+        )}
+      </div>
     </section>
   );
 }
