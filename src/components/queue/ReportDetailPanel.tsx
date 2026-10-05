@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { logReportView } from "@/app/actions/audit";
 import { callAction } from "@/lib/callAction";
 import { reportsAlreadyResolved } from "@/lib/utils";
@@ -37,6 +37,22 @@ import {
 } from "./routing";
 import type { AgencyRouting, QueueReport, RoutingPlanEntry } from "@/types";
 
+// Tailwind's md breakpoint: from here the chat and the details sit side by
+// side; below it they are two tabs.
+const DESKTOP_QUERY = "(min-width: 768px)";
+
+function useIsDesktop(): boolean {
+  return useSyncExternalStore(
+    (notify) => {
+      const mq = window.matchMedia(DESKTOP_QUERY);
+      mq.addEventListener("change", notify);
+      return () => mq.removeEventListener("change", notify);
+    },
+    () => window.matchMedia(DESKTOP_QUERY).matches,
+    () => true
+  );
+}
+
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-ink-100 py-2.5 last:border-0">
@@ -66,7 +82,7 @@ export function ReportDetailPanel({
   onClose: () => void;
   onResolved: (verdict: Verdict) => void;
   // Opened from a row's [Chat] button: land on the thread's composer. The
-  // footer's Validate and Reject are the same ones the row has.
+  // header's Validate and Reject are the same ones the row has.
   focusChat?: boolean;
 }) {
   const { isPending, isRejecting, openReject, cancelReject, validate, reject } = useReportReview(
@@ -77,7 +93,7 @@ export function ReportDetailPanel({
     }
   );
 
-  // Unlike a decision, routing leaves the drawer open: the report stays in
+  // Unlike a decision, routing leaves the pop-up open: the report stays in
   // this barangay's view afterwards, and the official can watch the agency
   // rows appear. QueueClient hands the drawer the freshest copy of the
   // report after each refresh, so this re-renders from the server's answer.
@@ -137,9 +153,164 @@ export function ReportDetailPanel({
   }, [report.id, showToast, t]);
 
   const d = report.details;
+  const chatOffered = isChatOffered(REPORT_CHAT_LIVE, d.discreetReporting);
+
+  // Below md the two columns become two tabs. Only the visible one is
+  // mounted: the chat marks the reporter's messages read when it appears, and
+  // that must mean an official can see them. A report that is still to be
+  // judged opens on Details, since that is what the decision rests on; the
+  // row's [Chat] button and every decided report open on Chat.
+  const isDesktop = useIsDesktop();
+  const [tab, setTab] = useState<"chat" | "details">(
+    focusChat || !isReviewable(d.status) ? "chat" : "details"
+  );
+  const showChat = chatOffered && (isDesktop || tab === "chat");
+  const showDetails = isDesktop || !chatOffered || tab === "details";
+
+  // The same actions the drawer's footer held, now at the top right: the
+  // review pair before a decision, routing and resolving after it. A decided
+  // report can't be reviewed again (review_report() refuses it with 42501), so
+  // review buttons never show for one.
+  const actions = isReviewable(d.status) ? (
+    <>
+      <Button variant="primary" size="sm" disabled={isPending} onClick={validate}>
+        {t("review.validate")}
+      </Button>
+      <Button variant="secondary" size="sm" disabled={isPending} onClick={openReject}>
+        {t("review.reject")}
+      </Button>
+    </>
+  ) : routeState.kind === "ready" || routeState.kind === "incomplete" ? (
+    <>
+      <Button variant="primary" size="sm" disabled={writing} onClick={routing.openConfirm}>
+        {t(routeState.kind === "ready" ? "routing.routeToAgency" : "routing.finish")}
+      </Button>
+      {mayResolve && (
+        <Button variant="secondary" size="sm" disabled={writing} onClick={barangayResolve.openPrompt}>
+          {t("resolve.button")}
+        </Button>
+      )}
+    </>
+  ) : mayResolve ? (
+    // No agency is mapped: resolving is the one action left.
+    <Button variant="primary" size="sm" disabled={writing} onClick={barangayResolve.openPrompt}>
+      {t("resolve.button")}
+    </Button>
+  ) : routeState.kind === "returned" && routeState.options && routeState.options.length > 0 ? (
+    <Button variant="primary" size="sm" disabled={routing.isPending} onClick={routing.openConfirm}>
+      {t("routing.routeElsewhere")}
+    </Button>
+  ) : (
+    <p className="max-w-xs text-xs text-ink-500">{footerNote(routeState, t)}</p>
+  );
+
+  const details = (
+    <>
+      {/* First thing in the details, above everything the official reads
+          before acting: discreet reporting is always on for domestic
+          violence, where a call or a text can reach the wrong person. The
+          backend owner asked for this wording (2026-09-29). */}
+      {d.discreetReporting && (
+        <p
+          role="note"
+          className="mb-4 flex items-start gap-2 rounded-md border border-priority-medium/30 bg-priority-mediumBg px-3 py-2 text-sm font-semibold text-priority-medium"
+        >
+          <Icon name="no-contact" className="mt-0.5" />
+          {t("drawer.discreetBanner")}
+        </p>
+      )}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <PriorityBadge priority={report.priority} />
+        <span className="text-xs text-ink-500">{t(`drawer.tier.${d.entryTier}`)}</span>
+        {isReviewable(d.status) && reportsAlreadyResolved(d.safetyNetConfirmation) && (
+          <span className="rounded-full bg-priority-mediumBg px-2 py-0.5 text-[11px] font-semibold text-priority-medium">
+            {t("row.alreadyResolved")}
+          </span>
+        )}
+      </div>
+
+      <p className="mb-5 whitespace-pre-wrap text-sm text-ink-900">
+        {d.description ?? <span className="text-ink-500">{t("drawer.noDescription")}</span>}
+      </p>
+
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+        {t("drawer.section.reporterSaid")}
+      </p>
+      <div className="mb-5">
+        <Row label={t("drawer.severity")} value={d.severitySelfRating ?? <NotProvided />} />
+        <Row label={t("drawer.anyoneHurt")} value={d.anyoneHurt ?? <NotProvided />} />
+        <Row
+          label={t("drawer.ongoing")}
+          value={d.isOngoing === null ? <NotProvided /> : t(d.isOngoing ? "drawer.yes" : "drawer.no")}
+        />
+        <Row label={t("drawer.safetyNet")} value={d.safetyNetConfirmation ?? <NotProvided />} />
+        <Row label={t("drawer.attachments")} value={attachmentSummary(d.hasPhoto, d.hasVideo, t)} />
+      </div>
+
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+        {t("drawer.section.triage")}
+      </p>
+      <div className="mb-5">
+        <Row
+          label={t("drawer.priority")}
+          value={
+            report.priority === null
+              ? <span className="text-ink-500">{t("drawer.notScoredYet")}</span>
+              : d.priorityScore === null
+                ? report.priority
+                : t("drawer.score", { priority: report.priority, score: d.priorityScore })
+          }
+        />
+        {/* Only Other-reports carry one; an empty row on every emergency
+            would say nothing. */}
+        {d.subCategory && <Row label={t("drawer.subCategory")} value={d.subCategory} />}
+        <Row label={t("drawer.confidence")} value={d.confidenceBand ?? <NotProvided />} />
+        <Row label={t("drawer.status")} value={statusLabel(d.status, t)} />
+        {d.clusterId && (
+          <Row label={t("drawer.cluster")} value={<span className="font-mono text-xs">{d.clusterId}</span>} />
+        )}
+      </div>
+
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+        {t("drawer.section.submission")}
+      </p>
+      <div>
+        <Row label={t("field.reporter")} value={<ReporterChip reporter={report.reporter} />} />
+        <Row label={t("drawer.submitted")} value={formatTimestamp(d.submittedAt)} />
+      </div>
+
+      {/* A map, not an address: incident_reports stores a point (geom),
+          and nothing decodes it into street text. Never shown for an
+          identity-withheld or discreet report. */}
+      <p className="mb-1.5 mt-5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+        {t("drawer.section.location")}
+      </p>
+      <LocationPreview position={d.position} />
+
+      {/* Before the decision: where this report would go once validated.
+          Read-only — routing stays a separate, confirmed step. */}
+      {isReviewable(d.status) && (
+        <>
+          <p className="mb-1.5 mt-5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+            {t("drawer.section.routing")}
+          </p>
+          <RoutingPreview plan={d.routingPlan} routing={d.routing} />
+        </>
+      )}
+
+      {routeState.kind !== "none" && (
+        <>
+          <p className="mb-1.5 mt-5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+            {t("drawer.section.routing")}
+          </p>
+          <RoutingSection state={routeState} />
+        </>
+      )}
+    </>
+  );
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center md:items-center md:p-6">
       <button
         aria-label={t("drawer.close")}
         className="absolute inset-0 bg-ink-900/40 motion-safe:animate-scrimIn"
@@ -152,180 +323,65 @@ export function ReportDetailPanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-detail-title"
-        // Slides in from the edge it occupies, so it reads as a panel over
-        // the queue rather than a new page.
-        className="relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-ink-100 bg-white shadow-panel focus:outline-none motion-safe:animate-drawerIn"
+        // A centred pop-up, not an edge drawer: the report and its thread sit
+        // side by side the way a web messenger does. Full screen below md.
+        className="relative flex h-full max-h-full w-full flex-col overflow-hidden bg-white shadow-panel focus:outline-none md:h-[85vh] md:max-w-[1200px] md:rounded-card"
       >
-        <header className="sticky top-0 flex items-start justify-between gap-3 border-b border-ink-100 bg-white px-5 py-4">
+        <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-ink-100 bg-white px-4 py-3 md:px-5">
           <div className="min-w-0">
             <p id="report-detail-title" className="text-sm font-semibold text-ink-900">
               {report.category}
             </p>
             <p className="truncate font-mono text-xs text-ink-500">{report.id}</p>
           </div>
-          <Button variant="ghost" size="sm" className="min-w-11" onClick={closeUnlessWriting} aria-label={t("common.close")}>
-            <Icon name="close" />
-          </Button>
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            {actions}
+            <Button variant="ghost" size="sm" className="min-w-11" onClick={closeUnlessWriting} aria-label={t("common.close")}>
+              <Icon name="close" />
+            </Button>
+          </div>
         </header>
 
-        <div className="flex-1 px-5 py-4">
-          {/* First thing in the drawer, above everything the official reads
-              before acting: discreet reporting is always on for domestic
-              violence, where a call or a text can reach the wrong person. The
-              backend owner asked for this wording (2026-09-29). */}
-          {d.discreetReporting && (
-            <p
-              role="note"
-              className="mb-4 flex items-start gap-2 rounded-md border border-priority-medium/30 bg-priority-mediumBg px-3 py-2 text-sm font-semibold text-priority-medium"
-            >
-              <Icon name="no-contact" className="mt-0.5" />
-              {t("drawer.discreetBanner")}
-            </p>
+        {chatOffered && (
+          <div role="tablist" aria-label={t("popup.tabsLabel")} className="flex border-b border-ink-100 md:hidden">
+            {(["chat", "details"] as const).map((id) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                onClick={() => setTab(id)}
+                className={`min-h-11 flex-1 text-sm font-medium ${
+                  tab === id ? "border-b-2 border-brand-500 text-ink-900" : "text-ink-500"
+                }`}
+              >
+                {t(id === "chat" ? "popup.tab.chat" : "popup.tab.details")}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="flex min-h-0 flex-1">
+          {showChat && (
+            <div className="flex min-w-0 flex-1 flex-col">
+              <ReportChatSection reportId={report.id} focusComposer={focusChat} />
+            </div>
           )}
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <PriorityBadge priority={report.priority} />
-            <span className="text-xs text-ink-500">{t(`drawer.tier.${d.entryTier}`)}</span>
-            {isReviewable(d.status) && reportsAlreadyResolved(d.safetyNetConfirmation) && (
-              <span className="rounded-full bg-priority-mediumBg px-2 py-0.5 text-[11px] font-semibold text-priority-medium">
-                {t("row.alreadyResolved")}
-              </span>
-            )}
-          </div>
-
-          <p className="mb-5 whitespace-pre-wrap text-sm text-ink-900">
-            {d.description ?? <span className="text-ink-500">{t("drawer.noDescription")}</span>}
-          </p>
-
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-            {t("drawer.section.reporterSaid")}
-          </p>
-          <div className="mb-5">
-            <Row label={t("drawer.severity")} value={d.severitySelfRating ?? <NotProvided />} />
-            <Row label={t("drawer.anyoneHurt")} value={d.anyoneHurt ?? <NotProvided />} />
-            <Row
-              label={t("drawer.ongoing")}
-              value={d.isOngoing === null ? <NotProvided /> : t(d.isOngoing ? "drawer.yes" : "drawer.no")}
-            />
-            <Row label={t("drawer.safetyNet")} value={d.safetyNetConfirmation ?? <NotProvided />} />
-            <Row
-              label={t("drawer.attachments")}
-              value={attachmentSummary(d.hasPhoto, d.hasVideo, t)}
-            />
-          </div>
-
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-            {t("drawer.section.triage")}
-          </p>
-          <div className="mb-5">
-            <Row
-              label={t("drawer.priority")}
-              value={
-                report.priority === null
-                  ? <span className="text-ink-500">{t("drawer.notScoredYet")}</span>
-                  : d.priorityScore === null
-                    ? report.priority
-                    : t("drawer.score", { priority: report.priority, score: d.priorityScore })
+          {showDetails && (
+            <div
+              className={
+                chatOffered
+                  ? "min-w-0 flex-1 overflow-y-auto px-5 py-4 md:w-[380px] md:flex-none md:border-l md:border-ink-100"
+                  : "min-w-0 flex-1 overflow-y-auto px-5 py-4"
               }
-            />
-            {/* Only Other-reports carry one; an empty row on every emergency
-                would say nothing. */}
-            {d.subCategory && <Row label={t("drawer.subCategory")} value={d.subCategory} />}
-            <Row label={t("drawer.confidence")} value={d.confidenceBand ?? <NotProvided />} />
-            <Row label={t("drawer.status")} value={statusLabel(d.status, t)} />
-            {d.clusterId && (
-              <Row
-                label={t("drawer.cluster")}
-                value={<span className="font-mono text-xs">{d.clusterId}</span>}
-              />
-            )}
-          </div>
-
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-            {t("drawer.section.submission")}
-          </p>
-          <div>
-            <Row label={t("field.reporter")} value={<ReporterChip reporter={report.reporter} />} />
-            <Row label={t("drawer.submitted")} value={formatTimestamp(d.submittedAt)} />
-          </div>
-
-          {/* A map, not an address: incident_reports stores a point (geom),
-              and nothing decodes it into street text. Never shown for an
-              identity-withheld or discreet report. */}
-          <p className="mb-1.5 mt-5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-            {t("drawer.section.location")}
-          </p>
-          <LocationPreview position={d.position} />
-
-          {/* Before the decision: where this report would go once validated.
-              Read-only — routing stays a separate, confirmed step. */}
-          {isReviewable(d.status) && (
-            <>
-              <p className="mb-1.5 mt-5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-                {t("drawer.section.routing")}
-              </p>
-              <RoutingPreview plan={d.routingPlan} routing={d.routing} />
-            </>
-          )}
-
-          {routeState.kind !== "none" && (
-            <>
-              <p className="mb-1.5 mt-5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-                {t("drawer.section.routing")}
-              </p>
-              <RoutingSection state={routeState} />
-            </>
-          )}
-
-          {/* No thread exists for a discreet report (the backend refuses it),
-              so none is offered. Off entirely until REPORT_CHAT_LIVE. */}
-          {isChatOffered(REPORT_CHAT_LIVE, d.discreetReporting) && (
-            <ReportChatSection reportId={report.id} focusComposer={focusChat} />
+            >
+              {/* No thread exists for a discreet report (the backend refuses
+                  it), and none is offered while REPORT_CHAT_LIVE is off:
+                  details alone, kept to a readable width. */}
+              <div className={chatOffered ? "" : "mx-auto max-w-2xl"}>{details}</div>
+            </div>
           )}
         </div>
-
-        {/* Past review, the drawer's action is routing — the same one the
-            row offers. A decided report can't be reviewed again
-            (review_report() refuses it with 42501), so review buttons never
-            show here for one. */}
-        <footer className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-ink-100 bg-white px-5 py-3">
-          {isReviewable(d.status) ? (
-            <>
-              <Button variant="secondary" size="sm" disabled={isPending} onClick={openReject}>
-                {t("review.reject")}
-              </Button>
-              <Button variant="primary" size="sm" disabled={isPending} onClick={validate}>
-                {t("review.validate")}
-              </Button>
-            </>
-          ) : routeState.kind === "ready" || routeState.kind === "incomplete" ? (
-            <>
-              {mayResolve && (
-                <Button variant="secondary" size="sm" disabled={writing} onClick={barangayResolve.openPrompt}>
-                  {t("resolve.button")}
-                </Button>
-              )}
-              <Button variant="primary" size="sm" disabled={writing} onClick={routing.openConfirm}>
-                {t(routeState.kind === "ready" ? "routing.routeToAgency" : "routing.finish")}
-              </Button>
-            </>
-          ) : mayResolve ? (
-            // No agency is mapped: resolving is the one action left.
-            <Button variant="primary" size="sm" disabled={writing} onClick={barangayResolve.openPrompt}>
-              {t("resolve.button")}
-            </Button>
-          ) : routeState.kind === "returned" && routeState.options && routeState.options.length > 0 ? (
-            <Button
-              variant="primary"
-              size="sm"
-              disabled={routing.isPending}
-              onClick={routing.openConfirm}
-            >
-              {t("routing.routeElsewhere")}
-            </Button>
-          ) : (
-            <p className="text-xs text-ink-500">{footerNote(routeState, t)}</p>
-          )}
-        </footer>
       </aside>
 
       {isRejecting && (
