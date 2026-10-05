@@ -103,3 +103,13 @@ export type ChatLock =
   | { kind: "locks"; at: string }
   | { kind: "locked" }
   | { kind: "unknown" };
+
+/**
+ * Whether a report offers the chat at all: the backend has it (the
+ * REPORT_CHAT_LIVE flag, passed in) and the report is not discreet, which
+ * has no thread. The drawer and the queue row's [Chat] button both ask this,
+ * so they can never disagree.
+ */
+export function isChatOffered(live: boolean, discreetReporting: boolean): boolean {
+  return live && !discreetReporting;
+}

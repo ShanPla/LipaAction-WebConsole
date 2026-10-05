@@ -43,7 +43,16 @@ function formatTime(iso: string): string {
  * report (which has no thread): the drawer decides that, this component
  * assumes a thread may exist.
  */
-export function ReportChatSection({ reportId }: { reportId: string }) {
+export function ReportChatSection({
+  reportId,
+  focusComposer = false,
+}: {
+  reportId: string;
+  // Set when the drawer was opened from a row's [Chat] button: the official
+  // came to write, so the thread scrolls into view and the composer is
+  // focused.
+  focusComposer?: boolean;
+}) {
   const t = useT();
   const { showToast } = useToast();
   const { messages, state, capped, live, isSending, send } = useReportChat(reportId, true);
@@ -55,6 +64,16 @@ export function ReportChatSection({ reportId }: { reportId: string }) {
   // disabled before anyone types, and an upcoming lock is announced.
   const [lock, setLock] = useState<ChatLock>({ kind: "unknown" });
   const endRef = useRef<HTMLLIElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const draftRef = useRef<HTMLTextAreaElement>(null);
+
+  // Runs before the drawer's focus trap claims the dialog itself, which only
+  // does so when nothing inside has focus.
+  useEffect(() => {
+    if (!focusComposer) return;
+    sectionRef.current?.scrollIntoView?.({ block: "start" });
+    draftRef.current?.focus({ preventScroll: true });
+  }, [focusComposer]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,7 +111,7 @@ export function ReportChatSection({ reportId }: { reportId: string }) {
   };
 
   return (
-    <section aria-labelledby="report-chat-title" className="mt-5">
+    <section ref={sectionRef} aria-labelledby="report-chat-title" className="mt-5">
       <p id="report-chat-title" className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
         {t("chat.title")}
       </p>
@@ -149,6 +168,7 @@ export function ReportChatSection({ reportId }: { reportId: string }) {
           </label>
           <textarea
             id="report-chat-draft"
+            ref={draftRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             maxLength={MAX_MESSAGE_LENGTH}
