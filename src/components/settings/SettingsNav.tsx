@@ -22,14 +22,14 @@ export function SettingsNav({
 }) {
   const t = useT();
   return (
-    <div className="w-56 shrink-0 overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel">
-      <nav className="flex flex-col p-1.5">
+    <div className="shrink-0 overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel md:w-56">
+      <nav className="flex flex-row overflow-x-auto p-1.5 md:flex-col md:overflow-visible">
         {sections.map((section) => (
           <button
             key={section.id}
             onClick={() => onChange(section.id)}
             className={cx(
-              "flex min-h-11 items-center rounded-md px-3 text-left text-sm font-medium transition-colors",
+              "flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-md px-3 text-left text-sm font-medium transition-colors",
               active === section.id
                 ? "bg-brand-100 text-brand-700"
                 : "text-ink-700 hover:bg-ink-100"
@@ -38,11 +38,11 @@ export function SettingsNav({
             {t(section.label)}
           </button>
         ))}
-        <div className="my-1 border-t border-ink-100" />
-        <form action={signOut}>
+        <div className="mx-1 my-auto h-6 w-px shrink-0 bg-ink-100 md:mx-0 md:my-1 md:h-px md:w-full" />
+        <form action={signOut} className="shrink-0 md:w-full">
           <button
             type="submit"
-            className="flex min-h-11 w-full items-center rounded-md px-3 text-left text-sm font-medium text-priority-critical hover:bg-priority-criticalBg"
+            className="flex min-h-11 w-full shrink-0 items-center whitespace-nowrap rounded-md px-3 text-left text-sm font-medium text-priority-critical hover:bg-priority-criticalBg"
           >
             {t("shell.signOut")}
           </button>

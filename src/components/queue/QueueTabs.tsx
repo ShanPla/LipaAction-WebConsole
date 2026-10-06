@@ -67,8 +67,12 @@ export function QueueTabs({
   }
 
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 border-b border-ink-100">
-      <div role="tablist" aria-label={t("queue.tabsLabel")} className="flex flex-wrap items-center gap-1">
+    <div className="mb-4 flex flex-col gap-2 border-b border-ink-100 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-3">
+      <div
+        role="tablist"
+        aria-label={t("queue.tabsLabel")}
+        className="flex flex-nowrap items-center gap-1 overflow-x-auto sm:flex-wrap sm:overflow-visible"
+      >
       {tabs.map((tab, index) => {
         const active = tab.id === activeTab;
         return (
@@ -86,7 +90,7 @@ export function QueueTabs({
             onClick={() => onChange(tab.id)}
             onKeyDown={(event) => onKeyDown(event, index)}
             className={cx(
-              "relative flex min-h-11 items-center gap-1.5 px-3 text-sm font-medium transition-colors",
+              "relative flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap px-3 text-sm font-medium transition-colors",
               active ? "text-brand-700" : "text-ink-500 hover:text-ink-900"
             )}
           >

@@ -57,7 +57,7 @@ export function SettingsClient({ official }: { official: OfficialProfile }) {
 
   return (
     <AppShell breadcrumb={[official.barangayName, t("nav.settings")]} official={official}>
-      <div className="flex gap-4">
+      <div className="flex flex-col gap-4 md:flex-row">
         <SettingsNav active={activeSection} onChange={setActiveSection} />
         <div className="flex-1 space-y-4">
           {activeSection === "profile" && <ProfileCard official={official} />}

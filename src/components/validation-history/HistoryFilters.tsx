@@ -89,15 +89,15 @@ export function HistoryFilters({
 
   // print:hidden: a printed history shows the rows and tiles, not the controls.
   return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 print:hidden">
-      <div className="flex flex-wrap items-center gap-1.5">
+    <div className="mb-3 flex flex-col gap-2 print:hidden sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div className="flex flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
         {rangeOptions.map((opt) => (
           <button
             key={opt.id}
             onClick={() => onRangeChange(opt.id)}
             aria-pressed={range === opt.id}
             className={cx(
-              "inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium transition-colors",
+              "inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-sm font-medium transition-colors",
               range === opt.id
                 ? "bg-brand-500 text-white"
                 : "bg-white text-ink-700 border border-ink-100 hover:bg-ink-50"
@@ -127,7 +127,7 @@ export function HistoryFilters({
             aria-label={t("history.filterOfficial")}
             value={official}
             onChange={(e) => onOfficialChange(e.target.value)}
-            className="min-h-11 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
+            className="min-h-11 shrink-0 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
           >
             <option value="all">{t("history.allOfficials")}</option>
             {officialOptions.map((name) => (
@@ -143,7 +143,7 @@ export function HistoryFilters({
             aria-label={t("history.filterCategory")}
             value={category}
             onChange={(e) => onCategoryChange(e.target.value)}
-            className="min-h-11 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
+            className="min-h-11 shrink-0 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
           >
             <option value="all">{t("history.allCategories")}</option>
             {categoryOptions.map((name) => (
@@ -159,7 +159,7 @@ export function HistoryFilters({
             aria-label={t("history.filterPriority")}
             value={priority}
             onChange={(e) => onPriorityChange(e.target.value)}
-            className="min-h-11 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
+            className="min-h-11 shrink-0 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
           >
             <option value="all">{t("history.allPriorities")}</option>
             {priorityOptions.map((p) => (
@@ -175,7 +175,7 @@ export function HistoryFilters({
             aria-label={t("history.filterResolution")}
             value={resolution}
             onChange={(e) => onResolutionChange(e.target.value as ResolutionStatus | "all")}
-            className="min-h-11 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
+            className="min-h-11 shrink-0 rounded-full border border-ink-100 bg-white px-4 text-sm font-medium text-ink-700"
           >
             <option value="all">{t("history.allResolutions")}</option>
             {resolutionOptions.map((s) => (
