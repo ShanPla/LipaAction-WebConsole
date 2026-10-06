@@ -295,12 +295,15 @@ In each case the console shows nothing rather than an approximation.
   applied by the backend when an agency closes a report as confirmed false; the console
   only lists and lifts them, and cannot apply one.
 - **Cluster data.** The console shows which reports the duplicate-detection service
-  grouped, not why: no centroid, radius, or per-report proximity signal is shown, and
-  the spatial panel is a labelled schematic rather than a map with invented positions.
-  Only reports from the same barangay filed within 72 hours of each other are compared,
-  and only pending reports are grouped, so a group thins out as its members are decided.
-  Reports sent without a location, every identity-withheld report included, are left out
-  of grouping. Grouping by photo similarity is not computed.
+  grouped, not why: no centroid, radius, or per-report proximity signal is shown.
+  The spatial panel plots each member's real position where one exists — not a
+  computed shape for the cluster — and names how many members have no usable one
+  (identity-withheld, discreet reporting, or no GPS fix) rather than guessing at
+  their location. Only reports from the same barangay filed within 72 hours of each
+  other are compared, and only pending reports are grouped, so a group thins out as
+  its members are decided. Reports sent without a location, every identity-withheld
+  report included, are left out of grouping. Grouping by photo similarity is not
+  computed.
 - **Priority comes from the inference service.** A report it has not scored is labelled
   Not scored rather than given a tier, and pending reports are listed highest score
   first, then longest-waiting first, with unscored reports after scored ones. Because
@@ -331,7 +334,9 @@ In each case the console shows nothing rather than an approximation.
 - **Report addresses.** Reports carry a geographic point, not an address string, so the
   drawer shows the point on a street map with its coordinates, not a street address. The
   map's tiles come from OpenStreetMap's public tile server, which therefore sees the area
-  of each report opened.
+  of each report opened, and, for Cluster Explorer, of each cluster selected — the same
+  identity-withheld and discreet-reporting reports that are hidden from the drawer's map
+  are also never placed on the cluster map.
 - **Validation History** shows the 50 most recent reviewed reports. Filters apply to
   those rows.
 - **Resolving at the barangay is an addition to the thesis**, whose Chapter 3 gives the

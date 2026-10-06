@@ -1,10 +1,12 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { loadPositions } from "@/lib/data/positions";
 import { categoryLabel, distinctCategories, reporterLabel, timeAgo } from "@/lib/utils";
-import type { ClusterExplorerEntry, ClusterMemberDetail } from "@/types";
+import type { ClusterExplorerEntry, ClusterMemberDetail, ReportPosition } from "@/types";
 
 const PENDING_STATUSES = ["pending_priority", "prioritized"];
 const PRIORITY_ORDER: Record<string, number> = { Critical: 3, High: 2, Medium: 1, Low: 0 };
+const UNKNOWN_POSITION: ReportPosition = { kind: "unavailable" };
 
 interface RawReport {
   id: string;
@@ -12,6 +14,7 @@ interface RawReport {
   priority_name: "Low" | "Medium" | "High" | "Critical" | null;
   status: string;
   identity_withheld: boolean;
+  discreet_reporting: boolean;
   created_at: string;
   cluster_id: string | null;
 }
@@ -37,6 +40,11 @@ export interface ClusterData {
  * proximity fields are therefore approximated or omitted rather than real
  * geospatial output. Revisit if/when a real clusters table or a geospatial
  * RPC gets added on the backend.
+ *
+ * Each member's own position IS real, though: loadPositions reads geom the
+ * same way the queue drawer does, under the same privacy rule (hidden for
+ * identity-withheld or discreet reporting). MapPanel plots it; there is
+ * still no real centroid or radius to draw around the points.
  */
 export async function getBarangayClusters(
   barangayId: string,
@@ -46,7 +54,7 @@ export async function getBarangayClusters(
 
   const { data, error } = await supabase
     .from("incident_reports")
-    .select("id, category, priority_name, status, identity_withheld, created_at, cluster_id")
+    .select("id, category, priority_name, status, identity_withheld, discreet_reporting, created_at, cluster_id")
     .eq("incident_barangay_id", barangayId)
     .not("cluster_id", "is", null)
     // Status filtered in SQL, not after the fact: this used to fetch every
@@ -73,6 +81,13 @@ export async function getBarangayClusters(
     group.push(r);
     groups.set(r.cluster_id, group);
   }
+
+  // Only for reports that are actually in a duplicate group (2+ members):
+  // the Primary/Related loop below needs it, and there's no reason to look
+  // up a position for a cluster of one that gets dropped next.
+  const clusteredRows = [...groups.values()].filter((g) => g.length >= 2).flat();
+  const positions = await loadPositions(supabase, clusteredRows, "cluster-explorer");
+  const positionOf = (r: RawReport) => positions.get(r.id) ?? UNKNOWN_POSITION;
 
   const entries: ClusterExplorerEntry[] = [];
 
@@ -101,6 +116,7 @@ export async function getBarangayClusters(
         name: reporterLabel(r.identity_withheld),
         identityWithheld: r.identity_withheld,
       },
+      position: positionOf(r),
       // visualHash / temporalDeltaSeconds / sitio intentionally omitted — no
       // real backing data. MemberPanel already renders that row conditionally.
     }));

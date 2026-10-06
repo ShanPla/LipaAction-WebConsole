@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { parsePoint } from "@/lib/geo";
+import { loadPositions } from "@/lib/data/positions";
 import { categoryLabel, distinctCategories, medianAgeMinutes, reporterLabel, startOfManilaDay, timeAgo } from "@/lib/utils";
 import type { AgencyRouting, KpiSummary, QueueReport, QueueTabId, RoutingOption, RoutingPlanEntry, SituationCluster, ReportPosition } from "@/types";
 
@@ -97,9 +97,6 @@ const NO_ROUTING: RoutingExtras = { routing: [], routingPlan: null, routingOptio
 // A report whose position was never looked up reads as unavailable, never as
 // [no location sent], which would be a claim about the report.
 const UNKNOWN_POSITION: ReportPosition = { kind: "unavailable" };
-
-// Ids per .in() request: they travel in the URL.
-const POSITION_ID_CHUNK = 100;
 
 export interface QueueData {
   kpiSummary: KpiSummary;
@@ -214,7 +211,7 @@ export async function getBarangayQueue(
 
   const [routingExtras, positions] = await Promise.all([
     loadRouting(supabase, pending, awaiting, routed),
-    loadPositions(supabase, [...pending, ...awaiting, ...routed]),
+    loadPositions(supabase, [...pending, ...awaiting, ...routed], "queue"),
   ]);
   const positionOf = (r: RawReport) => positions.get(r.id) ?? UNKNOWN_POSITION;
 
@@ -509,66 +506,6 @@ async function loadRouting(
   }
 
   return extras;
-}
-
-/**
- * Where each report's phone was, for the drawer's map preview (A.3.2: [a GPS
- * map preview centered on the reported location]).
- *
- * geom is read in a query of its own, never in REPORT_COLUMNS, and the
- * database itself leaves out every identity-withheld or discreet report: the
- * app doesn't send a position for a withheld report, but nothing in the
- * database stops one being there, and a discreet report's position is likely
- * the resident's home. Those two are marked hidden without asking, and a
- * missing withheld flag counts as withheld, as on the city map. A report that
- * changed between the two queries and didn't come back is hidden too: when in
- * doubt, no map. A failed lookup costs only the maps.
- */
-async function loadPositions(
-  supabase: ReturnType<typeof createClient>,
-  reports: RawReport[]
-): Promise<Map<string, ReportPosition>> {
-  const positions = new Map<string, ReportPosition>();
-  const eligible: RawReport[] = [];
-  for (const r of reports) {
-    if (r.identity_withheld === false && r.discreet_reporting !== true) eligible.push(r);
-    else positions.set(r.id, { kind: "hidden" });
-  }
-  if (eligible.length === 0) return positions;
-
-  const ids = [...new Set(eligible.map((r) => r.id))];
-  const chunks: string[][] = [];
-  for (let i = 0; i < ids.length; i += POSITION_ID_CHUNK) chunks.push(ids.slice(i, i + POSITION_ID_CHUNK));
-  const results = await Promise.all(
-    chunks.map((chunk) =>
-      supabase
-        .from("incident_reports")
-        .select("id, geom")
-        .in("id", chunk)
-        .eq("identity_withheld", false)
-        .not("discreet_reporting", "is", true)
-    )
-  );
-  const failed = results.find((res) => res.error || !res.data);
-  if (failed) {
-    console.error("[queue] positions load failed", failed.error?.code, failed.error?.message);
-    for (const r of eligible) positions.set(r.id, UNKNOWN_POSITION);
-    return positions;
-  }
-
-  const found = new Map<string, { lat: number; lng: number } | null>();
-  for (const row of results.flatMap((res) => (res.data ?? []) as { id: string; geom: unknown }[])) {
-    found.set(row.id, parsePoint(row.geom));
-  }
-  for (const r of eligible) {
-    if (!found.has(r.id)) {
-      positions.set(r.id, { kind: "hidden" });
-      continue;
-    }
-    const point = found.get(r.id);
-    positions.set(r.id, point ? { kind: "point", lat: point.lat, lng: point.lng } : { kind: "none" });
-  }
-  return positions;
 }
 
 function toQueueReport(

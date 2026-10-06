@@ -762,12 +762,27 @@ export const MESSAGES = {
   "cluster.signal.visualHash": { en: "Visual hash {value}", tl: "Visual hash {value}" },
   "cluster.signal.temporal": { en: "Temporal Δ {minutes}m {seconds}s", tl: "Agwat sa oras {minutes}m {seconds}s" },
   "cluster.signal.sitio": { en: "{sitio} radius", tl: "Radius ng {sitio}" },
-  "cluster.map.title": { en: "Spatial extent", tl: "Saklaw sa mapa" },
-  "cluster.map.radius": { en: "{meters}m radius around centroid", tl: "{meters}m radius mula sa gitna" },
-  "cluster.map.noExtent": { en: "Precise spatial extent not available yet", tl: "Wala pang eksaktong saklaw sa mapa" },
-  "cluster.map.aria": { en: "Cluster map, schematic and not to scale", tl: "Mapa ng kumpol, iskematiko at hindi eksakto ang sukat" },
-  "cluster.map.schematic": { en: "Schematic, not to scale: each dot is one of the cluster's reports, not its real position.", tl: "Iskematiko at hindi eksakto ang sukat: bawat tuldok ay isa sa mga ulat ng kumpol, hindi ang tunay nitong lokasyon." },
+  "cluster.map.title": { en: "Member locations", tl: "Lokasyon ng mga miyembro" },
+  "cluster.map.aria": { en: "Map of this cluster's members", tl: "Mapa ng mga miyembro ng kumpol na ito" },
   "cluster.map.area": { en: "Barangay: {name}", tl: "Barangay: {name}" },
+  "cluster.map.shown": {
+    en: "{shown} of {total} members have a usable location.",
+    tl: "{shown} sa {total} na miyembro ang may magagamit na lokasyon.",
+  },
+  "cluster.map.hiddenNote": {
+    en: "{count} without a map, by design: identity withheld or discreet reporting.",
+    tl: "{count} walang mapa, sinadya: nakatago ang pagkakakilanlan o discreet reporting.",
+  },
+  "cluster.map.missingNote": {
+    en: "{count} with no usable position — no GPS fix, or the lookup failed.",
+    tl: "{count} walang magagamit na posisyon — walang GPS fix, o hindi na-load.",
+  },
+  "cluster.map.noneUsable": {
+    en: "None of this cluster's members have a usable location.",
+    tl: "Walang miyembro ng kumpol na ito na may magagamit na lokasyon.",
+  },
+  "cluster.map.loading": { en: "Loading map…", tl: "Nilo-load ang mapa…" },
+  "cluster.map.failed": { en: "Couldn't load the map.", tl: "Hindi na-load ang mapa." },
   "clusters.emptyTitle": {
     en: "Duplicate detection isn't connected yet",
     tl: "Hindi pa nakakonekta ang pagtukoy ng doble",

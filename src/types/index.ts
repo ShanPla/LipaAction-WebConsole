@@ -159,6 +159,11 @@ export interface ClusterMemberDetail {
   timestamp: string;
   submittedAt: string; // exact ISO timestamp, for ages that keep moving (timeAgo)
   reporter: ReporterInfo;
+  // Where the reporter's phone was when they filed, same privacy rule as the
+  // queue drawer's LocationPreview (see loadPositions): hidden for an
+  // identity-withheld or discreet report, none for a report with no fix,
+  // unavailable only when the lookup itself failed.
+  position: ReportPosition;
   visualHash?: number; // pairwise proximity signal
   temporalDeltaSeconds?: number;
   sitio?: string;
