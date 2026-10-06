@@ -3,7 +3,13 @@
 let context: AudioContext | null = null;
 
 /**
- * A short two-note chime for a new Tier 0 emergency arriving in the queue.
+ * An alarm-style chime for a new Tier 0 emergency arriving in the queue: a
+ * continuous square-wave tone that sweeps up and down twice, a wail rather
+ * than discrete notes. Two fixed pitches read as a chime regardless of which
+ * two notes they are — the envelope is what says "alarm" versus "ping", and
+ * a sweeping siren is the one almost everyone already recognises as urgent.
+ * Louder and harsher on purpose — this fires for the highest-priority tier,
+ * at a desk, possibly unattended.
  *
  * Synthesised with the Web Audio API rather than shipped as a file: nothing
  * to host, nothing to fetch, and no dependency on the artifact/CDN rules of
@@ -58,22 +64,44 @@ export function primeChime(): void {
   }
 }
 
+// A continuous siren wail: the pitch rises and falls, SIREN_CYCLES times,
+// between SIREN_LOW and SIREN_HIGH, over SIREN_DURATION seconds total.
+const SIREN_LOW = 700;
+const SIREN_HIGH = 1500;
+const SIREN_CYCLES = 2;
+const SIREN_DURATION = 1.1;
+
 function playTones(ctx: AudioContext): void {
   const start = ctx.currentTime;
-  tone(ctx, 880, start, 0.12);
-  tone(ctx, 1175, start + 0.14, 0.18);
-}
-
-function tone(ctx: AudioContext, frequency: number, start: number, duration: number): void {
   const oscillator = ctx.createOscillator();
   const gain = ctx.createGain();
-  oscillator.type = "sine";
-  oscillator.frequency.value = frequency;
-  // Ramp in and out so it doesn't click.
+  // Square, not sine: the extra harmonics read as an alarm rather than a
+  // notification ping, and carry further at the same peak gain.
+  oscillator.type = "square";
+
+  // One hard attack and one release wrap the whole wail — not one soft
+  // ramp per note, which is what made two fixed pitches still read as a
+  // chime. A near-instant attack (2 ms) reads as an alert going off, not a
+  // tone fading in. 0.6 is louder than a square wave's harmonics can take
+  // before the destination clips at 1.0, so this is close to the loudest
+  // this can go without distorting.
   gain.gain.setValueAtTime(0.0001, start);
-  gain.gain.exponentialRampToValueAtTime(0.3, start + 0.01);
-  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  gain.gain.linearRampToValueAtTime(0.6, start + 0.002);
+  gain.gain.setValueAtTime(0.6, start + SIREN_DURATION - 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + SIREN_DURATION);
+
+  // The up-down sweep. linearRampToValueAtTime between alternating highs and
+  // lows, back to back, is a standard way to script a continuous siren wail
+  // on one oscillator — each ramp picks up from wherever the last left off.
+  oscillator.frequency.setValueAtTime(SIREN_LOW, start);
+  const cycleDuration = SIREN_DURATION / SIREN_CYCLES;
+  for (let i = 0; i < SIREN_CYCLES; i++) {
+    const cycleStart = start + i * cycleDuration;
+    oscillator.frequency.linearRampToValueAtTime(SIREN_HIGH, cycleStart + cycleDuration / 2);
+    oscillator.frequency.linearRampToValueAtTime(SIREN_LOW, cycleStart + cycleDuration);
+  }
+
   oscillator.connect(gain).connect(ctx.destination);
   oscillator.start(start);
-  oscillator.stop(start + duration + 0.02);
+  oscillator.stop(start + SIREN_DURATION + 0.02);
 }
