@@ -186,6 +186,20 @@ function PointsMap({
         };
 
         for (const m of points) {
+          const pick = () => {
+            const group = nearby(m);
+            if (group.length === 1) {
+              choose(m.reportId);
+              return;
+            }
+            // Several reports at one spot: a short list to pick from,
+            // built as elements for the same reason as the tooltip.
+            popup?.remove();
+            popup = L.popup({ closeButton: true, autoPan: true, maxWidth: 260 })
+              .setLatLng([m.position.lat, m.position.lng])
+              .setContent(pickList(group, t, choose))
+              .openOn(map!);
+          };
           const marker = L.circleMarker([m.position.lat, m.position.lng], {
             radius: 8,
             weight: 2,
@@ -193,35 +207,31 @@ function PointsMap({
             // Full class names, so Tailwind finds them here; a CSS fill
             // outranks the colour Leaflet writes as an attribute.
             className: (m.priority && DOT_CLASS[m.priority]) || UNSCORED_DOT,
-            // Leaflet's SVG path is focusable only when told so.
-            interactive: true,
           })
             // An element, not an HTML string: Leaflet would parse a string
             // as markup, and this label carries a database value.
             .bindTooltip(dotLabel(m, t))
-            .on("click", () => {
-              const group = nearby(m);
-              if (group.length === 1) {
-                choose(m.reportId);
-                return;
-              }
-              // Several reports at one spot: a short list to pick from,
-              // built as elements for the same reason as the tooltip.
-              popup?.remove();
-              popup = L.popup({ closeButton: true, autoPan: true, maxWidth: 260 })
-                .setLatLng([m.position.lat, m.position.lng])
-                .setContent(pickList(group, t, choose))
-                .openOn(map!);
-            })
+            .on("click", pick)
             .addTo(map);
-          marker.on("add", () => {
-            const path = marker.getElement();
-            if (path) {
-              path.setAttribute("role", "button");
-              path.setAttribute("tabindex", "0");
-              path.setAttribute("aria-label", dotLabel(m, t).textContent ?? m.reportId);
-            }
-          });
+          // After addTo, so the SVG path exists (an "add" listener attached
+          // here would miss the event, which addTo has already fired). The
+          // dot is a control: a name for screen readers, a place in the Tab
+          // order, and Enter or Space doing what a click does.
+          const path = marker.getElement();
+          if (path) {
+            path.setAttribute("role", "button");
+            path.setAttribute("tabindex", "0");
+            path.setAttribute("aria-label", dotLabel(m, t).textContent ?? m.reportId);
+            path.addEventListener("keydown", (event) => {
+              // getElement() is typed as a plain Element, so the listener
+              // sees a plain Event; it is a KeyboardEvent for keydown.
+              const key = (event as KeyboardEvent).key;
+              if (key === "Enter" || key === " ") {
+                event.preventDefault();
+                pick();
+              }
+            });
+          }
           markerMap.set(m.reportId, marker);
         }
 
