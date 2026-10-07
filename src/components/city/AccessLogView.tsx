@@ -45,6 +45,7 @@ const ACTION_LABELS: Record<string, MessageKey> = {
   report_submitted: "audit.action.report_submitted",
   resident_sanction_lifted: "audit.action.resident_sanction_lifted",
   profile_scope_changed: "audit.action.profile_scope_changed",
+  report_message_sent: "audit.action.report_message_sent",
   [ACCESS_LOG_OPENED]: "city.access.action.opened",
   [DATA_EXPORTED]: "city.access.action.exported",
 };

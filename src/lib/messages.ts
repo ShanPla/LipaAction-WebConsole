@@ -927,6 +927,9 @@ export const MESSAGES = {
   "audit.action.report_submitted": { en: "Report submitted", tl: "Nagsumite ng ulat" },
   "audit.action.resident_sanction_lifted": { en: "Sanction lifted", tl: "Inalis ang parusa" },
   "audit.action.profile_scope_changed": { en: "Account role or barangay changed", tl: "Nabago ang role o barangay ng account" },
+  // Written by the report chat for a message in either direction; the role
+  // column says whether a resident or an official sent it.
+  "audit.action.report_message_sent": { en: "Message sent on the report", tl: "Nagpadala ng mensahe sa ulat" },
   "audit.reportGone": { en: "Report no longer in the database", tl: "Wala na sa database ang ulat" },
   "role.municipal_admin": { en: "Municipal Admin", tl: "Municipal Admin" },
   "role.agency_user": { en: "Agency staff", tl: "Kawani ng ahensya" },

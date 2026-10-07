@@ -23,6 +23,8 @@ export const ACTION_LABELS: Record<string, MessageKey> = {
   routing_in_progress: "audit.action.routing_in_progress",
   report_resolved_by_agencies: "audit.action.report_resolved_by_agencies",
   report_returned_to_barangay: "audit.action.report_returned_to_barangay",
+  // The report chat's event, if the read function ever lets it through.
+  report_message_sent: "audit.action.report_message_sent",
 };
 
 const ACTION_TONES: Record<string, "neutral" | "brand" | "warning"> = {
