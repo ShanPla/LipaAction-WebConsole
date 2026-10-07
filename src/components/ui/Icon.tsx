@@ -8,7 +8,9 @@ import {
   Layers,
   Lock,
   Map as MapGlyph,
+  Maximize2,
   Menu,
+  Minimize2,
   PhoneOff,
   Search,
   ShieldAlert,
@@ -37,7 +39,9 @@ export type IconName =
   | "timer"
   | "map"
   | "verify"
-  | "sanctions";
+  | "sanctions"
+  | "expand"
+  | "shrink";
 
 /**
  * The console's icons, from Lucide (lucide-react, ISC licence).
@@ -65,6 +69,8 @@ const ICONS: Record<IconName, LucideIcon> = {
   map: MapGlyph, // where open reports are
   verify: UserCheck, // attesting that a resident lives in the barangay
   sanctions: ShieldAlert, // cooldowns and suspensions on residents' accounts
+  expand: Maximize2, // open a map at full size
+  shrink: Minimize2, // back to the small map
 };
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {

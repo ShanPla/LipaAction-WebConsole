@@ -3,6 +3,9 @@
 import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CircleMarker, Map as LeafletMap, Popup } from "leaflet";
+import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
+import { MapLightbox } from "@/components/ui/MapLightbox";
 import { useT, type Translate } from "@/lib/i18n";
 import type { ClusterExplorerEntry, ClusterMemberDetail } from "@/types";
 
@@ -50,6 +53,7 @@ export function MapPanel({
   onSelect: (reportId: string) => void;
 }) {
   const t = useT();
+  const [expanded, setExpanded] = useState(false);
   const points = useMemo(
     () => cluster.members.filter((m): m is PositionedMember => m.position.kind === "point"),
     [cluster.members]
@@ -58,14 +62,26 @@ export function MapPanel({
   const missingCount = cluster.members.filter(
     (m) => m.position.kind === "none" || m.position.kind === "unavailable"
   ).length;
+  const shownLine = t("cluster.map.shown", { shown: points.length, total: cluster.members.length });
 
   return (
     <div className="flex w-full shrink-0 flex-col overflow-hidden rounded-card border border-ink-100 bg-white shadow-panel lg:w-72">
-      <div className="border-b border-ink-100 px-3 py-2.5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">{t("cluster.map.title")}</p>
-        <p className="text-xs text-ink-500">
-          {t("cluster.map.shown", { shown: points.length, total: cluster.members.length })}
-        </p>
+      <div className="flex items-start justify-between gap-2 border-b border-ink-100 py-2.5 pl-3 pr-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">{t("cluster.map.title")}</p>
+          <p className="text-xs text-ink-500">{shownLine}</p>
+        </div>
+        {points.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="min-w-11 shrink-0"
+            onClick={() => setExpanded(true)}
+            aria-label={t("map.expand")}
+          >
+            <Icon name="expand" />
+          </Button>
+        )}
       </div>
 
       <div className="relative min-h-[220px] flex-1 bg-ink-50">
@@ -75,6 +91,14 @@ export function MapPanel({
           <NoPoints />
         )}
       </div>
+
+      {/* The same points and selection at full size; a dot picked here still
+          lights its row in the list behind. */}
+      {expanded && points.length > 0 && (
+        <MapLightbox title={t("cluster.map.title")} caption={shownLine} onClose={() => setExpanded(false)}>
+          <PointsMap points={points} selectedId={selectedId} onSelect={onSelect} />
+        </MapLightbox>
+      )}
 
       <div className="border-t border-ink-100 px-3 py-2.5 text-[11px] text-ink-500">
         <p>{t("cluster.map.area", { name: cluster.centroidLabel })}</p>

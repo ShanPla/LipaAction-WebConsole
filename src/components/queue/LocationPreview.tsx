@@ -3,7 +3,11 @@
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
 import type { Map as LeafletMap } from "leaflet";
+import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
+import { MapLightbox } from "@/components/ui/MapLightbox";
 import { useT, type MessageKey } from "@/lib/i18n";
+import { cx } from "@/lib/utils";
 import type { ReportPosition } from "@/types";
 
 const NO_MAP: Record<Exclude<ReportPosition["kind"], "point">, MessageKey> = {
@@ -18,20 +22,62 @@ const NO_MAP: Record<Exclude<ReportPosition["kind"], "point">, MessageKey> = {
  * access log. An identity-withheld or discreet report never reaches this
  * component with a position (see loadPositions in queue.ts); for those, and
  * for a report without one, it says why there is no map.
+ *
+ * Expand opens the same point at full size (MapLightbox). The parent is told
+ * so it can yield Escape and Tab to the lightbox while it is up, the way it
+ * does for the reject prompt.
  */
-export function LocationPreview({ position }: { position: ReportPosition | undefined }) {
+export function LocationPreview({
+  position,
+  onExpandedChange,
+}: {
+  position: ReportPosition | undefined;
+  onExpandedChange?: (expanded: boolean) => void;
+}) {
   const t = useT();
+  const [expanded, setExpanded] = useState(false);
   const shown = position ?? { kind: "unavailable" as const };
+
+  function setOpen(open: boolean) {
+    setExpanded(open);
+    onExpandedChange?.(open);
+  }
+
   if (shown.kind !== "point") return <p className="text-xs text-ink-500">{t(NO_MAP[shown.kind])}</p>;
-  return <PointMap lat={shown.lat} lng={shown.lng} />;
+  const caption = t("drawer.location.caption", { lat: shown.lat.toFixed(5), lng: shown.lng.toFixed(5) });
+  return (
+    <div>
+      <div className="relative">
+        <PointMap lat={shown.lat} lng={shown.lng} className="h-44 rounded-md border border-ink-100" />
+        {/* Above Leaflet's panes (z-index 400 and up inside the isolated map
+            box), below any dialog. */}
+        <Button
+          variant="secondary"
+          size="sm"
+          className="absolute right-2 top-2 z-10 min-w-11 shadow-panel"
+          onClick={() => setOpen(true)}
+          aria-label={t("map.expand")}
+        >
+          <Icon name="expand" />
+        </Button>
+      </div>
+      <p className="mt-1.5 text-[11px] text-ink-500">{caption}</p>
+      {expanded && (
+        <MapLightbox title={t("drawer.location.label")} caption={caption} onClose={() => setOpen(false)}>
+          <PointMap lat={shown.lat} lng={shown.lng} className="h-full" />
+        </MapLightbox>
+      )}
+    </div>
+  );
 }
 
 /**
  * Leaflet, loaded only in the browser and only when a drawer with a position
  * opens: it touches window when it loads, so a static import would fail the
- * server render.
+ * server render. Sized by the caller: the preview is a fixed strip, the
+ * expanded view fills its box.
  */
-function PointMap({ lat, lng }: { lat: number; lng: number }) {
+function PointMap({ lat, lng, className }: { lat: number; lng: number; className?: string }) {
   const t = useT();
   const container = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
@@ -78,23 +124,18 @@ function PointMap({ lat, lng }: { lat: number; lng: number }) {
   }, [lat, lng]);
 
   return (
-    <div>
-      {/* isolate: Leaflet stacks its panes at z-index 400 and up, which
-          would otherwise draw them over the reject prompt and any other
-          dialog opened above the drawer. */}
-      <div className="relative isolate h-44 overflow-hidden rounded-md border border-ink-100">
-        <div ref={container} role="region" aria-label={t("drawer.location.label")} className="h-full w-full" />
-        {state !== "ready" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/80 px-4 text-center">
-            <p role="status" className="text-xs text-ink-700">
-              {t(state === "failed" ? "drawer.location.failed" : "city.map.loading")}
-            </p>
-          </div>
-        )}
-      </div>
-      <p className="mt-1.5 text-[11px] text-ink-500">
-        {t("drawer.location.caption", { lat: lat.toFixed(5), lng: lng.toFixed(5) })}
-      </p>
+    // isolate: Leaflet stacks its panes at z-index 400 and up, which would
+    // otherwise draw them over the reject prompt and any other dialog opened
+    // above the drawer.
+    <div className={cx("relative isolate overflow-hidden", className)}>
+      <div ref={container} role="region" aria-label={t("drawer.location.label")} className="h-full w-full" />
+      {state !== "ready" && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/80 px-4 text-center">
+          <p role="status" className="text-xs text-ink-700">
+            {t(state === "failed" ? "drawer.location.failed" : "city.map.loading")}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

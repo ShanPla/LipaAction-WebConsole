@@ -110,7 +110,9 @@ export function ReportDetailPanel({
   // Disabled while a prompt is stacked on top — the reject reason or the
   // routing confirmation — so Escape backs out one layer at a time, and
   // while a write is in flight.
-  const stacked = isRejecting || routing.isConfirming || barangayResolve.isPrompting;
+  // The expanded location map is one more layer on top.
+  const [mapExpanded, setMapExpanded] = useState(false);
+  const stacked = isRejecting || routing.isConfirming || barangayResolve.isPrompting || mapExpanded;
   const writing = isPending || routing.isPending || barangayResolve.isPending;
   useDismissOnEscape(onClose, !stacked && !writing);
 
@@ -285,7 +287,7 @@ export function ReportDetailPanel({
       <p className="mb-1.5 mt-5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
         {t("drawer.section.location")}
       </p>
-      <LocationPreview position={d.position} />
+      <LocationPreview position={d.position} onExpandedChange={setMapExpanded} />
 
       {/* Before the decision: where this report would go once validated.
           Read-only — routing stays a separate, confirmed step. */}
