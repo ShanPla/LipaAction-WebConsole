@@ -24,6 +24,13 @@ export function ClusterExplorerClient({
   const hasClusters = clusters.length > 0;
   const [activeId, setActiveId] = useState(hasClusters ? clusters[0].id : "");
   const activeCluster = clusters.find((c) => c.id === activeId);
+  // The member picked on the map or in the list; one state so both agree.
+  // Cleared when another cluster is chosen, since its ids belong to the old one.
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  function selectCluster(id: string) {
+    setActiveId(id);
+    setSelectedMemberId(null);
+  }
   const t = useT();
   const lang = useLang();
   // Member ages keep moving; this page doesn't refetch on its own.
@@ -67,9 +74,18 @@ export function ClusterExplorerClient({
               of the demo pair whose grouping the backend owner writes by
               hand. Category names and tier names stay English, as
               everywhere. */}
-          <ClusterList clusters={clusters} activeId={activeId} onSelect={setActiveId} />
-          {activeCluster && <MemberPanel cluster={activeCluster} now={now} />}
-          {activeCluster && <MapPanel cluster={activeCluster} />}
+          <ClusterList clusters={clusters} activeId={activeId} onSelect={selectCluster} />
+          {activeCluster && (
+            <MemberPanel
+              cluster={activeCluster}
+              now={now}
+              selectedId={selectedMemberId}
+              onSelect={setSelectedMemberId}
+            />
+          )}
+          {activeCluster && (
+            <MapPanel cluster={activeCluster} selectedId={selectedMemberId} onSelect={setSelectedMemberId} />
+          )}
         </div>
       )}
     </AppShell>

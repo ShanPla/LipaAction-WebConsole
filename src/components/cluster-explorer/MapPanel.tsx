@@ -2,7 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Map as LeafletMap } from "leaflet";
+import type { CircleMarker, Map as LeafletMap, Popup } from "leaflet";
 import { useT, type Translate } from "@/lib/i18n";
 import type { ClusterExplorerEntry, ClusterMemberDetail } from "@/types";
 
@@ -15,6 +15,13 @@ const DOT_CLASS: Record<string, string> = {
 };
 const UNSCORED_DOT = "fill-ink-500 stroke-ink-500";
 
+// Two dots closer than this on screen read as one spot. A tap there can't
+// tell them apart, so the map asks which report was meant instead of
+// picking the top one silently.
+const NEARBY_PX = 20;
+
+type PositionedMember = ClusterMemberDetail & { position: { kind: "point"; lat: number; lng: number } };
+
 /**
  * Each member's real position — the same geom the queue drawer plots,
  * loaded under the same privacy rule (see loadPositions): never for an
@@ -24,15 +31,27 @@ const UNSCORED_DOT = "fill-ink-500 stroke-ink-500";
  * itself to whichever points it has rather than claiming a shape for the
  * cluster.
  *
+ * A dot is a control: tapping it selects that member, and the member list
+ * beside the map highlights it and shows its details. The selection flows
+ * the other way too, so a row picked in the list lights its dot.
+ *
  * No access-log entry of its own: a dot's label carries only the report id,
  * category and priority — nothing the resident wrote — the same reasoning
  * the city map uses for why its dots need none either. The reporter's own
  * words stay behind the queue drawer, which does log its opening.
  */
-export function MapPanel({ cluster }: { cluster: ClusterExplorerEntry }) {
+export function MapPanel({
+  cluster,
+  selectedId,
+  onSelect,
+}: {
+  cluster: ClusterExplorerEntry;
+  selectedId: string | null;
+  onSelect: (reportId: string) => void;
+}) {
   const t = useT();
   const points = useMemo(
-    () => cluster.members.filter((m): m is ClusterMemberDetail & { position: { kind: "point"; lat: number; lng: number } } => m.position.kind === "point"),
+    () => cluster.members.filter((m): m is PositionedMember => m.position.kind === "point"),
     [cluster.members]
   );
   const hiddenCount = cluster.members.filter((m) => m.position.kind === "hidden").length;
@@ -50,11 +69,16 @@ export function MapPanel({ cluster }: { cluster: ClusterExplorerEntry }) {
       </div>
 
       <div className="relative min-h-[220px] flex-1 bg-ink-50">
-        {points.length > 0 ? <PointsMap points={points} /> : <NoPoints />}
+        {points.length > 0 ? (
+          <PointsMap points={points} selectedId={selectedId} onSelect={onSelect} />
+        ) : (
+          <NoPoints />
+        )}
       </div>
 
       <div className="border-t border-ink-100 px-3 py-2.5 text-[11px] text-ink-500">
         <p>{t("cluster.map.area", { name: cluster.centroidLabel })}</p>
+        {points.length > 0 && <p className="mt-1">{t("cluster.map.tapHint")}</p>}
         {hiddenCount > 0 && <p className="mt-1">{t("cluster.map.hiddenNote", { count: hiddenCount })}</p>}
         {missingCount > 0 && <p className="mt-1">{t("cluster.map.missingNote", { count: missingCount })}</p>}
       </div>
@@ -78,16 +102,28 @@ function NoPoints() {
  */
 function PointsMap({
   points,
+  selectedId,
+  onSelect,
 }: {
-  points: (ClusterMemberDetail & { position: { kind: "point"; lat: number; lng: number } })[];
+  points: PositionedMember[];
+  selectedId: string | null;
+  onSelect: (reportId: string) => void;
 }) {
   const t = useT();
   const container = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const markers = useRef(new Map<string, CircleMarker>());
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
+  // The latest callback, read from inside Leaflet's handlers so the map isn't
+  // rebuilt every time the parent re-renders.
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
 
   useEffect(() => {
     let map: LeafletMap | null = null;
+    let popup: Popup | null = null;
     let cancelled = false;
+    const markerMap = markers.current;
     setState("loading");
 
     import("leaflet")
@@ -102,24 +138,67 @@ function PointsMap({
           // A wheel over the map would zoom it instead of scrolling the page.
           scrollWheelZoom: false,
         });
+        mapRef.current = map;
         L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
           maxZoom: 19,
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(map);
 
+        // Members whose dots sit within NEARBY_PX of this one on screen, the
+        // tapped member first. Measured at the current zoom: zoomed out, more
+        // dots overlap; zoomed in, they come apart and the picker goes away.
+        const nearby = (m: PositionedMember): PositionedMember[] => {
+          if (!map) return [m];
+          const here = map.latLngToContainerPoint([m.position.lat, m.position.lng]);
+          return points.filter(
+            (p) => p === m || map!.latLngToContainerPoint([p.position.lat, p.position.lng]).distanceTo(here) <= NEARBY_PX
+          );
+        };
+
+        const choose = (id: string) => {
+          popup?.remove();
+          popup = null;
+          onSelectRef.current(id);
+        };
+
         for (const m of points) {
-          L.circleMarker([m.position.lat, m.position.lng], {
+          const marker = L.circleMarker([m.position.lat, m.position.lng], {
             radius: 8,
             weight: 2,
             fillOpacity: 0.7,
             // Full class names, so Tailwind finds them here; a CSS fill
             // outranks the colour Leaflet writes as an attribute.
             className: (m.priority && DOT_CLASS[m.priority]) || UNSCORED_DOT,
+            // Leaflet's SVG path is focusable only when told so.
+            interactive: true,
           })
             // An element, not an HTML string: Leaflet would parse a string
             // as markup, and this label carries a database value.
             .bindTooltip(dotLabel(m, t))
+            .on("click", () => {
+              const group = nearby(m);
+              if (group.length === 1) {
+                choose(m.reportId);
+                return;
+              }
+              // Several reports at one spot: a short list to pick from,
+              // built as elements for the same reason as the tooltip.
+              popup?.remove();
+              popup = L.popup({ closeButton: true, autoPan: true, maxWidth: 260 })
+                .setLatLng([m.position.lat, m.position.lng])
+                .setContent(pickList(group, t, choose))
+                .openOn(map!);
+            })
             .addTo(map);
+          marker.on("add", () => {
+            const path = marker.getElement();
+            if (path) {
+              path.setAttribute("role", "button");
+              path.setAttribute("tabindex", "0");
+              path.setAttribute("aria-label", dotLabel(m, t).textContent ?? m.reportId);
+            }
+          });
+          markerMap.set(m.reportId, marker);
         }
 
         if (points.length > 1) {
@@ -136,11 +215,27 @@ function PointsMap({
 
     return () => {
       cancelled = true;
+      popup?.remove();
+      markerMap.clear();
+      mapRef.current = null;
       map?.remove();
     };
     // points is memoized on cluster.members (see the parent), so this only
     // re-runs when the selected cluster actually changes.
   }, [points, t]);
+
+  // Selection styling, separate from the build so picking a member doesn't
+  // redraw the map. The chosen dot grows and gains a heavier ring; the rest
+  // keep their tier colour.
+  useEffect(() => {
+    if (state !== "ready") return;
+    for (const [id, marker] of markers.current) {
+      const selected = id === selectedId;
+      marker.setStyle({ radius: selected ? 11 : 8, weight: selected ? 4 : 2, fillOpacity: selected ? 0.9 : 0.7 });
+      if (selected) marker.bringToFront();
+      marker.getElement()?.setAttribute("aria-pressed", String(selected));
+    }
+  }, [selectedId, state]);
 
   return (
     // isolate: Leaflet stacks its panes at z-index 400 and up, which would
@@ -167,6 +262,26 @@ function dotLabel(m: ClusterMemberDetail, t: Translate): HTMLElement {
     priorityText(m, t),
     m.relationship === "Primary" ? t("cluster.member.primary") : t("cluster.member.related"),
   ].join(" · ");
+  return box;
+}
+
+// The picker for dots that share a spot: one 44 px button per report.
+function pickList(group: ClusterMemberDetail[], t: Translate, choose: (id: string) => void): HTMLElement {
+  const box = document.createElement("div");
+  box.className = "flex flex-col gap-1";
+  const heading = document.createElement("p");
+  heading.className = "mb-1 text-xs font-semibold text-ink-700";
+  heading.textContent = t("cluster.map.nearby", { count: group.length });
+  box.appendChild(heading);
+  for (const m of group) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className =
+      "flex min-h-11 w-full items-center rounded-md border border-ink-100 px-3 text-left text-xs text-ink-900 hover:bg-ink-50";
+    button.textContent = dotLabel(m, t).textContent;
+    button.addEventListener("click", () => choose(m.reportId));
+    box.appendChild(button);
+  }
   return box;
 }
 

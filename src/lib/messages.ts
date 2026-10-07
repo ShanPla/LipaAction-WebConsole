@@ -781,6 +781,27 @@ export const MESSAGES = {
     en: "None of this cluster's members have a usable location.",
     tl: "Walang miyembro ng kumpol na ito na may magagamit na lokasyon.",
   },
+  "cluster.map.tapHint": {
+    en: "Tap a dot to see that report's details in the list.",
+    tl: "Pindutin ang tuldok para makita ang detalye ng ulat na iyon sa listahan.",
+  },
+  "cluster.map.nearby": {
+    en: "{count} reports at this spot — pick one",
+    tl: "{count} ulat sa lugar na ito — pumili ng isa",
+  },
+  "cluster.member.submitted": { en: "Filed", tl: "Isinumite" },
+  "cluster.member.location": { en: "Location", tl: "Lokasyon" },
+  "cluster.member.locationHidden": {
+    en: "Not shown: identity withheld or discreet reporting.",
+    tl: "Hindi ipinapakita: nakatago ang pagkakakilanlan o discreet reporting.",
+  },
+  "cluster.member.locationNone": { en: "No usable location on this report.", tl: "Walang magagamit na lokasyon ang ulat na ito." },
+  "cluster.member.locationUnavailable": { en: "Couldn't load the location.", tl: "Hindi na-load ang lokasyon." },
+  "cluster.member.decide": { en: "Decide", tl: "Magpasya" },
+  "cluster.member.decideBody": {
+    en: "Validate or reject this report from the Queue; the resident's description is shown there.",
+    tl: "I-validate o tanggihan ang ulat na ito mula sa Pila ng Ulat; doon ipinapakita ang paglalarawan ng residente.",
+  },
   "cluster.map.loading": { en: "Loading map…", tl: "Nilo-load ang mapa…" },
   "cluster.map.failed": { en: "Couldn't load the map.", tl: "Hindi na-load ang mapa." },
   "clusters.emptyTitle": {
