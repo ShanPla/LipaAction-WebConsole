@@ -922,6 +922,9 @@ export const MESSAGES = {
   // Shown only on the city access log, which reads the whole trail.
   "audit.action.report_status_changed": { en: "Status changed", tl: "Nabago ang status" },
   "audit.action.identity_reveal": { en: "Identity revealed", tl: "Inilantad ang pagkakakilanlan" },
+  "audit.action.report_submitted": { en: "Report submitted", tl: "Nagsumite ng ulat" },
+  "audit.action.resident_sanction_lifted": { en: "Sanction lifted", tl: "Inalis ang parusa" },
+  "audit.action.profile_scope_changed": { en: "Account role or barangay changed", tl: "Nabago ang role o barangay ng account" },
   "audit.reportGone": { en: "Report no longer in the database", tl: "Wala na sa database ang ulat" },
   "role.municipal_admin": { en: "Municipal Admin", tl: "Municipal Admin" },
   "role.agency_user": { en: "Agency staff", tl: "Kawani ng ahensya" },

@@ -41,6 +41,10 @@ const ACTION_LABELS: Record<string, MessageKey> = {
   report_returned_to_barangay: "audit.action.report_returned_to_barangay",
   report_status_changed: "audit.action.report_status_changed",
   identity_reveal: "audit.action.identity_reveal",
+  // Backend-written events seen raw on the live trail (2026-10-05).
+  report_submitted: "audit.action.report_submitted",
+  resident_sanction_lifted: "audit.action.resident_sanction_lifted",
+  profile_scope_changed: "audit.action.profile_scope_changed",
   [ACCESS_LOG_OPENED]: "city.access.action.opened",
   [DATA_EXPORTED]: "city.access.action.exported",
 };
@@ -54,6 +58,8 @@ const ACTION_TONES: Record<string, "neutral" | "brand" | "warning"> = {
   report_resolved_by_agencies: "brand",
   report_returned_to_barangay: "warning",
   identity_reveal: "warning",
+  resident_sanction_lifted: "brand",
+  profile_scope_changed: "warning",
 };
 
 // Known roles get a label; an unknown one shows as itself, a missing one as
