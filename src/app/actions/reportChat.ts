@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { REPORT_CHAT_LIVE, REPORT_CHAT_V2 } from "@/lib/features";
+import { REPORT_CHAT_LIVE, REPORT_CHAT_MEDIA, REPORT_CHAT_V2 } from "@/lib/features";
 import { isUuid } from "@/lib/utils";
 import {
   MAX_MESSAGE_LENGTH,
@@ -12,6 +12,7 @@ import {
   type ChatThread,
   type SendOutcome,
 } from "@/lib/reportChat";
+import { cleanAttachments, type MediaSendOutcome } from "@/lib/chatMedia";
 
 /*
  * The report chat's writes, the lock-time read, and (v2) the agencies'
@@ -143,6 +144,61 @@ export async function sendDeskMessage(reportId: string, body: string): Promise<S
 
   if (!error) return "sent";
   return sendRefusalOutcome("send_report_chat_message", reportId, status, error);
+}
+
+/**
+ * Sends one message with photos or a video (REPORT_CHAT_MEDIA), on either
+ * thread: send_report_chat_media(p_report_id, p_thread, p_message_id,
+ * p_body, p_attachments), the backend's
+ * docs/specs/2026-10-08-report-chat-media-design.md, section 4.
+ *
+ * The files are already in the bucket: the browser uploads them first, to
+ * paths that carry `messageId`, and this call writes the message and its
+ * attachment rows in one go. Nobody can read a file before then. The text
+ * may be empty; otherwise it follows the text rules (at most 1000
+ * characters after trimming).
+ *
+ * The list is checked here against the same rules (1 to 4 photos or 1
+ * video, the path shape, the sizes) because this is a public endpoint, and
+ * only the known keys are passed on. The function checks it all again, and
+ * also that each file is really in the bucket, uploaded by this account,
+ * with the size and type the call says.
+ *
+ * 23505 on message_id means a message with this id already exists: the
+ * drawer retries a send whose answer was lost with the same id, so that is
+ * the earlier send having landed, and it is answered as sent.
+ */
+export async function sendChatMedia(
+  reportId: string,
+  thread: ChatThread,
+  messageId: string,
+  body: string,
+  attachments: unknown
+): Promise<MediaSendOutcome> {
+  if (!REPORT_CHAT_LIVE || !REPORT_CHAT_V2 || !REPORT_CHAT_MEDIA) return "off";
+  if (thread !== "group" && thread !== "desk") return "invalid";
+  const trimmed = typeof body === "string" ? body.trim() : "";
+  if (!isUuid(reportId) || !isUuid(messageId) || trimmed.length > MAX_MESSAGE_LENGTH) return "invalid";
+  const clean = cleanAttachments(attachments, reportId, thread, messageId);
+  if (!clean) return "media-invalid";
+
+  const supabase = createClient();
+  const { error, status } = await supabase.rpc("send_report_chat_media", {
+    p_report_id: reportId.toLowerCase(),
+    p_thread: thread,
+    p_message_id: messageId.toLowerCase(),
+    p_body: trimmed,
+    p_attachments: clean,
+  });
+
+  if (!error) return "sent";
+  const token = error.details ?? "";
+  if (error.code === "23505" && token.includes("message_id")) return "sent";
+  if (error.code === "55000" && token.includes("media_missing")) return "media-missing";
+  // 22023 on the text keeps the text's answer; on anything else it is the
+  // list of files (or a stored file that differs from it).
+  if (error.code === "22023" && !token.includes("body")) return "media-invalid";
+  return sendRefusalOutcome("send_report_chat_media", reportId, status, error);
 }
 
 /**

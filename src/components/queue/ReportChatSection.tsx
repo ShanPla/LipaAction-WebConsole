@@ -1,10 +1,21 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useT } from "@/lib/i18n";
 import { getChatLock } from "@/app/actions/reportChat";
 import { callAction } from "@/lib/callAction";
-import { MAX_MESSAGE_LENGTH, type ChatLock, type ChatMessage, type ChatThread, type SendOutcome } from "@/lib/reportChat";
+import { REPORT_CHAT_MEDIA } from "@/lib/features";
+import { MAX_MESSAGE_LENGTH, type ChatLock, type ChatMessage, type ChatThread } from "@/lib/reportChat";
+import {
+  MAX_PHOTOS,
+  canAddKind,
+  formatDuration,
+  kindOfFile,
+  type MediaSendOutcome,
+  type PickRefusal,
+} from "@/lib/chatMedia";
+import type { PreparedMedia } from "@/lib/chatMediaPrepare";
 import { Button } from "@/components/ui/Button";
 import { buildThreadItems } from "@/lib/chatThreadView";
 import { openedBy, seenAvatarsByMessage, type Seer } from "@/lib/chatSeen";
@@ -13,7 +24,12 @@ import { Icon } from "@/components/ui/Icon";
 import { useReportChat } from "./useReportChat";
 import { useChatSeen } from "./useChatSeen";
 import { ChatAvatar, agencyLabelOf } from "./ChatAvatar";
+import { ChatAttachments } from "./ChatAttachments";
 import type { AgencyLabel } from "./useAgencyDirectory";
+
+// Loaded the first time a photo or video is opened: most openings of the
+// pop-up never show one.
+const ChatMediaViewer = dynamic(() => import("./ChatMediaViewer").then((m) => m.ChatMediaViewer), { ssr: false });
 
 // Each failed send is worded in the official's language; "sent" and null
 // (the action never answered) are handled in submit().
@@ -30,7 +46,28 @@ const OUTCOME_KEY = {
   unreachable: "chat.err.unreachable",
   off: "chat.err.off",
   failed: "chat.err.failed",
-} as const;
+  // Chat media only (REPORT_CHAT_MEDIA).
+  "media-invalid": "chat.media.err.invalid",
+  "media-missing": "chat.media.err.missing",
+  "upload-refused": "chat.media.err.uploadRefused",
+  "upload-too-large": "chat.media.err.tooLarge",
+  "upload-failed": "chat.media.err.uploadFailed",
+} as const satisfies Record<Exclude<MediaSendOutcome, "sent">, string>;
+
+// Why a picked file was not attached, in the official's language.
+const PICK_KEY = {
+  "too-many": "chat.media.pick.tooMany",
+  mixed: "chat.media.pick.mixed",
+  "file-type": "chat.media.pick.fileType",
+  "photo-unreadable": "chat.media.pick.photoUnreadable",
+  "photo-too-large": "chat.media.pick.tooLarge",
+  "photo-metadata": "chat.media.pick.photoMetadata",
+  "video-unreadable": "chat.media.pick.videoUnreadable",
+  "video-too-long": "chat.media.pick.videoTooLong",
+  "video-too-large": "chat.media.pick.tooLarge",
+  "video-not-mp4": "chat.media.pick.videoNotMp4",
+  "video-location": "chat.media.pick.videoLocation",
+} as const satisfies Record<PickRefusal, string>;
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleString("en-US", {
@@ -79,6 +116,12 @@ const COMPOSER_MAX_PX = 144;
  * agency messages under the agency's name, the agencies that have opened
  * it, and a small avatar under the newest message each participant has
  * seen, as a messenger does.
+ *
+ * Under REPORT_CHAT_MEDIA (v2 threads only) a message can also carry up to
+ * 4 photos or 1 video: the composer gets an attach button, and each
+ * message's files are drawn as tiles that open a full-size viewer.
+ * `onViewerChange` tells the pop-up when that viewer is open, so it can
+ * stand its own Escape and focus trap down, as for the expanded map.
  */
 export function ReportChatSection({
   reportId,
@@ -86,6 +129,7 @@ export function ReportChatSection({
   thread,
   agencies,
   agencyConsentPending = false,
+  onViewerChange,
 }: {
   reportId: string;
   // Set when the pop-up was opened from a row's [Chat] button: the official
@@ -97,10 +141,26 @@ export function ReportChatSection({
   // v2 group thread only: the agencies can't read it yet, because the
   // reporter hasn't accepted the consent notice that covers agency chat.
   agencyConsentPending?: boolean;
+  // REPORT_CHAT_MEDIA only: the media viewer opened or closed.
+  onViewerChange?: (open: boolean) => void;
 }) {
   const t = useT();
   const { showToast } = useToast();
-  const { messages, state, capped, live, isSending, send } = useReportChat(reportId, true, thread);
+  const {
+    messages,
+    state,
+    capped,
+    live,
+    isSending,
+    send,
+    attachments,
+    attachmentsFailed,
+    retryAttachments,
+    sendMedia,
+    uploadProgress,
+  } = useReportChat(reportId, true, thread);
+  // Media lives only in the v2 threads.
+  const mediaOn = REPORT_CHAT_MEDIA && thread !== undefined;
   // v2 only; with no thread nothing is read and no channel is joined.
   const { rows: seenRows } = useChatSeen(reportId, thread ?? "group", thread !== undefined);
   const seenUnder = useMemo(
@@ -121,6 +181,79 @@ export function ReportChatSection({
   const threadRef = useRef<HTMLUListElement>(null);
   const draftRef = useRef<HTMLTextAreaElement>(null);
   const items = useMemo(() => buildThreadItems(messages), [messages]);
+
+  // Chat media: the files waiting in the composer, and the open viewer.
+  const [picked, setPicked] = useState<PreparedMedia[]>([]);
+  const [preparing, setPreparing] = useState(false);
+  const [viewer, setViewer] = useState<{ messageId: string; index: number } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const viewerMessage = viewer ? messages.find((m) => m.id === viewer.messageId) : undefined;
+  const viewerFiles = viewer ? attachments.get(viewer.messageId) : undefined;
+  const viewerOpen = viewer !== null && viewerFiles !== undefined && viewerFiles.length > 0;
+
+  useEffect(() => {
+    onViewerChange?.(viewerOpen);
+  }, [viewerOpen, onViewerChange]);
+  // Closing the thread with the viewer open must not leave the pop-up
+  // thinking something is stacked on it.
+  useEffect(() => () => onViewerChange?.(false), [onViewerChange]);
+
+  // Each preview is an object URL; it is released when its file leaves the
+  // composer, and all of them when the thread closes.
+  const pickedRef = useRef(picked);
+  pickedRef.current = picked;
+  useEffect(
+    () => () => {
+      pickedRef.current.forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl));
+    },
+    []
+  );
+  const removePicked = (key: string) =>
+    setPicked((prev) => {
+      prev.filter((p) => p.key === key).forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl));
+      return prev.filter((p) => p.key !== key);
+    });
+  const clearPicked = () =>
+    setPicked((prev) => {
+      prev.forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl));
+      return [];
+    });
+
+  // Up to 4 photos or 1 video. Each file is checked and, for a photo,
+  // re-encoded before it joins the composer; one that can't go is named in
+  // a toast and left out.
+  const addFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+    setPreparing(true);
+    try {
+      // The re-encode and the video checks load only when a file is picked.
+      const { prepareFile } = await import("@/lib/chatMediaPrepare");
+      const kinds = picked.map((p) => p.kind);
+      const ready: PreparedMedia[] = [];
+      for (const file of files) {
+        const kind = kindOfFile(file);
+        if (!kind) {
+          showToast(t(PICK_KEY["file-type"]), "danger");
+          continue;
+        }
+        const fits = canAddKind(kinds, kind);
+        if (fits !== true) {
+          showToast(t(PICK_KEY[fits]), "danger");
+          continue;
+        }
+        const result = await prepareFile(file);
+        if (!result.ok) {
+          showToast(t(PICK_KEY[result.reason]), "danger");
+          continue;
+        }
+        kinds.push(kind);
+        ready.push(result.media);
+      }
+      if (ready.length > 0) setPicked((prev) => [...prev, ...ready]);
+    } finally {
+      setPreparing(false);
+    }
+  };
 
   // Runs before the dialog's focus trap claims the dialog itself, which only
   // does so when nothing inside has focus.
@@ -156,13 +289,21 @@ export function ReportChatSection({
   }, [draft, locked]);
 
   const trimmed = draft.trim();
-  const canSend = !isSending && !locked && trimmed.length > 0 && trimmed.length <= MAX_MESSAGE_LENGTH;
+  const withMedia = mediaOn && picked.length > 0;
+  // With files attached the text may be empty.
+  const canSend =
+    !isSending &&
+    !locked &&
+    !preparing &&
+    trimmed.length <= MAX_MESSAGE_LENGTH &&
+    (trimmed.length > 0 || withMedia);
 
   const submit = async () => {
     if (!canSend) return;
-    const outcome: SendOutcome | null = await send(trimmed);
+    const outcome: MediaSendOutcome | null = withMedia ? await sendMedia(trimmed, picked) : await send(trimmed);
     if (outcome === "sent") {
       setDraft("");
+      if (withMedia) clearPicked();
       return;
     }
     if (outcome === null) {
@@ -190,7 +331,7 @@ export function ReportChatSection({
             {t("chat.v2.agencyConsentPending")}
           </p>
         )}
-        <p className="text-xs text-ink-500">{t("chat.closeWarning")}</p>
+        <p className="text-xs text-ink-500">{t(mediaOn ? "chat.media.closeWarning" : "chat.closeWarning")}</p>
         {thread && state === "ready" && (
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] font-medium text-ink-500">{t("chat.v2.openedBy")}</span>
@@ -247,19 +388,35 @@ export function ReportChatSection({
             const { message: m, side, showMeta } = item;
             const fromDesk = side === "desk";
             const seers = seenUnder.get(m.id);
+            const hasMedia = mediaOn && m.mediaCount > 0;
             return (
               <li key={m.id} className={`flex flex-col ${fromDesk ? "items-end" : "items-start"} ${showMeta ? "mb-2" : ""}`}>
-                <p
-                  className={`max-w-[75%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${
-                    fromDesk
-                      ? "bg-brand-500 text-white"
-                      : m.side === "agency"
-                        ? "border border-ink-100 bg-ink-50 text-ink-900"
-                        : "bg-ink-100 text-ink-900"
-                  }`}
-                >
-                  {m.body}
-                </p>
+                {hasMedia && (
+                  <div className="mb-0.5 max-w-[75%]">
+                    <ChatAttachments
+                      count={m.mediaCount}
+                      attachments={attachments.get(m.id)}
+                      failed={attachmentsFailed.has(m.id)}
+                      senderLabel={senderLabel(m)}
+                      onOpen={(index) => setViewer({ messageId: m.id, index })}
+                      onRetry={retryAttachments}
+                    />
+                  </div>
+                )}
+                {/* A media message may have no text; it then has no bubble. */}
+                {!(hasMedia && m.body === "") && (
+                  <p
+                    className={`max-w-[75%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${
+                      fromDesk
+                        ? "bg-brand-500 text-white"
+                        : m.side === "agency"
+                          ? "border border-ink-100 bg-ink-50 text-ink-900"
+                          : "bg-ink-100 text-ink-900"
+                    }`}
+                  >
+                    {m.body}
+                  </p>
+                )}
                 {showMeta && !thread && (
                   <p className="mt-0.5 px-1 text-[11px] text-ink-500">
                     {t(fromDesk ? "chat.fromDesk" : "chat.fromReporter")} · {formatClock(m.createdAt)}
@@ -317,7 +474,69 @@ export function ReportChatSection({
                     : "chat.composerLabel"
               )}
             </label>
+            {mediaOn && picked.length > 0 && (
+              <ul className="mb-2 flex flex-wrap gap-2" aria-label={t("chat.media.pickedLabel")}>
+                {picked.map((p, i) => (
+                  <li key={p.key} className="relative">
+                    {p.kind === "photo" && p.previewUrl ? (
+                      // A local blob: URL of the re-encoded photo, never uploaded yet.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.previewUrl}
+                        alt={t("chat.media.pickedPhoto", { n: i + 1 })}
+                        className="h-16 w-16 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-16 w-24 flex-col items-center justify-center gap-0.5 rounded-lg bg-ink-900 text-[11px] text-white">
+                        <Icon name="play" className="h-4 w-4" />
+                        {t("chat.media.video")} {formatDuration(p.durationS ?? null)}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removePicked(p.key)}
+                      disabled={isSending}
+                      aria-label={t("chat.media.remove", { n: i + 1 })}
+                      className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-ink-100 bg-white text-ink-700 shadow-sm disabled:opacity-50"
+                    >
+                      <Icon name="close" className="h-3 w-3" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
             <div className="flex items-end gap-2">
+              {mediaOn && (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    // Photos in any format the browser can decode (they are
+                    // re-encoded to JPEG); videos as MP4 only.
+                    accept="image/*,video/mp4"
+                    multiple
+                    hidden
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files ?? []);
+                      // So the same file can be picked again after removal.
+                      e.target.value = "";
+                      void addFiles(files);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="min-w-11"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isSending || preparing || picked.some((p) => p.kind === "video") || picked.length >= MAX_PHOTOS}
+                    aria-label={t("chat.media.attach")}
+                    title={t("chat.media.attachHint")}
+                  >
+                    <Icon name="attach" />
+                  </Button>
+                </>
+              )}
               <textarea
                 id="report-chat-draft"
                 ref={draftRef}
@@ -340,12 +559,35 @@ export function ReportChatSection({
                 {t("chat.send")}
               </Button>
             </div>
-            <p className="mt-1 text-right text-[11px] text-ink-500">
-              {draft.length}/{MAX_MESSAGE_LENGTH}
-            </p>
+            {mediaOn ? (
+              <p className="mt-1 flex justify-between gap-2 text-[11px] text-ink-500">
+                <span role="status">
+                  {preparing
+                    ? t("chat.media.preparing")
+                    : uploadProgress
+                      ? t("chat.media.uploading", { n: Math.min(uploadProgress.done + 1, uploadProgress.total), total: uploadProgress.total })
+                      : ""}
+                </span>
+                <span>
+                  {draft.length}/{MAX_MESSAGE_LENGTH}
+                </span>
+              </p>
+            ) : (
+              <p className="mt-1 text-right text-[11px] text-ink-500">
+                {draft.length}/{MAX_MESSAGE_LENGTH}
+              </p>
+            )}
           </form>
         )}
       </div>
+      {viewerOpen && viewer && viewerFiles && (
+        <ChatMediaViewer
+          attachments={viewerFiles}
+          startIndex={viewer.index}
+          caption={viewerMessage ? `${senderLabel(viewerMessage)} · ${formatTime(viewerMessage.createdAt)}` : ""}
+          onClose={() => setViewer(null)}
+        />
+      )}
     </section>
   );
 }

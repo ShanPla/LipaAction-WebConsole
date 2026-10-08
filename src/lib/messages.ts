@@ -2002,6 +2002,155 @@ export const MESSAGES = {
     en: "Agencies can't see this chat until the resident accepts the updated consent.",
     tl: "Hindi pa makikita ng mga ahensya ang chat na ito hangga't hindi tinatanggap ng residente ang na-update na pahintulot.",
   },
+  // --- Report chat media (behind REPORT_CHAT_MEDIA) ---
+  "chat.media.closeWarning": {
+    en: "Text, photos and short videos. Three days after the report is closed, this chat becomes read-only. Messages and files are kept with the report.",
+    tl: "Teksto, larawan at maikling video. Tatlong araw matapos maisara ang ulat, magiging read-only ang chat na ito. Mananatili ang mga mensahe at file sa ulat.",
+  },
+  "chat.media.attach": {
+    en: "Attach photos or a video",
+    tl: "Maglakip ng larawan o video",
+  },
+  "chat.media.attachHint": {
+    en: "Up to 4 photos, or 1 MP4 video of at most 30 seconds and 25 MB",
+    tl: "Hanggang 4 na larawan, o 1 MP4 na video na hindi lalampas sa 30 segundo at 25 MB",
+  },
+  "chat.media.pickedLabel": {
+    en: "Files to send",
+    tl: "Mga file na ipapadala",
+  },
+  "chat.media.pickedPhoto": {
+    en: "Photo {n} to send",
+    tl: "Larawan {n} na ipapadala",
+  },
+  "chat.media.remove": {
+    en: "Remove file {n}",
+    tl: "Alisin ang file {n}",
+  },
+  "chat.media.preparing": {
+    en: "Preparing files...",
+    tl: "Inihahanda ang mga file...",
+  },
+  "chat.media.uploading": {
+    en: "Uploading {n} of {total}...",
+    tl: "Ina-upload ang {n} sa {total}...",
+  },
+  "chat.media.video": {
+    en: "Video",
+    tl: "Video",
+  },
+  "chat.media.openPhoto": {
+    en: "Open photo {n} of {total} from {name}",
+    tl: "Buksan ang larawan {n} sa {total} mula sa {name}",
+  },
+  "chat.media.openVideo": {
+    en: "Open video from {name}, {length}",
+    tl: "Buksan ang video mula sa {name}, {length}",
+  },
+  "chat.media.loading": {
+    en: "Loading files...",
+    tl: "Kinukuha ang mga file...",
+  },
+  "chat.media.loadFailed": {
+    en: "The files could not be loaded.",
+    tl: "Hindi makuha ang mga file.",
+  },
+  "chat.media.retry": {
+    en: "Retry",
+    tl: "Subukan muli",
+  },
+  "chat.media.unavailable": {
+    en: "Files not available.",
+    tl: "Hindi available ang mga file.",
+  },
+  "chat.media.photoFailed": {
+    en: "Could not load this file.",
+    tl: "Hindi ma-load ang file na ito.",
+  },
+  "chat.media.viewerPhoto": {
+    en: "Photo",
+    tl: "Larawan",
+  },
+  "chat.media.viewerVideo": {
+    en: "Video",
+    tl: "Video",
+  },
+  "chat.media.photoAlt": {
+    en: "Photo sent in the report chat",
+    tl: "Larawang ipinadala sa chat ng ulat",
+  },
+  "chat.media.position": {
+    en: "{n} of {total}",
+    tl: "{n} sa {total}",
+  },
+  "chat.media.previous": {
+    en: "Previous photo",
+    tl: "Nakaraang larawan",
+  },
+  "chat.media.next": {
+    en: "Next photo",
+    tl: "Susunod na larawan",
+  },
+  "chat.media.pick.tooMany": {
+    en: "A message can carry up to 4 photos or 1 video.",
+    tl: "Hanggang 4 na larawan o 1 video lamang ang maaaring isama sa isang mensahe.",
+  },
+  "chat.media.pick.mixed": {
+    en: "Send photos and a video in separate messages.",
+    tl: "Ipadala ang mga larawan at ang video sa magkahiwalay na mensahe.",
+  },
+  "chat.media.pick.fileType": {
+    en: "Only photos and MP4 videos can be attached.",
+    tl: "Mga larawan at MP4 na video lamang ang maaaring ilakip.",
+  },
+  "chat.media.pick.photoUnreadable": {
+    en: "This photo could not be read. Try a JPEG or PNG.",
+    tl: "Hindi mabasa ang larawang ito. Subukan ang JPEG o PNG.",
+  },
+  "chat.media.pick.photoMetadata": {
+    en: "This photo still carried location data after preparing it, so it was not attached.",
+    tl: "May dala pa ring datos ng lokasyon ang larawang ito, kaya hindi ito inilakip.",
+  },
+  "chat.media.pick.tooLarge": {
+    en: "The file is larger than 25 MB.",
+    tl: "Lampas sa 25 MB ang file.",
+  },
+  "chat.media.pick.videoUnreadable": {
+    en: "This video's length could not be read, so it was not attached.",
+    tl: "Hindi mabasa ang haba ng video na ito, kaya hindi ito inilakip.",
+  },
+  "chat.media.pick.videoTooLong": {
+    en: "The video is longer than 30 seconds.",
+    tl: "Lampas sa 30 segundo ang video.",
+  },
+  "chat.media.pick.videoNotMp4": {
+    en: "Only MP4 videos can be attached.",
+    tl: "MP4 na video lamang ang maaaring ilakip.",
+  },
+  "chat.media.pick.videoLocation": {
+    en: "This video records where it was taken, so it was not attached. Send a photo instead, or a video recorded with location tags off.",
+    tl: "Nakatala sa video na ito kung saan ito kinunan, kaya hindi ito inilakip. Magpadala na lang ng larawan, o ng video na kinunan nang naka-off ang location tag.",
+  },
+  "chat.media.err.invalid": {
+    en: "The files were refused. Check that they are within the limits and try again.",
+    tl: "Tinanggihan ang mga file. Tiyaking pasok ang mga ito sa limitasyon at subukan muli.",
+  },
+  "chat.media.err.missing": {
+    en: "An uploaded file could not be found. Try sending again.",
+    tl: "Hindi makita ang isang na-upload na file. Subukang ipadala muli.",
+  },
+  "chat.media.err.uploadRefused": {
+    en: "The upload was refused: the chat may be read-only, or too many files were sent in a short time.",
+    tl: "Tinanggihan ang pag-upload: maaaring read-only na ang chat, o masyadong maraming file ang naipadala sa maikling oras.",
+  },
+  "chat.media.err.tooLarge": {
+    en: "A file is larger than 25 MB.",
+    tl: "Lampas sa 25 MB ang isang file.",
+  },
+  "chat.media.err.uploadFailed": {
+    en: "A file could not be uploaded. The message was not sent.",
+    tl: "Hindi ma-upload ang isang file. Hindi naipadala ang mensahe.",
+  },
   "popup.tabsLabel": {
     en: "Report sections",
     tl: "Mga seksyon ng ulat",

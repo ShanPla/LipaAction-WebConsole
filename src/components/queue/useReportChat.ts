@@ -4,13 +4,28 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   markReportChatSeen,
   markReportMessagesRead,
+  sendChatMedia,
   sendDeskMessage,
   sendReportMessage,
 } from "@/app/actions/reportChat";
 import { callAction } from "@/lib/callAction";
+import { REPORT_CHAT_MEDIA } from "@/lib/features";
 import { createClient } from "@/lib/supabase/client";
 import {
+  ATTACHMENT_COLUMNS,
+  CHAT_MEDIA_BUCKET,
+  chatMediaPath,
+  sortAttachments,
+  toChatAttachment,
+  type AttachmentInput,
+  type ChatAttachment,
+  type MediaSendOutcome,
+} from "@/lib/chatMedia";
+import type { PreparedMedia } from "@/lib/chatMediaPrepare";
+import {
+  DESK_MESSAGE_COLUMNS_MEDIA,
   DESK_MESSAGE_COLUMNS_V2,
+  GROUP_MESSAGE_COLUMNS_MEDIA,
   GROUP_MESSAGE_COLUMNS_V2,
   MESSAGE_COLUMNS,
   THREAD_LIMIT,
@@ -26,6 +41,46 @@ import {
 // How often the thread is read again while its live channel isn't
 // delivering: the queue's own fallback cadence.
 const THREAD_POLL_MS = 30_000;
+
+// Attachment rows are read for this many messages per request, so the
+// request's address stays short.
+const ATTACHMENT_PAGE = 50;
+
+// The columns each thread is read with: v1, v2, or v2 with media_count.
+function columnsFor(thread: ChatThread | undefined): string {
+  if (!thread) return MESSAGE_COLUMNS;
+  if (REPORT_CHAT_MEDIA) return thread === "desk" ? DESK_MESSAGE_COLUMNS_MEDIA : GROUP_MESSAGE_COLUMNS_MEDIA;
+  return thread === "desk" ? DESK_MESSAGE_COLUMNS_V2 : GROUP_MESSAGE_COLUMNS_V2;
+}
+
+/**
+ * A media send in progress, kept until it is answered "sent": if the answer
+ * is lost, the next Send reuses the same message id and the files already
+ * uploaded, and the backend answers a repeat as already sent. Picking
+ * different files starts a new one.
+ */
+interface PendingMediaSend {
+  messageId: string;
+  // The picked files' keys, joined.
+  files: string;
+  uploaded: Map<string, AttachmentInput>;
+}
+
+/** What a failed Storage upload means for the official. */
+function uploadOutcome(error: { status?: number; statusCode?: string }): MediaSendOutcome {
+  // The HTTP status, and the status Storage writes in its JSON body: some
+  // versions answer a too-large file as HTTP 400 with "413" in the body.
+  const http = typeof error.status === "number" ? error.status : NaN;
+  const body = Number(error.statusCode);
+  if (http === 0 || (!Number.isFinite(http) && !Number.isFinite(body))) return "unreachable";
+  if (http === 401 || body === 401) return "session-expired";
+  if (http === 413 || body === 413) return "upload-too-large";
+  // A refused policy (row-level security) is 400 or 403: the chat is
+  // closed, the thread is not this desk's, or too many files were sent on
+  // the report in a short time.
+  if (http === 400 || http === 403 || body === 403) return "upload-refused";
+  return "upload-failed";
+}
 
 type ThreadState = "loading" | "ready" | "failed";
 
@@ -74,7 +129,7 @@ export function useReportChat(reportId: string, enabled: boolean, thread?: ChatT
       // limit would keep the oldest messages and drop the ones just sent.
       const { data, error } = await createClient()
         .from(thread ? THREAD_TABLE[thread] : "report_messages")
-        .select(thread ? (thread === "desk" ? DESK_MESSAGE_COLUMNS_V2 : GROUP_MESSAGE_COLUMNS_V2) : MESSAGE_COLUMNS)
+        .select(columnsFor(thread))
         .eq("report_id", reportId)
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
@@ -215,6 +270,66 @@ export function useReportChat(reportId: string, enabled: boolean, thread?: ChatT
     return () => document.removeEventListener("visibilitychange", mark);
   }, [thread, enabled, state, messages, reportId]);
 
+  // Chat media (REPORT_CHAT_MEDIA, v2 threads only): the attachment rows of
+  // every message that carries media, read once per message. The rows
+  // commit with their message, so a message on screen already has them.
+  // The table is not in Realtime; a message's own INSERT is the signal.
+  const mediaOn = REPORT_CHAT_MEDIA && thread !== undefined && enabled;
+  const [attachments, setAttachments] = useState<Map<string, ChatAttachment[]>>(() => new Map());
+  const [attachmentsFailed, setAttachmentsFailed] = useState<Set<string>>(() => new Set());
+  const [attachmentRetry, setAttachmentRetry] = useState(0);
+  const requested = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (!mediaOn || !thread) return;
+    const ids = messages.filter((m) => m.mediaCount > 0 && !requested.current.has(m.id)).map((m) => m.id);
+    if (ids.length === 0) return;
+    ids.forEach((id) => requested.current.add(id));
+    const supabase = createClient();
+    for (let i = 0; i < ids.length; i += ATTACHMENT_PAGE) {
+      const page = ids.slice(i, i + ATTACHMENT_PAGE);
+      const markFailed = () => {
+        // Asked again on Retry.
+        page.forEach((id) => requested.current.delete(id));
+        setAttachmentsFailed((prev) => new Set([...Array.from(prev), ...page]));
+      };
+      void Promise.resolve(
+        supabase
+          .from("report_chat_attachments")
+          .select(ATTACHMENT_COLUMNS)
+          .eq("report_id", reportId)
+          .eq("thread", thread)
+          .in("message_id", page)
+      ).then(({ data, error }) => {
+        if (error || !data) {
+          markFailed();
+          return;
+        }
+        const byMessage = new Map<string, ChatAttachment[]>(page.map((id) => [id, []]));
+        for (const row of data as unknown[]) {
+          const a = toChatAttachment(row);
+          if (a) byMessage.get(a.messageId)?.push(a);
+        }
+        setAttachments((prev) => {
+          const next = new Map(prev);
+          byMessage.forEach((list, id) => next.set(id, sortAttachments(list)));
+          return next;
+        });
+        setAttachmentsFailed((prev) => {
+          if (!page.some((id) => prev.has(id))) return prev;
+          const next = new Set(prev);
+          page.forEach((id) => next.delete(id));
+          return next;
+        });
+      }, markFailed);
+    }
+  }, [mediaOn, thread, messages, reportId, attachmentRetry]);
+
+  const retryAttachments = useCallback(() => {
+    setAttachmentsFailed(new Set());
+    setAttachmentRetry((n) => n + 1);
+  }, []);
+
   /**
    * Sends one message. null means the action never answered (see
    * callAction): the message may or may not have been stored, so the thread
@@ -238,5 +353,82 @@ export function useReportChat(reportId: string, enabled: boolean, thread?: ChatT
     [reportId, thread, load]
   );
 
-  return { messages, state, capped, live, isSending, send, reload: load };
+  const pendingMedia = useRef<PendingMediaSend | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
+
+  /**
+   * Sends a message with photos or a video (REPORT_CHAT_MEDIA): uploads
+   * each file to the private bucket first, never overwriting, then sends
+   * the message that names them. null means the send action never answered,
+   * as for send(); the next try reuses the same ids.
+   */
+  const sendMedia = useCallback(
+    async (body: string, files: PreparedMedia[]): Promise<MediaSendOutcome | null> => {
+      if (!REPORT_CHAT_MEDIA || !thread) return "off";
+      setIsSending(true);
+      try {
+        const key = files.map((f) => f.key).join(",");
+        if (!pendingMedia.current || pendingMedia.current.files !== key) {
+          pendingMedia.current = { messageId: crypto.randomUUID(), files: key, uploaded: new Map() };
+        }
+        const pending = pendingMedia.current;
+        const storage = createClient().storage.from(CHAT_MEDIA_BUCKET);
+        setUploadProgress({ done: pending.uploaded.size, total: files.length });
+        for (const file of files) {
+          if (pending.uploaded.has(file.key)) continue;
+          const path = chatMediaPath(reportId, thread, pending.messageId, crypto.randomUUID(), file.kind);
+          let failure: MediaSendOutcome | null = null;
+          try {
+            const { error } = await storage.upload(path, file.blob, { contentType: file.mime, upsert: false });
+            if (error) failure = uploadOutcome(error as { status?: number; statusCode?: string });
+          } catch {
+            failure = "unreachable";
+          }
+          if (failure) {
+            // Codes and ids only; never a file name.
+            console.error("[chat media] upload not stored", JSON.stringify({ report: reportId, thread, outcome: failure }));
+            return failure;
+          }
+          pending.uploaded.set(file.key, {
+            path,
+            kind: file.kind,
+            mime: file.mime,
+            bytes: file.bytes,
+            ...(file.width ? { width: file.width } : {}),
+            ...(file.height ? { height: file.height } : {}),
+            ...(file.kind === "video" && file.durationS ? { duration_s: file.durationS } : {}),
+          });
+          setUploadProgress({ done: pending.uploaded.size, total: files.length });
+        }
+        const list = files.map((f) => pending.uploaded.get(f.key)).filter((a): a is AttachmentInput => !!a);
+        const outcome = await callAction(() => sendChatMedia(reportId, thread, pending.messageId, body, list));
+        // Sent, or refused for the files themselves (one missing from the
+        // bucket, or the stored list not matching): the next Send starts over
+        // with a new message id and uploads every file again. Reusing the same
+        // ids would only send the identical, refused list again.
+        if (outcome === "sent" || outcome === "media-missing" || outcome === "media-invalid") pendingMedia.current = null;
+        if (outcome === "sent" || outcome === null) void load();
+        return outcome;
+      } finally {
+        setUploadProgress(null);
+        setIsSending(false);
+      }
+    },
+    [reportId, thread, load]
+  );
+
+  return {
+    messages,
+    state,
+    capped,
+    live,
+    isSending,
+    send,
+    reload: load,
+    attachments,
+    attachmentsFailed,
+    retryAttachments,
+    sendMedia,
+    uploadProgress,
+  };
 }

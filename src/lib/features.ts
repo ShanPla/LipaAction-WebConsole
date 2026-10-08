@@ -82,3 +82,32 @@ export const REPORT_CHAT_LIVE: boolean = true;
  * on prod.
  */
 export const REPORT_CHAT_V2: boolean = false;
+
+/**
+ * Whether the backend has chat media: photos and short videos in both
+ * threads of the v2 chat. That is the backend's migration 20261126090000
+ * (report_messages.media_count and report_desk_messages.media_count, the
+ * table report_chat_attachments, the function send_report_chat_media(),
+ * and the private Storage bucket report-chat-media with its two policies);
+ * its contract is the backend's
+ * docs/specs/2026-10-08-report-chat-media-design.md. Like the chat itself,
+ * it is an addition the backend owner approved on 2026-10-08, outside
+ * Chapter 3.
+ *
+ * While this is false the chat is exactly the v2 chat above: nothing reads
+ * media_count or report_chat_attachments, nothing touches the bucket, the
+ * composer has no attach button, the page's Content-Security-Policy is
+ * unchanged, and sendChatMedia in src/app/actions/reportChat.ts refuses
+ * before any read. A select that names media_count fails until the
+ * migration is on prod.
+ *
+ * With it true the desk can attach up to 4 photos or 1 video (MP4, at most
+ * 30 seconds, at most 25 MB) to a message on either thread, and sees
+ * everyone's attachments through short-lived signed URLs. It needs
+ * REPORT_CHAT_V2 and REPORT_CHAT_LIVE too: media lives only in the v2
+ * threads.
+ *
+ * Never set it to true before the backend owner confirms the migration is
+ * on prod.
+ */
+export const REPORT_CHAT_MEDIA: boolean = false;

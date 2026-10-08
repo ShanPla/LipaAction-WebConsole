@@ -113,7 +113,9 @@ export function ReportDetailPanel({
   // while a write is in flight.
   // The expanded location map is one more layer on top.
   const [mapExpanded, setMapExpanded] = useState(false);
-  const stacked = isRejecting || routing.isConfirming || barangayResolve.isPrompting || mapExpanded;
+  // So is a chat photo or video at full size (REPORT_CHAT_MEDIA).
+  const [chatViewerOpen, setChatViewerOpen] = useState(false);
+  const stacked = isRejecting || routing.isConfirming || barangayResolve.isPrompting || mapExpanded || chatViewerOpen;
   const writing = isPending || routing.isPending || barangayResolve.isPending;
   useDismissOnEscape(onClose, !stacked && !writing);
 
@@ -372,6 +374,7 @@ export function ReportDetailPanel({
                   reportId={report.id}
                   routedToAgency={report.details.routing.length > 0}
                   focusComposer={focusChat}
+                  onViewerChange={setChatViewerOpen}
                 />
               ) : (
                 <ReportChatSection reportId={report.id} focusComposer={focusChat} />
