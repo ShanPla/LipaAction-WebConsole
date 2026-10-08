@@ -4,11 +4,16 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { getChatLock } from "@/app/actions/reportChat";
 import { callAction } from "@/lib/callAction";
-import { MAX_MESSAGE_LENGTH, type ChatLock, type SendOutcome } from "@/lib/reportChat";
+import { MAX_MESSAGE_LENGTH, type ChatLock, type ChatMessage, type ChatThread, type SendOutcome } from "@/lib/reportChat";
 import { Button } from "@/components/ui/Button";
 import { buildThreadItems } from "@/lib/chatThreadView";
+import { openedBy, seenAvatarsByMessage, type Seer } from "@/lib/chatSeen";
 import { useToast } from "@/components/ui/Toast";
+import { Icon } from "@/components/ui/Icon";
 import { useReportChat } from "./useReportChat";
+import { useChatSeen } from "./useChatSeen";
+import { ChatAvatar, agencyLabelOf } from "./ChatAvatar";
+import type { AgencyLabel } from "./useAgencyDirectory";
 
 // Each failed send is worded in the official's language; "sent" and null
 // (the action never answered) are handled in submit().
@@ -68,19 +73,40 @@ const COMPOSER_MAX_PX = 144;
  *
  * It fills the height its parent gives it (the pop-up's chat column), so it
  * must sit in a flex column with a bounded height.
+ *
+ * `thread` is given only under REPORT_CHAT_V2, by ReportChatThreads. Without
+ * it this is the v1 chat exactly. With it, the section shows that thread:
+ * agency messages under the agency's name, the agencies that have opened
+ * it, and a small avatar under the newest message each participant has
+ * seen, as a messenger does.
  */
 export function ReportChatSection({
   reportId,
   focusComposer = false,
+  thread,
+  agencies,
 }: {
   reportId: string;
   // Set when the pop-up was opened from a row's [Chat] button: the official
   // came to write, so the composer is focused.
   focusComposer?: boolean;
+  // v2 only: which thread, and the agencies' names by id.
+  thread?: ChatThread;
+  agencies?: Map<string, AgencyLabel>;
 }) {
   const t = useT();
   const { showToast } = useToast();
-  const { messages, state, capped, live, isSending, send } = useReportChat(reportId, true);
+  const { messages, state, capped, live, isSending, send } = useReportChat(reportId, true, thread);
+  // v2 only; with no thread nothing is read and no channel is joined.
+  const { rows: seenRows } = useChatSeen(reportId, thread ?? "group", thread !== undefined);
+  const seenUnder = useMemo(
+    () => (thread ? seenAvatarsByMessage(thread, messages, seenRows) : new Map<string, Seer[]>()),
+    [thread, messages, seenRows]
+  );
+  const openers = useMemo(() => (thread ? openedBy(thread, messages, seenRows) : []), [thread, messages, seenRows]);
+  const nameOf = (agencyId: string | null) => agencyLabelOf(agencies, agencyId, t).name;
+  const senderLabel = (m: ChatMessage) =>
+    m.side === "agency" ? nameOf(m.agencyId) : t(m.side === "barangay" ? "chat.fromDesk" : "chat.fromReporter");
   const [draft, setDraft] = useState("");
   // Set once a send says the thread no longer takes messages, so the
   // composer stops offering what the backend will refuse.
@@ -148,9 +174,41 @@ export function ReportChatSection({
     <section aria-labelledby="report-chat-title" className="flex min-h-0 flex-1 flex-col">
       <div className="border-b border-ink-100 px-4 py-2">
         <p id="report-chat-title" className="text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-          {t("chat.title")}
+          {t(thread === "desk" ? "chat.v2.title.desk" : thread === "group" ? "chat.v2.title.group" : "chat.title")}
         </p>
+        {thread && (
+          <p className={`text-xs ${thread === "desk" ? "font-medium text-ink-700" : "text-ink-500"}`}>
+            {t(thread === "desk" ? "chat.v2.deskNote" : "chat.v2.groupNote")}
+          </p>
+        )}
         <p className="text-xs text-ink-500">{t("chat.closeWarning")}</p>
+        {thread && state === "ready" && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-medium text-ink-500">{t("chat.v2.openedBy")}</span>
+            {openers.length === 0 && <span className="text-[11px] text-ink-500">{t("chat.v2.openedByNone")}</span>}
+            {openers.map((o) => {
+              const name = nameOf(o.agencyId);
+              const label = t(o.caughtUp ? "chat.v2.openedSeen" : "chat.v2.openedNotSeen", {
+                agency: name,
+                date: formatTime(o.openedAt),
+              });
+              return (
+                <span
+                  key={o.agencyId}
+                  title={label}
+                  className={`inline-flex items-center gap-1 rounded-full border border-ink-100 py-0.5 pl-0.5 pr-2 text-[11px] ${
+                    o.caughtUp ? "bg-white text-ink-900" : "bg-ink-50 text-ink-700"
+                  }`}
+                >
+                  <ChatAvatar side="agency" agencyId={o.agencyId} agencies={agencies} />
+                  <span aria-hidden>{name}</span>
+                  {o.caughtUp && <Icon name="check" className="h-3 w-3 text-brand-600" />}
+                  <span className="sr-only">{label}</span>
+                </span>
+              );
+            })}
+          </div>
+        )}
         {lock.kind === "locks" && (
           <p role="note" className="mt-1 text-xs font-medium text-ink-700">
             {t("chat.lockNotice", { date: formatTime(lock.at) })}
@@ -179,19 +237,48 @@ export function ReportChatSection({
             }
             const { message: m, side, showMeta } = item;
             const fromDesk = side === "desk";
+            const seers = seenUnder.get(m.id);
             return (
               <li key={m.id} className={`flex flex-col ${fromDesk ? "items-end" : "items-start"} ${showMeta ? "mb-2" : ""}`}>
                 <p
                   className={`max-w-[75%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${
-                    fromDesk ? "bg-brand-500 text-white" : "bg-ink-100 text-ink-900"
+                    fromDesk
+                      ? "bg-brand-500 text-white"
+                      : m.side === "agency"
+                        ? "border border-ink-100 bg-ink-50 text-ink-900"
+                        : "bg-ink-100 text-ink-900"
                   }`}
                 >
                   {m.body}
                 </p>
-                {showMeta && (
+                {showMeta && !thread && (
                   <p className="mt-0.5 px-1 text-[11px] text-ink-500">
                     {t(fromDesk ? "chat.fromDesk" : "chat.fromReporter")} · {formatClock(m.createdAt)}
                     {fromDesk && m.readAt ? ` · ${t("chat.read")}` : ""}
+                  </p>
+                )}
+                {showMeta && thread && (
+                  <p className="mt-0.5 flex items-center gap-1 px-1 text-[11px] text-ink-500">
+                    {m.side === "agency" && <ChatAvatar side="agency" agencyId={m.agencyId} agencies={agencies} />}
+                    <span>
+                      {senderLabel(m)} · {formatClock(m.createdAt)}
+                    </span>
+                  </p>
+                )}
+                {seers && seers.length > 0 && (
+                  // Messenger's seen avatars: everyone whose newest seen
+                  // message is this one, under the bubble at the right.
+                  <p className="mt-0.5 flex w-full justify-end gap-0.5 px-1">
+                    <span className="sr-only">
+                      {t("chat.v2.seenBy", {
+                        names: seers
+                          .map((s) => (s.side === "resident" ? t("chat.fromReporter") : nameOf(s.agencyId)))
+                          .join(", "),
+                      })}
+                    </span>
+                    {seers.map((s) => (
+                      <ChatAvatar key={s.key} side={s.side} agencyId={s.agencyId} agencies={agencies} />
+                    ))}
                   </p>
                 )}
               </li>
@@ -213,7 +300,13 @@ export function ReportChatSection({
             }}
           >
             <label htmlFor="report-chat-draft" className="sr-only">
-              {t("chat.composerLabel")}
+              {t(
+                thread === "desk"
+                  ? "chat.v2.composerLabel.desk"
+                  : thread === "group"
+                    ? "chat.v2.composerLabel.group"
+                    : "chat.composerLabel"
+              )}
             </label>
             <div className="flex items-end gap-2">
               <textarea

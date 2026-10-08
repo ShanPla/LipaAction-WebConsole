@@ -1,15 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { markReportMessagesRead, sendReportMessage } from "@/app/actions/reportChat";
+import {
+  markReportChatSeen,
+  markReportMessagesRead,
+  sendDeskMessage,
+  sendReportMessage,
+} from "@/app/actions/reportChat";
 import { callAction } from "@/lib/callAction";
 import { createClient } from "@/lib/supabase/client";
 import {
+  DESK_MESSAGE_COLUMNS_V2,
+  GROUP_MESSAGE_COLUMNS_V2,
   MESSAGE_COLUMNS,
   THREAD_LIMIT,
+  THREAD_TABLE,
   sortMessages,
   toChatMessage,
+  toChatMessageV2,
   type ChatMessage,
+  type ChatThread,
   type SendOutcome,
 } from "@/lib/reportChat";
 
@@ -37,8 +47,15 @@ type ThreadState = "loading" | "ready" | "failed";
  * again too, since changes made during a gap are never replayed. While the
  * channel isn't delivering, the thread is read on a timer and `live` is
  * false, so the drawer can say so.
+ *
+ * `thread` is given only under REPORT_CHAT_V2. Without it this is the v1
+ * chat, unchanged: report_messages, the v1 columns and reader, the v1
+ * mark-read and send. With it, the hook reads that thread's table with the
+ * v2 columns and keeps agency messages, marks the thread seen through the
+ * v2 function (only while the page is visible), and sends on the desk
+ * thread through the v2 function. The group thread keeps the v1 send.
  */
-export function useReportChat(reportId: string, enabled: boolean) {
+export function useReportChat(reportId: string, enabled: boolean, thread?: ChatThread) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [state, setState] = useState<ThreadState>("loading");
   // True when the thread holds more than THREAD_LIMIT messages and only the
@@ -56,8 +73,8 @@ export function useReportChat(reportId: string, enabled: boolean) {
       // Newest first with a limit, then turned round: ascending with a
       // limit would keep the oldest messages and drop the ones just sent.
       const { data, error } = await createClient()
-        .from("report_messages")
-        .select(MESSAGE_COLUMNS)
+        .from(thread ? THREAD_TABLE[thread] : "report_messages")
+        .select(thread ? (thread === "desk" ? DESK_MESSAGE_COLUMNS_V2 : GROUP_MESSAGE_COLUMNS_V2) : MESSAGE_COLUMNS)
         .eq("report_id", reportId)
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
@@ -69,14 +86,15 @@ export function useReportChat(reportId: string, enabled: boolean) {
         setState((prev) => (prev === "ready" ? prev : "failed"));
         return;
       }
-      const rows = (data as unknown[]).map(toChatMessage).filter((m): m is ChatMessage => m !== null);
+      const read = thread ? toChatMessageV2 : toChatMessage;
+      const rows = (data as unknown[]).map(read).filter((m): m is ChatMessage => m !== null);
       setCapped(rows.length > THREAD_LIMIT);
       setMessages(sortMessages(rows.slice(0, THREAD_LIMIT)));
       setState("ready");
     } catch {
       if (seq === loadSeq.current) setState((prev) => (prev === "ready" ? prev : "failed"));
     }
-  }, [reportId]);
+  }, [reportId, thread]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -97,13 +115,19 @@ export function useReportChat(reportId: string, enabled: boolean) {
       .then(() => {
         if (disposed) return;
         channel = supabase
-          .channel(`report-messages:${reportId}`)
+          .channel(thread ? `report-chat-${thread}:${reportId}` : `report-messages:${reportId}`)
           .on(
             "postgres_changes",
-            { event: "*", schema: "public", table: "report_messages", filter: `report_id=eq.${reportId}` },
+            {
+              event: "*",
+              schema: "public",
+              table: thread ? THREAD_TABLE[thread] : "report_messages",
+              filter: `report_id=eq.${reportId}`,
+            },
             (payload) => {
               if (disposed) return;
-              const message = payload.eventType === "DELETE" ? null : toChatMessage(payload.new);
+              const read = thread ? toChatMessageV2 : toChatMessage;
+              const message = payload.eventType === "DELETE" ? null : read(payload.new);
               // The filter is defence in depth; a message for another
               // report must never be drawn in this thread.
               if (!message || message.reportId !== reportId) {
@@ -130,7 +154,7 @@ export function useReportChat(reportId: string, enabled: boolean) {
       loadSeq.current += 1;
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [enabled, reportId, load]);
+  }, [enabled, reportId, thread, load]);
 
   // The fallback, only while the channel isn't delivering.
   useEffect(() => {
@@ -147,7 +171,7 @@ export function useReportChat(reportId: string, enabled: boolean) {
   // repeat for as long as the drawer stays open.
   const triedToMark = useRef(new Set<string>());
   useEffect(() => {
-    if (!enabled || state !== "ready") return;
+    if (thread || !enabled || state !== "ready") return;
     const unread = messages.filter((m) => m.side === "resident" && m.readAt === null && !triedToMark.current.has(m.id));
     if (unread.length === 0) return;
     for (const m of unread) triedToMark.current.add(m.id);
@@ -159,7 +183,37 @@ export function useReportChat(reportId: string, enabled: boolean) {
       const ids = new Set(unread.map((m) => m.id));
       setMessages((prev) => prev.map((m) => (ids.has(m.id) && m.readAt === null ? { ...m, readAt } : m)));
     });
-  }, [enabled, state, messages, reportId]);
+  }, [enabled, state, messages, reportId, thread]);
+
+  // v2: mark the thread seen while it is on an official's screen. This
+  // component is mounted only while its thread is the one shown, so
+  // "visible" is the page itself: on opening, for each newest message that
+  // arrives, and when the tab comes back into view. A call that would not
+  // move the desk's marker writes nothing on the backend, so the only
+  // dedupe here is the newest message already marked; a failure is tried
+  // again when the next message arrives, as v1 does.
+  const markedThrough = useRef<string | null>(null);
+  useEffect(() => {
+    if (!thread || !enabled || state !== "ready") return;
+    // "" stands for the empty thread: opening it still records "opened".
+    const newest = messages.length > 0 ? messages[messages.length - 1].id : "";
+    const mark = () => {
+      if (document.visibilityState !== "visible" || markedThrough.current === newest) return;
+      markedThrough.current = newest;
+      const unread = thread === "group" ? messages.filter((m) => m.side === "resident" && m.readAt === null) : [];
+      void callAction(() => markReportChatSeen(reportId, thread, unread.length > 0)).then((marked) => {
+        if (!marked || unread.length === 0) return;
+        // As in v1: the channel reports each read_at; this covers a thread
+        // read on the timer.
+        const readAt = new Date().toISOString();
+        const ids = new Set(unread.map((m) => m.id));
+        setMessages((prev) => prev.map((m) => (ids.has(m.id) && m.readAt === null ? { ...m, readAt } : m)));
+      });
+    };
+    mark();
+    document.addEventListener("visibilitychange", mark);
+    return () => document.removeEventListener("visibilitychange", mark);
+  }, [thread, enabled, state, messages, reportId]);
 
   /**
    * Sends one message. null means the action never answered (see
@@ -170,7 +224,9 @@ export function useReportChat(reportId: string, enabled: boolean) {
     async (body: string): Promise<SendOutcome | null> => {
       setIsSending(true);
       try {
-        const outcome = await callAction(() => sendReportMessage(reportId, body));
+        const outcome = await callAction(() =>
+          thread === "desk" ? sendDeskMessage(reportId, body) : sendReportMessage(reportId, body)
+        );
         // The channel usually delivers the new message first; reading again
         // is what shows it when the channel is down, or the answer was lost.
         if (outcome === "sent" || outcome === null) void load();
@@ -179,7 +235,7 @@ export function useReportChat(reportId: string, enabled: boolean) {
         setIsSending(false);
       }
     },
-    [reportId, load]
+    [reportId, thread, load]
   );
 
   return { messages, state, capped, live, isSending, send, reload: load };

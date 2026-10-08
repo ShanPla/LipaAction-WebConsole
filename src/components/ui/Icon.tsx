@@ -16,6 +16,7 @@ import {
   ShieldAlert,
   SlidersHorizontal,
   Timer,
+  User,
   UserCheck,
   X,
   type LucideIcon,
@@ -41,7 +42,8 @@ export type IconName =
   | "verify"
   | "sanctions"
   | "expand"
-  | "shrink";
+  | "shrink"
+  | "person";
 
 /**
  * The console's icons, from Lucide (lucide-react, ISC licence).
@@ -71,6 +73,7 @@ const ICONS: Record<IconName, LucideIcon> = {
   sanctions: ShieldAlert, // cooldowns and suspensions on residents' accounts
   expand: Maximize2, // open a map at full size
   shrink: Minimize2, // back to the small map
+  person: User, // the reporter's avatar in the chat: an icon, never initials
 };
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {

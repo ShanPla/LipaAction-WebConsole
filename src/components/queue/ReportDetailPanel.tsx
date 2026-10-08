@@ -21,7 +21,8 @@ import { AgencyPickerModal } from "./AgencyPickerModal";
 import { useBarangayResolve } from "./useBarangayResolve";
 import { ResolveNoteModal } from "./ResolveNoteModal";
 import { ReportChatSection } from "./ReportChatSection";
-import { REPORT_CHAT_LIVE } from "@/lib/features";
+import { ReportChatThreads } from "./ReportChatThreads";
+import { REPORT_CHAT_LIVE, REPORT_CHAT_V2 } from "@/lib/features";
 import { isChatOffered } from "@/lib/reportChat";
 import {
   agencyProgressLabel,
@@ -366,7 +367,11 @@ export function ReportDetailPanel({
         <div className="flex min-h-0 flex-1">
           {showChat && (
             <div className="flex min-w-0 flex-1 flex-col">
-              <ReportChatSection reportId={report.id} focusComposer={focusChat} />
+              {REPORT_CHAT_V2 ? (
+                <ReportChatThreads reportId={report.id} focusComposer={focusChat} />
+              ) : (
+                <ReportChatSection reportId={report.id} focusComposer={focusChat} />
+              )}
             </div>
           )}
           {showDetails && (

@@ -51,3 +51,28 @@ export const BARANGAY_RESOLVE_LIVE: boolean = true;
  * on prod.
  */
 export const REPORT_CHAT_LIVE: boolean = true;
+
+/**
+ * Whether the backend has the report chat v2: agencies in the report's
+ * thread, a desk-only thread between the barangay desk and the routed
+ * agencies, and seen markers. That is the backend's migration
+ * 20261125090000 (report_messages.agency_id, the tables
+ * report_desk_messages and report_chat_seen, and the functions
+ * send_report_chat_message() and mark_report_chat_seen()); its contract is
+ * the backend's docs/specs/2026-10-08-report-chat-v2-design.md. It is an
+ * addition the backend owner approved on 2026-10-08, outside Chapter 3.
+ *
+ * While this is false the chat is exactly the v1 chat above: one thread,
+ * resident and desk only, the v1 columns, the v1 functions, the v1 channel.
+ * Nothing v2 is read, joined or called, and the three v2 actions in
+ * src/app/actions/reportChat.ts refuse before any read. A select that names
+ * agency_id, or either new table, fails until the migration is on prod.
+ *
+ * With it true the drawer's chat shows agency messages under the agency's
+ * name, adds the staff-only Desk thread, draws who has seen what, and lists
+ * the agencies that have opened the chat. It needs REPORT_CHAT_LIVE too.
+ *
+ * Never set it to true before the backend owner confirms the migration is
+ * on prod.
+ */
+export const REPORT_CHAT_V2: boolean = false;
