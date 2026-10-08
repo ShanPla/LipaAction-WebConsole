@@ -85,6 +85,7 @@ export function ReportChatSection({
   focusComposer = false,
   thread,
   agencies,
+  agencyConsentPending = false,
 }: {
   reportId: string;
   // Set when the pop-up was opened from a row's [Chat] button: the official
@@ -93,6 +94,9 @@ export function ReportChatSection({
   // v2 only: which thread, and the agencies' names by id.
   thread?: ChatThread;
   agencies?: Map<string, AgencyLabel>;
+  // v2 group thread only: the agencies can't read it yet, because the
+  // reporter hasn't accepted the consent notice that covers agency chat.
+  agencyConsentPending?: boolean;
 }) {
   const t = useT();
   const { showToast } = useToast();
@@ -179,6 +183,11 @@ export function ReportChatSection({
         {thread && (
           <p className={`text-xs ${thread === "desk" ? "font-medium text-ink-700" : "text-ink-500"}`}>
             {t(thread === "desk" ? "chat.v2.deskNote" : "chat.v2.groupNote")}
+          </p>
+        )}
+        {thread === "group" && agencyConsentPending && (
+          <p role="note" className="mt-1 text-xs font-medium text-ink-700">
+            {t("chat.v2.agencyConsentPending")}
           </p>
         )}
         <p className="text-xs text-ink-500">{t("chat.closeWarning")}</p>

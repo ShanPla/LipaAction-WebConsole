@@ -163,14 +163,30 @@ export function openedBy(thread: ChatThread, messages: ChatMessage[], rows: Seen
     .sort((a, b) => toMicros(a.openedAt) - toMicros(b.openedAt) || a.agencyId.localeCompare(b.agencyId));
 }
 
+// The most letters an agency's avatar holds (ChatAvatar).
+export const AGENCY_LABEL_MAX = 6;
+
 /**
- * The letters on an agency's avatar: its code (BFP, PNP, CDRRMO) when it
- * has one, cut to four, or else the first letters of its name. Agencies,
- * not people: a resident's avatar is an icon, never initials.
+ * The short label on an agency's avatar, read from its code in the agencies
+ * table, at most six letters so it fits the small avatar:
+ *
+ * - a one-word code is the agency's acronym, whole: pnp PNP, bfp BFP,
+ *   cdrrmo CDRRMO, cswdo CSWDO, ceo CEO;
+ * - a compound code names the office's work in its last word: city_health
+ *   HEALTH (cutting the code to four letters printed CDRR and CITY);
+ *   if that word is longer than six letters, the parts' first letters.
+ *
+ * With no code, the first letters of the name. Agencies, not people: a
+ * resident's avatar is an icon, never initials.
  */
 export function agencyInitials(code: string | null | undefined, name: string | null | undefined): string {
-  const fromCode = (code ?? "").trim();
-  if (fromCode) return fromCode.slice(0, 4).toUpperCase();
+  const parts = (code ?? "").trim().split(/[\s_-]+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, AGENCY_LABEL_MAX).toUpperCase();
+  if (parts.length > 1) {
+    const last = parts[parts.length - 1];
+    const label = last.length <= AGENCY_LABEL_MAX ? last : parts.map((w) => w[0]).join("");
+    return label.slice(0, AGENCY_LABEL_MAX).toUpperCase();
+  }
   const words = (name ?? "").trim().split(/\s+/).filter(Boolean);
   const letters = words.slice(0, 3).map((w) => w[0]).join("");
   return letters ? letters.toUpperCase() : "?";

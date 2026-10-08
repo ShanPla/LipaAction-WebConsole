@@ -158,6 +158,30 @@ export type ChatLock =
   | { kind: "unknown" };
 
 /**
+ * Whether the agencies a report is routed to take part in its group thread
+ * (REPORT_CHAT_V2): report_chat_access()'s agency_group_access, the
+ * backend's consent gate. An agency reads and writes the group thread only
+ * once the reporter has accepted the consent notice that covers agency
+ * chat; until then the agencies have the desk thread only.
+ *
+ * - open: the agencies read the group thread, earlier messages included.
+ * - consent-pending: the reporter hasn't accepted that notice yet.
+ * - none: nothing to wait for (a discreet report has no thread).
+ * - unknown: the read failed, or the answer was none of the above.
+ */
+export type AgencyGroupAccess = "open" | "consent-pending" | "none" | "unknown";
+
+/** Reads agency_group_access from report_chat_access()'s jsonb answer. */
+export function toAgencyGroupAccess(data: unknown): AgencyGroupAccess {
+  if (typeof data !== "object" || data === null || !("agency_group_access" in data)) return "unknown";
+  const value = (data as { agency_group_access: unknown }).agency_group_access;
+  if (value === "open") return "open";
+  if (value === "consent_pending") return "consent-pending";
+  if (value === null) return "none";
+  return "unknown";
+}
+
+/**
  * Whether a report offers the chat at all: the backend has it (the
  * REPORT_CHAT_LIVE flag, passed in) and the report is not discreet, which
  * has no thread. The drawer and the queue row's [Chat] button both ask this,

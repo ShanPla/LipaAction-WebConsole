@@ -42,8 +42,8 @@ export const BARANGAY_RESOLVE_LIVE: boolean = true;
  *
  * While this is false the console asks for none of it. The drawer shows no
  * chat and no Reporter section, the queue reads no unread messages and
- * joins no message channel, and the three actions in
- * src/app/actions/reportChat.ts refuse before any read. A select on a table
+ * joins no message channel, and every action in
+ * src/app/actions/reportChat.ts refuses before any read. A select on a table
  * that doesn't exist yet fails, and a composer that can only fail is worse
  * than none.
  *
@@ -58,19 +58,25 @@ export const REPORT_CHAT_LIVE: boolean = true;
  * agencies, and seen markers. That is the backend's migration
  * 20261125090000 (report_messages.agency_id, the tables
  * report_desk_messages and report_chat_seen, and the functions
- * send_report_chat_message() and mark_report_chat_seen()); its contract is
- * the backend's docs/specs/2026-10-08-report-chat-v2-design.md. It is an
- * addition the backend owner approved on 2026-10-08, outside Chapter 3.
+ * send_report_chat_message(), mark_report_chat_seen() and
+ * report_chat_access()), pushed together with its consent migration
+ * 20261125080000; its contract is the backend's
+ * docs/specs/2026-10-08-report-chat-v2-design.md. It is an addition the
+ * backend owner approved on 2026-10-08, outside Chapter 3.
  *
  * While this is false the chat is exactly the v1 chat above: one thread,
  * resident and desk only, the v1 columns, the v1 functions, the v1 channel.
  * Nothing v2 is read, joined or called, and the three v2 actions in
- * src/app/actions/reportChat.ts refuse before any read. A select that names
+ * src/app/actions/reportChat.ts (sendDeskMessage, markReportChatSeen,
+ * getAgencyGroupAccess) refuse before any read. A select that names
  * agency_id, or either new table, fails until the migration is on prod.
  *
  * With it true the drawer's chat shows agency messages under the agency's
- * name, adds the staff-only Desk thread, draws who has seen what, and lists
- * the agencies that have opened the chat. It needs REPORT_CHAT_LIVE too.
+ * name, adds the staff-only Desk thread (on a report routed to an agency),
+ * draws who has seen what, lists the agencies that have opened the chat,
+ * and says when the agencies can't read the group thread yet because the
+ * reporter hasn't accepted the consent notice that covers agency chat. It
+ * needs REPORT_CHAT_LIVE too.
  *
  * Never set it to true before the backend owner confirms the migration is
  * on prod.

@@ -368,7 +368,11 @@ export function ReportDetailPanel({
           {showChat && (
             <div className="flex min-w-0 flex-1 flex-col">
               {REPORT_CHAT_V2 ? (
-                <ReportChatThreads reportId={report.id} focusComposer={focusChat} />
+                <ReportChatThreads
+                  reportId={report.id}
+                  routedToAgency={report.details.routing.length > 0}
+                  focusComposer={focusChat}
+                />
               ) : (
                 <ReportChatSection reportId={report.id} focusComposer={focusChat} />
               )}

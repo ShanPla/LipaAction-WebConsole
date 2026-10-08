@@ -6,13 +6,16 @@ import { REPORT_CHAT_LIVE, REPORT_CHAT_V2 } from "@/lib/features";
 import { isUuid } from "@/lib/utils";
 import {
   MAX_MESSAGE_LENGTH,
+  toAgencyGroupAccess,
+  type AgencyGroupAccess,
   type ChatLock,
   type ChatThread,
   type SendOutcome,
 } from "@/lib/reportChat";
 
 /*
- * The report chat's writes, and the lock-time read.
+ * The report chat's writes, the lock-time read, and (v2) the agencies'
+ * access read.
  *
  * Every function here is a public POST endpoint, as in reports.ts: each
  * proves the shape of its input before any call, and each refuses before
@@ -243,4 +246,33 @@ export async function getChatLock(reportId: string): Promise<ChatLock> {
   const at = new Date(data).getTime();
   if (!Number.isFinite(at)) return { kind: "unknown" };
   return at <= Date.now() ? { kind: "locked" } : { kind: "locks", at: new Date(at).toISOString() };
+}
+
+/**
+ * Whether the agencies can read this report's group thread yet
+ * (REPORT_CHAT_V2), from report_chat_access(p_report_id), so the desk can
+ * be told why no agency is in it. The backend shows an agency the group
+ * thread only after the reporter accepts the consent notice that covers
+ * agency chat (its consent gate). The desk's own reading and writing are
+ * not gated.
+ *
+ * Any failure answers "unknown" and the drawer then says nothing: this is a
+ * hint, never a reason to hold back the thread or the composer.
+ */
+export async function getAgencyGroupAccess(reportId: string): Promise<AgencyGroupAccess> {
+  if (!REPORT_CHAT_LIVE || !REPORT_CHAT_V2 || !isUuid(reportId)) return "unknown";
+
+  const supabase = createClient();
+  const { data, error, status } = await supabase.rpc("report_chat_access", {
+    p_report_id: reportId,
+  });
+
+  if (error) {
+    console.error(
+      "[report_chat_access] not read",
+      JSON.stringify({ report: reportId, status, code: error.code, token: error.details ?? null })
+    );
+    return "unknown";
+  }
+  return toAgencyGroupAccess(data);
 }

@@ -1998,6 +1998,10 @@ export const MESSAGES = {
     en: "Message to the agencies, staff only",
     tl: "Mensahe sa mga ahensya, kawani lamang",
   },
+  "chat.v2.agencyConsentPending": {
+    en: "Agencies can't see this chat until the resident accepts the updated consent.",
+    tl: "Hindi pa makikita ng mga ahensya ang chat na ito hangga't hindi tinatanggap ng residente ang na-update na pahintulot.",
+  },
   "popup.tabsLabel": {
     en: "Report sections",
     tl: "Mga seksyon ng ulat",
