@@ -2,6 +2,8 @@ import {
   BarChart3,
   Building2,
   Check,
+  ChevronLeft,
+  ChevronRight,
   ClipboardCheck,
   FileText,
   Inbox,
@@ -11,7 +13,9 @@ import {
   Maximize2,
   Menu,
   Minimize2,
+  Paperclip,
   PhoneOff,
+  Play,
   Search,
   ShieldAlert,
   SlidersHorizontal,
@@ -43,7 +47,11 @@ export type IconName =
   | "sanctions"
   | "expand"
   | "shrink"
-  | "person";
+  | "person"
+  | "attach"
+  | "play"
+  | "previous"
+  | "next";
 
 /**
  * The console's icons, from Lucide (lucide-react, ISC licence).
@@ -74,6 +82,10 @@ const ICONS: Record<IconName, LucideIcon> = {
   expand: Maximize2, // open a map at full size
   shrink: Minimize2, // back to the small map
   person: User, // the reporter's avatar in the chat: an icon, never initials
+  attach: Paperclip, // add a photo or video to a chat message
+  play: Play, // a chat video, not yet playing
+  previous: ChevronLeft, // the previous photo in the chat viewer
+  next: ChevronRight, // the next one
 };
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {

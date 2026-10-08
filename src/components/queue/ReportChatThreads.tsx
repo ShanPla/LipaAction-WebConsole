@@ -39,11 +39,14 @@ export function ReportChatThreads({
   reportId,
   routedToAgency,
   focusComposer = false,
+  onViewerChange,
 }: {
   reportId: string;
   // Whether the report has any agency_routing row.
   routedToAgency: boolean;
   focusComposer?: boolean;
+  // REPORT_CHAT_MEDIA: the media viewer opened or closed (ReportChatSection).
+  onViewerChange?: (open: boolean) => void;
 }) {
   const t = useT();
   const [picked, setPicked] = useState<ChatThread>("group");
@@ -91,6 +94,7 @@ export function ReportChatThreads({
         agencyConsentPending={thread === "group" && agencyAccess === "consent-pending"}
         // The row's [Chat] button opens the conversation with the reporter.
         focusComposer={focusComposer && thread === "group"}
+        onViewerChange={onViewerChange}
       />
     </div>
   );

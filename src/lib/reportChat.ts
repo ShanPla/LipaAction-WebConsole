@@ -32,6 +32,15 @@ export const GROUP_MESSAGE_COLUMNS_V2 = "id, report_id, sender_side, agency_id, 
 export const DESK_MESSAGE_COLUMNS_V2 = "id, report_id, sender_side, agency_id, body, created_at";
 
 /**
+ * Chat media (REPORT_CHAT_MEDIA): the v2 columns plus media_count, how many
+ * photos or videos the message carries (0 for text). A message with media
+ * may have an empty body. Asked for only while the flag is on: the column
+ * doesn't exist before the backend's media migration.
+ */
+export const GROUP_MESSAGE_COLUMNS_MEDIA = `${GROUP_MESSAGE_COLUMNS_V2}, media_count`;
+export const DESK_MESSAGE_COLUMNS_MEDIA = `${DESK_MESSAGE_COLUMNS_V2}, media_count`;
+
+/**
  * The report's two threads under v2. [group] is the v1 thread
  * (report_messages) with the routed agencies added; [desk] is the
  * staff-only thread (report_desk_messages) the resident never reads.
@@ -60,6 +69,15 @@ export interface ChatMessage {
   // Set when the other side opened the thread; null until then, and always
   // null on the desk thread, which has no such column.
   readAt: string | null;
+  // How many photos or videos the message carries (REPORT_CHAT_MEDIA); 0
+  // for text, and 0 whenever the column wasn't read.
+  mediaCount: number;
+}
+
+// media_count as read, or 0: a reader that didn't ask for it gets none.
+function mediaCountOf(r: Record<string, unknown>): number {
+  const n = r.media_count;
+  return typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= 4 ? n : 0;
 }
 
 /**
@@ -81,6 +99,7 @@ export function toChatMessage(row: unknown): ChatMessage | null {
     body: r.body,
     createdAt: r.created_at,
     readAt: typeof r.read_at === "string" ? r.read_at : null,
+    mediaCount: 0,
   };
 }
 
@@ -95,7 +114,7 @@ export function toChatMessageV2(row: unknown): ChatMessage | null {
   const r = row as Record<string, unknown>;
   if (r.sender_side !== "agency") {
     const v1 = toChatMessage(row);
-    return v1 === null ? null : { ...v1, agencyId: null };
+    return v1 === null ? null : { ...v1, agencyId: null, mediaCount: mediaCountOf(r) };
   }
   if (typeof r.id !== "string" || typeof r.report_id !== "string") return null;
   if (typeof r.agency_id !== "string") return null;
@@ -108,6 +127,7 @@ export function toChatMessageV2(row: unknown): ChatMessage | null {
     body: r.body,
     createdAt: r.created_at,
     readAt: typeof r.read_at === "string" ? r.read_at : null,
+    mediaCount: mediaCountOf(r),
   };
 }
 
