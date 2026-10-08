@@ -23,7 +23,29 @@ export const MESSAGE_COLUMNS = "id, report_id, sender_side, body, created_at, re
 /** The newest messages the drawer loads; a longer thread says it is cut. */
 export const THREAD_LIMIT = 200;
 
-export type MessageSide = "resident" | "barangay";
+/**
+ * The v2 columns (REPORT_CHAT_V2): the v1 six plus agency_id, which names
+ * the agency of an [agency] message. The desk thread has no read_at; the
+ * seen markers replace it. Never widen either: sender_id is not readable.
+ */
+export const GROUP_MESSAGE_COLUMNS_V2 = "id, report_id, sender_side, agency_id, body, created_at, read_at";
+export const DESK_MESSAGE_COLUMNS_V2 = "id, report_id, sender_side, agency_id, body, created_at";
+
+/**
+ * The report's two threads under v2. [group] is the v1 thread
+ * (report_messages) with the routed agencies added; [desk] is the
+ * staff-only thread (report_desk_messages) the resident never reads.
+ */
+export type ChatThread = "group" | "desk";
+
+/** The table each thread is stored in. */
+export const THREAD_TABLE: Record<ChatThread, string> = {
+  group: "report_messages",
+  desk: "report_desk_messages",
+};
+
+// [agency] arrives only under v2; the v1 reader never returns it.
+export type MessageSide = "resident" | "barangay" | "agency";
 
 export interface ChatMessage {
   id: string;
@@ -31,9 +53,12 @@ export interface ChatMessage {
   // Decided by the backend from the sender's role. The desk writes as
   // [barangay]; which official wrote is not readable by any client.
   side: MessageSide;
+  // The agency that wrote an [agency] message; null on every other side.
+  agencyId: string | null;
   body: string;
   createdAt: string;
-  // Set when the other side opened the thread; null until then.
+  // Set when the other side opened the thread; null until then, and always
+  // null on the desk thread, which has no such column.
   readAt: string | null;
 }
 
@@ -52,6 +77,34 @@ export function toChatMessage(row: unknown): ChatMessage | null {
     id: r.id,
     reportId: r.report_id,
     side: r.sender_side,
+    agencyId: null,
+    body: r.body,
+    createdAt: r.created_at,
+    readAt: typeof r.read_at === "string" ? r.read_at : null,
+  };
+}
+
+/**
+ * The v2 reader, for either thread: as toChatMessage, and it also keeps an
+ * [agency] message, which must name its agency (the backend's CHECK
+ * guarantees one; a row without it is not drawn). A side this console
+ * doesn't know is still dropped.
+ */
+export function toChatMessageV2(row: unknown): ChatMessage | null {
+  if (typeof row !== "object" || row === null) return null;
+  const r = row as Record<string, unknown>;
+  if (r.sender_side !== "agency") {
+    const v1 = toChatMessage(row);
+    return v1 === null ? null : { ...v1, agencyId: null };
+  }
+  if (typeof r.id !== "string" || typeof r.report_id !== "string") return null;
+  if (typeof r.agency_id !== "string") return null;
+  if (typeof r.body !== "string" || typeof r.created_at !== "string") return null;
+  return {
+    id: r.id,
+    reportId: r.report_id,
+    side: "agency",
+    agencyId: r.agency_id,
     body: r.body,
     createdAt: r.created_at,
     readAt: typeof r.read_at === "string" ? r.read_at : null,
@@ -103,6 +156,30 @@ export type ChatLock =
   | { kind: "locks"; at: string }
   | { kind: "locked" }
   | { kind: "unknown" };
+
+/**
+ * Whether the agencies a report is routed to take part in its group thread
+ * (REPORT_CHAT_V2): report_chat_access()'s agency_group_access, the
+ * backend's consent gate. An agency reads and writes the group thread only
+ * once the reporter has accepted the consent notice that covers agency
+ * chat; until then the agencies have the desk thread only.
+ *
+ * - open: the agencies read the group thread, earlier messages included.
+ * - consent-pending: the reporter hasn't accepted that notice yet.
+ * - none: nothing to wait for (a discreet report has no thread).
+ * - unknown: the read failed, or the answer was none of the above.
+ */
+export type AgencyGroupAccess = "open" | "consent-pending" | "none" | "unknown";
+
+/** Reads agency_group_access from report_chat_access()'s jsonb answer. */
+export function toAgencyGroupAccess(data: unknown): AgencyGroupAccess {
+  if (typeof data !== "object" || data === null || !("agency_group_access" in data)) return "unknown";
+  const value = (data as { agency_group_access: unknown }).agency_group_access;
+  if (value === "open") return "open";
+  if (value === "consent_pending") return "consent-pending";
+  if (value === null) return "none";
+  return "unknown";
+}
 
 /**
  * Whether a report offers the chat at all: the backend has it (the

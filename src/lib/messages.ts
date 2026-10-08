@@ -1937,6 +1937,71 @@ export const MESSAGES = {
     en: "No answer from the server. The message may or may not have been sent; check the thread.",
     tl: "Walang sagot ang server. Maaaring naipadala o hindi; tingnan ang thread.",
   },
+  // --- Report chat v2 (behind REPORT_CHAT_V2) ---
+  "chat.v2.tabsLabel": {
+    en: "Chat threads",
+    tl: "Mga thread ng chat",
+  },
+  "chat.v2.tab.group": {
+    en: "Group",
+    tl: "Grupo",
+  },
+  "chat.v2.tab.desk": {
+    en: "Desk · staff only",
+    tl: "Desk · kawani lamang",
+  },
+  "chat.v2.title.group": {
+    en: "Reporter, barangay and agencies",
+    tl: "Nag-ulat, barangay at mga ahensya",
+  },
+  "chat.v2.title.desk": {
+    en: "Barangay desk and agencies",
+    tl: "Barangay desk at mga ahensya",
+  },
+  "chat.v2.groupNote": {
+    en: "The reporter and every agency this report is routed to read this thread, earlier messages included.",
+    tl: "Nababasa ng nag-ulat at ng bawat ahensyang pinagpasahan ng ulat ang thread na ito, kasama ang mga naunang mensahe.",
+  },
+  "chat.v2.deskNote": {
+    en: "Staff only: the barangay desk and the agencies this report is routed to. The reporter never sees this thread.",
+    tl: "Para sa kawani lamang: ang barangay desk at ang mga ahensyang pinagpasahan ng ulat. Hindi kailanman makikita ng nag-ulat ang thread na ito.",
+  },
+  "chat.v2.openedBy": {
+    en: "Opened by",
+    tl: "Binuksan ng",
+  },
+  "chat.v2.openedByNone": {
+    en: "no agency yet",
+    tl: "wala pang ahensya",
+  },
+  "chat.v2.openedSeen": {
+    en: "{agency} opened this thread on {date} and has seen the latest message.",
+    tl: "Binuksan ng {agency} ang thread na ito noong {date} at nakita na ang pinakabagong mensahe.",
+  },
+  "chat.v2.openedNotSeen": {
+    en: "{agency} opened this thread on {date} and has not seen the latest message yet.",
+    tl: "Binuksan ng {agency} ang thread na ito noong {date} pero hindi pa nakikita ang pinakabagong mensahe.",
+  },
+  "chat.v2.seenBy": {
+    en: "Seen by {names}",
+    tl: "Nakita na ng {names}",
+  },
+  "chat.v2.agencyFallback": {
+    en: "Agency",
+    tl: "Ahensya",
+  },
+  "chat.v2.composerLabel.group": {
+    en: "Message to the reporter and the agencies",
+    tl: "Mensahe sa nag-ulat at sa mga ahensya",
+  },
+  "chat.v2.composerLabel.desk": {
+    en: "Message to the agencies, staff only",
+    tl: "Mensahe sa mga ahensya, kawani lamang",
+  },
+  "chat.v2.agencyConsentPending": {
+    en: "Agencies can't see this chat until the resident accepts the updated consent.",
+    tl: "Hindi pa makikita ng mga ahensya ang chat na ito hangga't hindi tinatanggap ng residente ang na-update na pahintulot.",
+  },
   "popup.tabsLabel": {
     en: "Report sections",
     tl: "Mga seksyon ng ulat",

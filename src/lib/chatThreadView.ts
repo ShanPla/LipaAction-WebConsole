@@ -12,7 +12,11 @@ export const RUN_GAP_MS = 5 * 60 * 1000;
 
 export type BubbleSide = "desk" | "reporter";
 
-/** The desk is the viewer here, so it sits on the right, as "me" does in a messenger. */
+/**
+ * The desk is the viewer here, so it sits on the right, as "me" does in a
+ * messenger. Everyone else sits on the left: the reporter, and under
+ * REPORT_CHAT_V2 the agencies, whose bubbles carry their own name.
+ */
 export function bubbleSide(m: Pick<ChatMessage, "side">): BubbleSide {
   return m.side === "barangay" ? "desk" : "reporter";
 }
@@ -42,7 +46,8 @@ export type ThreadItem =
  * Turns a thread (oldest first, as sortMessages returns it) into the rows to
  * draw: a day separator before the first message of each Manila day, and a
  * showMeta flag on the last bubble of each run. A run ends at a change of
- * side, a change of day, or a gap longer than RUN_GAP_MS.
+ * side (two agencies are two sides), a change of day, or a gap longer than
+ * RUN_GAP_MS.
  */
 export function buildThreadItems(messages: ChatMessage[]): ThreadItem[] {
   const items: ThreadItem[] = [];
@@ -57,6 +62,7 @@ export function buildThreadItems(messages: ChatMessage[]): ThreadItem[] {
     const continues =
       next !== undefined &&
       next.side === message.side &&
+      next.agencyId === message.agencyId &&
       manilaDayKey(next.createdAt) === day &&
       new Date(next.createdAt).getTime() - new Date(message.createdAt).getTime() <= RUN_GAP_MS;
     items.push({ kind: "message", message, side: bubbleSide(message), showMeta: !continues });
