@@ -19,8 +19,11 @@
  *   (signed URLs), plus data: and blob: for anything the browser builds,
  *   and OpenStreetMap's tile server for the street map on the city map page.
  * - media-src, only while REPORT_CHAT_MEDIA is on: the same project, for
- *   a chat video's signed URL. Without the flag there is no media-src and
- *   default-src 'self' covers it, as before.
+ *   a chat video's signed URL, plus blob: for the video the official picks
+ *   (chatMediaPrepare.ts reads its length from a blob: object URL; without
+ *   blob: the browser blocks it and every pick fails as unreadable). Without
+ *   the flag there is no media-src and default-src 'self' covers it, as
+ *   before.
  * - font-src 'self': next/font serves Inter and JetBrains Mono from this
  *   site, never from Google.
  * - style-src 'unsafe-inline': a handful of computed style attributes (the
@@ -47,7 +50,7 @@ export function contentSecurityPolicy(nonce: string, supabaseUrl: string | undef
     "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(dev ? ["'unsafe-eval'"] : [])],
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "data:", "blob:", ...supabase.https, OSM_TILES],
-    ...(REPORT_CHAT_MEDIA ? { "media-src": ["'self'", ...supabase.https] } : {}),
+    ...(REPORT_CHAT_MEDIA ? { "media-src": ["'self'", "blob:", ...supabase.https] } : {}),
     "font-src": ["'self'"],
     "connect-src": ["'self'", ...supabase.https, ...supabase.wss],
     "object-src": ["'none'"],

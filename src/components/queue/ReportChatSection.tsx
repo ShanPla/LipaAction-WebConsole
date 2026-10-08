@@ -25,11 +25,11 @@ import { useReportChat } from "./useReportChat";
 import { useChatSeen } from "./useChatSeen";
 import { ChatAvatar, agencyLabelOf } from "./ChatAvatar";
 import { ChatAttachments } from "./ChatAttachments";
+import type { AgencyLabel } from "./useAgencyDirectory";
 
 // Loaded the first time a photo or video is opened: most openings of the
 // pop-up never show one.
 const ChatMediaViewer = dynamic(() => import("./ChatMediaViewer").then((m) => m.ChatMediaViewer), { ssr: false });
-import type { AgencyLabel } from "./useAgencyDirectory";
 
 // Each failed send is worded in the official's language; "sent" and null
 // (the action never answered) are handled in submit().
@@ -559,18 +559,24 @@ export function ReportChatSection({
                 {t("chat.send")}
               </Button>
             </div>
-            <p className="mt-1 flex justify-between gap-2 text-[11px] text-ink-500">
-              <span role="status">
-                {preparing
-                  ? t("chat.media.preparing")
-                  : uploadProgress
-                    ? t("chat.media.uploading", { n: Math.min(uploadProgress.done + 1, uploadProgress.total), total: uploadProgress.total })
-                    : ""}
-              </span>
-              <span>
+            {mediaOn ? (
+              <p className="mt-1 flex justify-between gap-2 text-[11px] text-ink-500">
+                <span role="status">
+                  {preparing
+                    ? t("chat.media.preparing")
+                    : uploadProgress
+                      ? t("chat.media.uploading", { n: Math.min(uploadProgress.done + 1, uploadProgress.total), total: uploadProgress.total })
+                      : ""}
+                </span>
+                <span>
+                  {draft.length}/{MAX_MESSAGE_LENGTH}
+                </span>
+              </p>
+            ) : (
+              <p className="mt-1 text-right text-[11px] text-ink-500">
                 {draft.length}/{MAX_MESSAGE_LENGTH}
-              </span>
-            </p>
+              </p>
+            )}
           </form>
         )}
       </div>

@@ -402,7 +402,11 @@ export function useReportChat(reportId: string, enabled: boolean, thread?: ChatT
         }
         const list = files.map((f) => pending.uploaded.get(f.key)).filter((a): a is AttachmentInput => !!a);
         const outcome = await callAction(() => sendChatMedia(reportId, thread, pending.messageId, body, list));
-        if (outcome === "sent") pendingMedia.current = null;
+        // Sent, or refused for the files themselves (one missing from the
+        // bucket, or the stored list not matching): the next Send starts over
+        // with a new message id and uploads every file again. Reusing the same
+        // ids would only send the identical, refused list again.
+        if (outcome === "sent" || outcome === "media-missing" || outcome === "media-invalid") pendingMedia.current = null;
         if (outcome === "sent" || outcome === null) void load();
         return outcome;
       } finally {
