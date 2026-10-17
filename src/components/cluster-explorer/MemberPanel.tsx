@@ -62,7 +62,7 @@ export function MemberPanel({
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
+      <div className="flex-1 space-y-3 overflow-y-auto p-3 scrollbar-thin">
         {cluster.members.map((member, idx) => {
           const selected = member.reportId === selectedId;
           return (
@@ -72,9 +72,11 @@ export function MemberPanel({
                 if (el) rows.current.set(member.reportId, el);
                 else rows.current.delete(member.reportId);
               }}
+              // A card per member; the selected one is marked by a ring and a
+              // tint, plus aria-expanded on its button.
               className={cx(
-                "border-b border-ink-100 last:border-0",
-                selected && "bg-brand-50"
+                "overflow-hidden rounded-card border bg-white",
+                selected ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500" : "border-ink-100"
               )}
             >
               <button
@@ -84,7 +86,7 @@ export function MemberPanel({
                 onClick={() => onSelect(member.reportId)}
                 className={cx(
                   "flex min-h-11 w-full flex-col items-start px-4 py-3 text-left transition-colors",
-                  selected ? "border-l-4 border-brand-500 pl-3" : "hover:bg-ink-50"
+                  !selected && "hover:bg-ink-50"
                 )}
               >
                 <div className="mb-1.5 flex flex-wrap items-center gap-2">

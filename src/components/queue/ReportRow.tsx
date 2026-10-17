@@ -1,6 +1,6 @@
 "use client";
 
-import { PriorityBadge, priorityBar } from "@/components/ui/Badge";
+import { PriorityBadge } from "@/components/ui/Badge";
 import { ReporterChip } from "@/components/ui/ReporterChip";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -97,10 +97,7 @@ export function ReportRow({
   if (resolvedAs) {
     return (
       <div
-        className={cx(
-          "flex items-center justify-between gap-4 rounded-card border border-l-4 border-ink-100 bg-ink-50 px-5 py-3 text-sm text-ink-500 motion-safe:animate-settle",
-          priorityBar(report.priority)
-        )}
+        className="flex items-center justify-between gap-4 rounded-card border border-ink-100 bg-ink-50 px-5 py-3 text-sm text-ink-500 motion-safe:animate-settle"
       >
         <span className="font-mono text-xs">{report.id}</span>
         <span>
@@ -238,8 +235,7 @@ export function ReportRow({
           last, where it no longer outshouts the rest. */}
       <div
         className={cx(
-          "rounded-card border border-l-4 border-ink-100 bg-white shadow-panel",
-          priorityBar(report.priority),
+          "rounded-card border border-ink-100 bg-white shadow-panel",
           // The tint fades out on its own; with reduced motion it simply
           // holds until QueueClient drops the flag. Either way the New chip
           // below carries the same fact in words, so nothing is said by

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PriorityBadge, priorityBar } from "@/components/ui/Badge";
+import { PriorityBadge } from "@/components/ui/Badge";
 import { CopyIdButton } from "@/components/ui/CopyIdButton";
 import { Button } from "@/components/ui/Button";
 import { FilterBar, FilterGroup } from "@/components/ui/FilterGroup";
@@ -161,8 +161,8 @@ export function CityReportList({ data }: { data: CityReportsData }) {
           </EmptyState>
         )
       ) : (
-        // One card per report, as on the barangay queue: a priority bar down
-        // the left, priority and category first, where it stands, which
+        // One card per report, as on the barangay queue: priority and
+        // category first, where it stands, which
         // barangay and when, the agencies holding it, and the id last with a
         // copy button. Still no description: the resident's own words are
         // only in the drawer, whose opening is logged.
@@ -170,7 +170,7 @@ export function CityReportList({ data }: { data: CityReportsData }) {
           {shown.map((r) => (
             <li
               key={r.id}
-              className={cx("rounded-card border border-l-4 border-ink-100 bg-white shadow-panel", priorityBar(r.priority))}
+              className="rounded-card border border-ink-100 bg-white shadow-panel"
             >
               <div className="flex flex-col gap-3 px-4 pb-3 pt-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
                 <div className="min-w-0 flex-1">

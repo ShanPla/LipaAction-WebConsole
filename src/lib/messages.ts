@@ -870,9 +870,8 @@ export const MESSAGES = {
       "Mga nasuring ulat: ulat, kategorya at priyoridad, pasya, opisyal na nag-validate, " +
       "nag-ulat, at oras ng pagsusuri",
   },
-  "history.col.report": { en: "Report", tl: "Ulat" },
-  "history.col.verdict": { en: "Verdict", tl: "Pasya" },
   "history.col.official": { en: "Validating official", tl: "Opisyal na nag-validate" },
+  "history.reviewedAt": { en: "Reviewed", tl: "Sinuri noong" },
   "history.tier.emergency": { en: "Emergency", tl: "Emergency" },
   "history.tier.other_reports": { en: "Standard intake", tl: "Karaniwang ulat" },
   "history.verdict.confirmed": { en: "Confirmed", tl: "Kumpirmado" },

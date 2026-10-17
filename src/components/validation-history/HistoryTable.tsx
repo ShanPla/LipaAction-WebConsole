@@ -6,6 +6,7 @@ import { Icon } from "@/components/ui/Icon";
 import type { ValidationRecord } from "@/types";
 import { RESOLUTION_LABELS } from "./historyOptions";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { CopyIdButton } from "@/components/ui/CopyIdButton";
 
 export function HistoryTable({
   records,
@@ -31,96 +32,87 @@ export function HistoryTable({
     );
   }
 
+  // One card per decided report, like the queue's: priority, category and
+  // verdict first, what became of it, who decided it and when, the reporter
+  // label, and the id last with a copy button.
   return (
-    <div className="overflow-x-auto rounded-card border border-ink-100 bg-white shadow-panel print:overflow-visible">
-      <table className="w-full min-w-[800px] text-left text-sm print:min-w-0">
-        <caption className="sr-only">{t("history.caption")}</caption>
-        <thead>
-          <tr className="border-b border-ink-100 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
-            <th scope="col" className="px-4 py-2.5 font-semibold">{t("history.col.report")}</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">{t("reports.col.category")}</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">{t("drawer.priority")}</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">{t("history.col.verdict")}</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">{t("history.col.official")}</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">{t("field.reporter")}</th>
-            <th scope="col" className="px-4 py-2.5 font-semibold">{t("field.timestamp")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {records.map((record) => (
-            <tr
-              key={record.reportId}
-              className="border-b border-ink-100 last:border-0 hover:bg-ink-50/60"
-            >
-              <td className="px-4 py-3 font-mono text-xs text-ink-500">{record.reportId}</td>
-              {/* Category and priority in columns of their own: sharing one
-                  cell, each badge started wherever its category name ended,
-                  so the badges zigzagged down the table. */}
-              <td className="px-4 py-3">
-                <span className="text-xs text-ink-700">{record.category}</span>
-                {/* Intake tier, kept as plain text so it can't be mistaken for
-                    a second priority reading. */}
-                <p className="mt-0.5 text-xs text-ink-500">
-                  {t(`history.tier.${record.entryTier}`)}
-                </p>
-              </td>
-              <td className="px-4 py-3">
-                <PriorityBadge priority={record.priority} />
-              </td>
-              <td className="px-4 py-3 align-top">
-                <Badge tone={record.verdict === "Confirmed" ? "success" : "warning"}>
-                  {/* The icon repeats the word, so the verdict is never
-                      carried by the badge colour alone. */}
-                  <Icon name={record.verdict === "Confirmed" ? "check" : "close"} className="mr-1 h-3 w-3" />
-                  {t(record.verdict === "Confirmed" ? "history.verdict.confirmed" : "history.verdict.rejected")}
-                </Badge>
-                {/* Rejection reason (incident_reports.review_reason). Only
-                    rejected rows carry one — the RPC leaves it NULL on
-                    validate — so this block is absent, not empty, otherwise.
-                    The category is parsed from the reason's prefix; a reason
-                    without one shows its text alone. */}
-                {/* What became of a confirmed report since: still with an
-                    agency, resolved, sent back. Absent on a rejection, and
-                    when the agency rows couldn't be read. */}
-                {record.resolution && (
-                  <p className="mt-1 text-xs text-ink-500">{t(RESOLUTION_LABELS[record.resolution])}</p>
+    <ul aria-label={t("history.caption")} className="space-y-3">
+      {records.map((record) => (
+        <li
+          key={record.reportId}
+          className="break-inside-avoid rounded-card border border-ink-100 bg-white shadow-panel"
+        >
+          <div className="px-4 pb-3 pt-4 sm:px-5">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <PriorityBadge priority={record.priority} />
+              <span className="text-base font-semibold text-ink-900">{record.category}</span>
+              <Badge tone={record.verdict === "Confirmed" ? "success" : "warning"}>
+                {/* The icon repeats the word, so the verdict is never
+                    carried by the badge colour alone. */}
+                <Icon name={record.verdict === "Confirmed" ? "check" : "close"} className="mr-1 h-3 w-3" />
+                {t(record.verdict === "Confirmed" ? "history.verdict.confirmed" : "history.verdict.rejected")}
+              </Badge>
+              {/* Intake tier, kept as plain text so it can't be mistaken for
+                  a second priority reading. */}
+              <span className="text-xs text-ink-500">{t(`history.tier.${record.entryTier}`)}</span>
+            </div>
+
+            {/* What became of a confirmed report since: still with an
+                agency, resolved, sent back. Absent on a rejection, and when
+                the agency rows couldn't be read. */}
+            {record.resolution && (
+              <p className="text-sm text-ink-700">{t(RESOLUTION_LABELS[record.resolution])}</p>
+            )}
+            {/* What the desk wrote when it closed the report itself. */}
+            {record.resolutionNote && (
+              <p className="mt-1 whitespace-pre-wrap text-sm leading-snug text-ink-700">
+                {record.resolutionNote}
+              </p>
+            )}
+            {/* Rejection reason (incident_reports.review_reason). Only
+                rejected rows carry one — the RPC leaves it NULL on validate —
+                so this block is absent, not empty, otherwise. The category is
+                parsed from the reason's prefix; a reason without one shows
+                its text alone. */}
+            {record.reason && (
+              <div className="mt-1 text-sm leading-snug text-ink-700">
+                {record.reasonCode && (
+                  <p className="font-medium text-ink-900">{t(`rejectReason.${record.reasonCode}`)}</p>
                 )}
-                {/* What the desk wrote when it closed the report itself. */}
-                {record.resolutionNote && (
-                  <p className="mt-1 max-w-[220px] whitespace-pre-wrap text-xs leading-snug text-ink-500">
-                    {record.resolutionNote}
-                  </p>
+                {record.reasonNote && <p>{record.reasonNote}</p>}
+              </div>
+            )}
+
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-700">
+              <span>
+                {/* A record CDRRMO decided already reads [Validated by CDRRMO]
+                    or [Rejected by CDRRMO], so it takes no label. */}
+                {record.decidedBy !== "cdrrmo" && (
+                  <span className="text-ink-500">{t("history.col.official")}: </span>
                 )}
-                {record.reason && (
-                  <div className="mt-1 max-w-[220px] text-xs leading-snug text-ink-500">
-                    {record.reasonCode && (
-                      <p className="font-medium text-ink-700">{t(`rejectReason.${record.reasonCode}`)}</p>
-                    )}
-                    {record.reasonNote && <p>{record.reasonNote}</p>}
-                  </div>
-                )}
-              </td>
-              <td className="px-4 py-3 text-xs text-ink-700">
                 {record.officialIsBarangayGeneric ? t("history.yourBarangay") : record.validatingOfficial}
-              </td>
-              <td className="px-4 py-3">
-                <ReporterChip reporter={record.reporter} />
-              </td>
-              <td
-                className={cx(
-                  "px-4 py-3 text-xs",
-                  record.trustDelta ? "text-priority-critical" : "text-ink-500"
-                )}
-              >
-                {record.timestamp}
+              </span>
+              <span aria-hidden className="text-ink-300">·</span>
+              <span className={cx(record.trustDelta ? "text-priority-critical" : "text-ink-500")}>
+                {t("history.reviewedAt")} {record.timestamp}
                 {record.trustDelta && (
                   <span className="ml-1.5 font-medium">{t("history.trust", { delta: record.trustDelta })}</span>
                 )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+              </span>
+            </div>
+            <div className="mt-2">
+              <ReporterChip reporter={record.reporter} />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 border-t border-ink-100 pl-4 pr-2 sm:pl-5">
+            <span className="shrink-0 text-xs text-ink-500">{t("row.reportId")}</span>
+            <span className="min-w-0 truncate font-mono text-xs text-ink-500">{record.reportId}</span>
+            <span className="print:hidden">
+              <CopyIdButton id={record.reportId} />
+            </span>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }

@@ -339,48 +339,42 @@ function PointList({ points }: { points: MapPoint[] }) {
   return (
     <div>
       <h3 className="mb-2 text-xs font-semibold text-ink-900">{t("city.map.listTitle")}</h3>
-      <div className="overflow-x-auto rounded-card border border-ink-100 bg-white shadow-panel">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <caption className="sr-only">{t("city.map.listCaption")}</caption>
-          <thead>
-            <tr className="border-b border-ink-100 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
-              <th scope="col" className="px-4 py-2.5 font-semibold">{t("city.reports.col.submitted")}</th>
-              <th scope="col" className="px-4 py-2.5 font-semibold">{t("city.col.barangay")}</th>
-              <th scope="col" className="px-4 py-2.5 font-semibold">{t("reports.col.category")}</th>
-              <th scope="col" className="px-4 py-2.5 font-semibold">{t("drawer.priority")}</th>
-              <th scope="col" className="px-4 py-2.5 font-semibold">{t("drawer.status")}</th>
-              <th scope="col" className="px-4 py-2.5 font-semibold">
-                <span className="sr-only">{t("city.reports.col.open")}</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {points.map((p) => (
-              <tr key={p.id} className="border-b border-ink-100 last:border-0">
-                <td className="whitespace-nowrap px-4 py-2.5 text-xs text-ink-700">{formatTimestamp(p.submittedAt)}</td>
-                <td className="px-4 py-2.5 text-xs text-ink-900">{p.barangayName ?? t("city.unnamedBarangay")}</td>
-                <th scope="row" className="px-4 py-2.5 text-xs font-medium text-ink-900">{p.category}</th>
-                <td className="px-4 py-2.5">
-                  <PriorityBadge priority={p.priority} score={p.priorityScore} />
-                </td>
-                <td className="px-4 py-2.5 text-xs text-ink-700">{statusLabel(p.status, t)}</td>
-                <td className="px-4 py-2.5 text-right">
-                  {/* The keyboard's way into a report, as the dot is the
-                      pointer's. Opening it is recorded on the reports page. */}
-                  <Link
-                    href={reportHref(p.id)}
-                    prefetch={false}
-                    aria-label={t("row.viewDetails", { id: p.id })}
-                    className={buttonClassName("secondary", "sm")}
-                  >
-                    {t("city.reports.open")}
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* One card per report, like the city report list. */}
+      <ul aria-label={t("city.map.listCaption")} className="space-y-3">
+        {points.map((p) => (
+          <li
+            key={p.id}
+            className="flex flex-col gap-3 rounded-card border border-ink-100 bg-white px-4 py-3 shadow-panel sm:flex-row sm:items-center sm:justify-between sm:px-5"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex flex-wrap items-center gap-2">
+                <PriorityBadge priority={p.priority} score={p.priorityScore} />
+                <span className="text-base font-semibold text-ink-900">{p.category}</span>
+                <span className="rounded-full bg-ink-100 px-2 py-0.5 text-xs font-semibold text-ink-700">
+                  {statusLabel(p.status, t)}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-700">
+                <span>{p.barangayName ?? t("city.unnamedBarangay")}</span>
+                <span aria-hidden className="text-ink-300">·</span>
+                <time dateTime={p.submittedAt} className="text-ink-500">
+                  {formatTimestamp(p.submittedAt)}
+                </time>
+              </div>
+            </div>
+            {/* The keyboard's way into a report, as the dot is the
+                pointer's. Opening it is recorded on the reports page. */}
+            <Link
+              href={reportHref(p.id)}
+              prefetch={false}
+              aria-label={t("row.viewDetails", { id: p.id })}
+              className={buttonClassName("secondary", "md", "shrink-0")}
+            >
+              {t("city.reports.open")}
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

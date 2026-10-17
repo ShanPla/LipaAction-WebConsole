@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ReporterChip } from "@/components/ui/ReporterChip";
 import { CopyIdButton } from "@/components/ui/CopyIdButton";
-import { PriorityBadge, priorityBar } from "@/components/ui/Badge";
+import { PriorityBadge } from "@/components/ui/Badge";
 import { useLang, useT } from "@/lib/i18n";
 import { cx, timeAgo } from "@/lib/utils";
 import { ValidateClusterButton } from "./ValidateClusterButton";
@@ -87,7 +87,7 @@ export function ClusterCard({
         {cluster.members.map((member) => (
           <div
             key={member.id}
-            className={cx("rounded-card border border-l-4 border-ink-100 bg-white", priorityBar(member.priority))}
+            className="rounded-card border border-ink-100 bg-white"
           >
             <div className="min-w-0 px-4 pb-2 pt-3">
               <div className="mb-1 flex flex-wrap items-center gap-2">
