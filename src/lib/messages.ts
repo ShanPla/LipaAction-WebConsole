@@ -1573,8 +1573,8 @@ export const MESSAGES = {
   },
   "city.drawer.reviewed": { en: "Reviewed", tl: "Nasuri" },
   "city.drawer.readOnly": {
-    en: "Read-only. Decisions and routing stay with the barangay.",
-    tl: "Pagtingin lamang. Nasa barangay ang pagpapasya at pagpasa.",
+    en: "Read-only. Decisions and routing stay with the barangay, except what the Critical timer or automatic routing sends on.",
+    tl: "Pagtingin lamang. Nasa barangay ang pagpapasya at pagpasa, maliban sa ipinapasa ng Critical timer o ng awtomatikong pag-route.",
   },
   "city.drawer.notRouted": { en: "Not routed to any agency.", tl: "Hindi pa naipasa sa anumang ahensya." },
   "city.drawer.resolvedAtBarangay": {
@@ -1588,8 +1588,8 @@ export const MESSAGES = {
   "banner.what.cityOverview": { en: "The city overview", tl: "pangkalahatang-tanaw ng lungsod" },
   "banner.what.cityResponse": { en: "Agency response times", tl: "oras ng tugon ng ahensya" },
   "city.readOnly": {
-    en: "Read-only. Decisions and routing stay with each barangay. No reporter is named on these pages.",
-    tl: "Pagtingin lamang. Nasa bawat barangay pa rin ang pagpapasya at pag-route. Walang nag-ulat na pinangangalanan sa mga pahinang ito.",
+    en: "Read-only, apart from the automatic-routing switch. Decisions and routing stay with each barangay, except what the Critical timer or automatic routing sends on. No reporter is named on these pages.",
+    tl: "Pagtingin lamang, maliban sa switch ng awtomatikong pag-route. Nasa bawat barangay pa rin ang pagpapasya at pag-route, maliban sa ipinapasa ng Critical timer o ng awtomatikong pag-route. Walang nag-ulat na pinangangalanan sa mga pahinang ito.",
   },
   // --- Automatic routing (CARD) switch, city overview ---------------------
   "autoRouting.title": { en: "Automatic routing (CARD)", tl: "Awtomatikong pag-route (CARD)" },
