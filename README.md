@@ -32,8 +32,8 @@ does not specify a CSS framework.
 - **Supabase** (Postgres, Auth, Row Level Security) via `@supabase/ssr`
 
 There is no test suite. Verification is `npx tsc --noEmit`, `npm run lint`,
-`npm run build`, and two plain-Node self-checks of pure modules, `npm run check:cdrrmo`
-and `npm run check:recall` (Node 22.18 or later).
+`npm run build`, and three plain-Node self-checks, `npm run check:cdrrmo`,
+`npm run check:recall` and `npm run check:autorouting` (Node 22.18 or later).
 
 ## Getting started
 

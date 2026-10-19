@@ -1573,8 +1573,8 @@ export const MESSAGES = {
   },
   "city.drawer.reviewed": { en: "Reviewed", tl: "Nasuri" },
   "city.drawer.readOnly": {
-    en: "Read-only. Decisions and routing stay with the barangay.",
-    tl: "Pagtingin lamang. Nasa barangay ang pagpapasya at pagpasa.",
+    en: "Read-only. Decisions and routing stay with the barangay, except what the Critical timer or automatic routing sends on.",
+    tl: "Pagtingin lamang. Nasa barangay ang pagpapasya at pagpasa, maliban sa ipinapasa ng Critical timer o ng awtomatikong pag-route.",
   },
   "city.drawer.notRouted": { en: "Not routed to any agency.", tl: "Hindi pa naipasa sa anumang ahensya." },
   "city.drawer.resolvedAtBarangay": {
@@ -1588,8 +1588,51 @@ export const MESSAGES = {
   "banner.what.cityOverview": { en: "The city overview", tl: "pangkalahatang-tanaw ng lungsod" },
   "banner.what.cityResponse": { en: "Agency response times", tl: "oras ng tugon ng ahensya" },
   "city.readOnly": {
-    en: "Read-only. Decisions and routing stay with each barangay. No reporter is named on these pages.",
-    tl: "Pagtingin lamang. Nasa bawat barangay pa rin ang pagpapasya at pag-route. Walang nag-ulat na pinangangalanan sa mga pahinang ito.",
+    en: "Read-only, apart from the automatic-routing switch. Decisions and routing stay with each barangay, except what the Critical timer or automatic routing sends on. No reporter is named on these pages.",
+    tl: "Pagtingin lamang, maliban sa switch ng awtomatikong pag-route. Nasa bawat barangay pa rin ang pagpapasya at pag-route, maliban sa ipinapasa ng Critical timer o ng awtomatikong pag-route. Walang nag-ulat na pinangangalanan sa mga pahinang ito.",
+  },
+  // --- Automatic routing (CARD) switch, city overview ---------------------
+  "autoRouting.title": { en: "Automatic routing (CARD)", tl: "Awtomatikong pag-route (CARD)" },
+  "autoRouting.help": {
+    en: "Turns automatic routing on or off for eligible reports. It controls automatic routing only: the Critical escalation timer and CDRRMO dispatch are separate and are not affected. Every change is recorded in the audit log.",
+    tl: "Binubuksan o pinapatay ang awtomatikong pag-route para sa mga kwalipikadong ulat. Awtomatikong pag-route lamang ang kinokontrol nito: hiwalay at hindi apektado ang timer ng Critical escalation at ang dispatch ng CDRRMO. Naitatala sa audit log ang bawat pagbabago.",
+  },
+  "autoRouting.switchLabel": { en: "Automatic routing", tl: "Awtomatikong pag-route" },
+  "autoRouting.statusOn": { en: "ON", tl: "NAKABUKAS" },
+  "autoRouting.statusOff": { en: "OFF", tl: "NAKAPATAY" },
+  "autoRouting.statusUnknown": { en: "Unknown", tl: "Hindi alam" },
+  "autoRouting.unknownBody": {
+    en: "The switch could not be read, so it cannot be changed from here. Reload the page to try again.",
+    tl: "Hindi nabasa ang switch, kaya hindi ito mababago mula rito. I-reload ang pahina para subukan muli.",
+  },
+  "autoRouting.updated": { en: "Last changed {when} (Asia/Manila)", tl: "Huling binago {when} (Asia/Manila)" },
+  "autoRouting.savedOn": { en: "Automatic routing is now ON.", tl: "NAKABUKAS na ang awtomatikong pag-route." },
+  "autoRouting.savedOff": { en: "Automatic routing is now OFF.", tl: "NAKAPATAY na ang awtomatikong pag-route." },
+  "autoRouting.confirmTitle": { en: "Turn automatic routing ON?", tl: "Buksan ang awtomatikong pag-route?" },
+  "autoRouting.confirmBody": {
+    en: "Eligible reports will be routed to agencies automatically, without a desk decision. The Critical escalation timer and CDRRMO dispatch are separate and stay as they are. You can turn it off again at any time.",
+    tl: "Awtomatikong ipapasa sa mga ahensya ang mga kwalipikadong ulat, nang walang pasya ng desk. Hiwalay at mananatiling gaya ng dati ang timer ng Critical escalation at ang dispatch ng CDRRMO. Maaari mo itong patayin muli anumang oras.",
+  },
+  "autoRouting.confirmOn": { en: "Turn ON", tl: "Buksan" },
+  "autoRouting.err.notAuthenticated": {
+    en: "You are signed out. Sign in again, then retry.",
+    tl: "Naka-sign out ka. Mag-sign in muli, saka subukan ulit.",
+  },
+  "autoRouting.err.notAuthorized": {
+    en: "Only the municipal administrator can change automatic routing.",
+    tl: "Ang municipal administrator lamang ang makapagbabago ng awtomatikong pag-route.",
+  },
+  "autoRouting.err.enabledRequired": {
+    en: "The switch needs a clear ON or OFF. Nothing was changed.",
+    tl: "Kailangan ng malinaw na ON o OFF ang switch. Walang nabago.",
+  },
+  "autoRouting.err.switchMissing": {
+    en: "The automatic routing setting is missing in the database. Nothing was changed. Tell the developers.",
+    tl: "Wala ang setting ng awtomatikong pag-route sa database. Walang nabago. Sabihan ang mga developer.",
+  },
+  "autoRouting.err.generic": {
+    en: "Couldn't change automatic routing. Check the state shown here before trying again.",
+    tl: "Hindi nabago ang awtomatikong pag-route. Tingnan ang estadong ipinapakita rito bago subukan muli.",
   },
   "city.overview.title": { en: "City-wide activity", tl: "Aktibidad sa buong lungsod" },
   "city.overview.intro": {

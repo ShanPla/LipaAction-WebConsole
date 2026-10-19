@@ -8,7 +8,8 @@
     "start": "next start -H 127.0.0.1",
     "lint": "next lint",
     "check:cdrrmo": "node scripts/check-cdrrmo-dispatch.mjs",
-    "check:recall": "node scripts/check-recall.mjs"
+    "check:recall": "node scripts/check-recall.mjs",
+    "check:autorouting": "node scripts/check-auto-routing.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
