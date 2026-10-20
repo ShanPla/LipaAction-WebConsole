@@ -90,6 +90,7 @@ check("RPC names", lib.RPC, {
   card: "resident_profile_card",
   history: "resident_report_history",
   sanction: "apply_manual_sanction",
+  strikes: "resident_sanction_strikes",
 });
 
 // --- Role gate: desk sees nothing; admin inaccurate only; senior both -------
@@ -102,6 +103,12 @@ check("senior admin can view", lib.canViewResidentProfile("senior_barangay_admin
 check("malicious: barangay_admin no", lib.canSanctionMalicious("barangay_admin"), false);
 check("malicious: desk no", lib.canSanctionMalicious("barangay_official"), false);
 check("malicious: senior admin yes", lib.canSanctionMalicious("senior_barangay_admin"), true);
+// Track list by role: admin inaccurate + spam; senior all four; nobody else any.
+check("tracks: barangay_admin gets inaccurate + spam only", lib.tracksForRole("barangay_admin"), ["inaccurate", "spam"]);
+check("tracks: senior admin gets all four", lib.tracksForRole("senior_barangay_admin"), ["inaccurate", "spam", "malicious", "abusive"]);
+for (const r of ["barangay_official", "agency_supervisor", "municipal_admin", "dpo", "resident", null, undefined, ""]) {
+  check(`tracks: ${r} gets none`, lib.tracksForRole(r), []);
+}
 
 // --- Mock client ------------------------------------------------------------
 function mockClient(handlers) {
@@ -180,6 +187,10 @@ check("duplicate evidence refused", lib.normalizeSanctionInput({ ...base, report
 check("non-uuid evidence refused", lib.normalizeSanctionInput({ ...base, reportIds: ["x"] }), "evidence");
 check("bad resident id refused", lib.normalizeSanctionInput({ ...base, residentId: "x" }), "resident");
 check("bad track refused", lib.normalizeSanctionInput({ ...base, track: "other" }), "track");
+for (const tr of ["inaccurate", "malicious", "spam", "abusive"]) {
+  check(`track ${tr} accepted`, lib.normalizeSanctionInput({ ...base, track: tr }).track, tr);
+}
+check("track 'constructor' refused", lib.normalizeSanctionInput({ ...base, track: "constructor" }), "track");
 check("19-character reason refused", lib.normalizeSanctionInput({ ...base, reason: "x".repeat(19) }), "reasonShort");
 check("reason is trimmed before counting", lib.normalizeSanctionInput({ ...base, reason: "  " + "x".repeat(19) + "  " }), "reasonShort");
 check("20-character reason accepted", typeof lib.normalizeSanctionInput({ ...base, reason: "x".repeat(20) }), "object");
@@ -208,6 +219,9 @@ check("42501 not visible", f("42501", "resident not found, or not visible to you
 check("22023 generic", f("22023", "track must be inaccurate or malicious"), "invalidInput");
 check("22023 reason", f("22023", "a reason of 20 to 500 characters is required"), "invalidInput");
 check("22023 at most 10 evidence", f("22023", "choose at most 10 evidence reports"), "tooManyEvidence");
+check("42501 abusive without senior admin", f("42501", "apply_manual_sanction: only a senior_barangay_admin or agency_supervisor may apply the abusive track"), "notAllowed");
+// Before migration 20261210120000 is pushed the old function refuses the new tracks with 22023: the generic message.
+check("22023 old function refusing spam/abusive", f("22023", "apply_manual_sanction: track must be inaccurate or malicious"), "invalidInput");
 check("55000 harsher", f("55000", "resident already has the same or a harsher active sanction"), "harsher");
 check("55000 already counted", f("55000", "this report was already counted against the resident"), "alreadyCounted");
 check("55000 unknown message", f("55000", "something else"), "failed");
@@ -235,13 +249,32 @@ check("401 session", f("PGRST301", "jwt", 401), "sessionExpired");
 }
 
 // --- The ladder (confirmation text only) --------------------------------------
-const ladder = (track, i, m) => { const e = lib.sanctionEffect(track, { inaccurateStrikes: i, maliciousStrikes: m }); return [e.delta, e.kind, e.cooldownHours, e.liftedBy]; };
+const ladder = (track, i, m, extra = {}) => { const e = lib.sanctionEffect(track, { inaccurateStrikes: i, maliciousStrikes: m, ...extra }); return e && [e.delta, e.kind, e.cooldownHours, e.liftedBy]; };
 check("inaccurate 1st", ladder("inaccurate", 0, 0), [-0.05, "cooldown", 1, null]);
 check("inaccurate 2nd", ladder("inaccurate", 1, 0), [-0.1, "cooldown", 24, null]);
 check("inaccurate 3rd", ladder("inaccurate", 2, 0), [-0.1, "suspension", null, "barangay_admin"]);
 check("inaccurate 4th+", ladder("inaccurate", 7, 0), [-0.1, "suspension", null, "barangay_admin"]);
 check("malicious 1st", ladder("malicious", 0, 0), [-0.2, "cooldown", 168, null]);
 check("malicious 2nd+", ladder("malicious", 0, 1), [-0.2, "suspension", null, "senior_barangay_admin"]);
+check("spam 1st (own counter)", ladder("spam", 5, 5, { spamStrikes: 0, abusiveStrikes: 0 }), [-0.05, "cooldown", 1, null]);
+check("spam 2nd", ladder("spam", 0, 0, { spamStrikes: 1, abusiveStrikes: 0 }), [-0.1, "cooldown", 24, null]);
+check("spam 3rd+", ladder("spam", 0, 0, { spamStrikes: 2, abusiveStrikes: 0 }), [-0.1, "suspension", null, "barangay_admin"]);
+check("abusive 1st", ladder("abusive", 5, 5, { spamStrikes: 5, abusiveStrikes: 0 }), [-0.1, "cooldown", 24, null]);
+check("abusive 2nd+", ladder("abusive", 0, 0, { spamStrikes: 0, abusiveStrikes: 1 }), [-0.1, "suspension", null, "senior_barangay_admin"]);
+check("spam/abusive with unknown counts: no rung named", [ladder("spam", 0, 0), ladder("abusive", 0, 0)], [null, null]);
+check("inaccurate and malicious never need the extra counts", [ladder("inaccurate", 0, 0), ladder("malicious", 0, 0)], [[-0.05, "cooldown", 1, null], [-0.2, "cooldown", 168, null]]);
+
+// --- resident_sanction_strikes loader: degrades to null, never throws --------
+{
+  const ok = mockClient({ resident_sanction_strikes: () => ({ data: [{ spam_strike_count: 2, abusive_strike_count: 1 }], error: null, status: 200 }) });
+  check("strikes: one row", await lib.loadSanctionStrikes(ok, RESIDENT), { spamStrikes: 2, abusiveStrikes: 1 });
+  check("strikes: called with p_resident_id", ok.calls[0], { name: "resident_sanction_strikes", args: { p_resident_id: RESIDENT } });
+  check("strikes: zero rows is unknown", await lib.loadSanctionStrikes(mockClient({ resident_sanction_strikes: () => ({ data: [], error: null, status: 200 }) }), RESIDENT), null);
+  check("strikes: function missing (migration not pushed) is unknown", await lib.loadSanctionStrikes(mockClient({ resident_sanction_strikes: () => ({ data: null, error: { code: "PGRST202", message: "not found" }, status: 404 }) }), RESIDENT), null);
+  check("strikes: 42501 is unknown", await lib.loadSanctionStrikes(mockClient({ resident_sanction_strikes: () => ({ data: null, error: { code: "42501" }, status: 403 }) }), RESIDENT), null);
+  check("strikes: malformed row is unknown", await lib.loadSanctionStrikes(mockClient({ resident_sanction_strikes: () => ({ data: [{ spam_strike_count: "x" }], error: null, status: 200 }) }), RESIDENT), null);
+  check("strikes: a throw is unknown", await lib.loadSanctionStrikes({ rpc: async () => { throw new Error("down"); } }, RESIDENT), null);
+}
 
 // --- Rendered screens ----------------------------------------------------------
 const card = lib.normalizeCard([cardRow]);
@@ -249,26 +282,31 @@ const history = reports.slice(0, 4).map((id, i) => ({
   reportId: id, createdAt: `2026-10-0${i + 1}T08:00:00Z`, category: "Noise", priorityClass: "low", priorityName: "Low", status: "resolved", outcome: i === 0 ? "confirmed-false" : null,
 }));
 const T = new Map(); // so `t` is the English default outside a provider
-const formHtml = (props) => renderToStaticMarkup(h(form.SanctionForm, { card, history, allowMalicious: false, ...props }));
+const ADMIN_TRACKS = lib.tracksForRole("barangay_admin");
+const SENIOR_TRACKS = lib.tracksForRole("senior_barangay_admin");
+const formHtml = (props) => renderToStaticMarkup(h(form.SanctionForm, { card, history, tracks: ADMIN_TRACKS, ...props }));
+const optionValues = (html) => [...html.matchAll(/<option value="(\w+)"/g)].map((m) => m[1]);
 
 {
   const html = formHtml({});
   check("checkbox list equals exactly the history rows", (html.match(/type="checkbox"/g) ?? []).length, history.length);
   check("every history row is a checkbox value", history.every((r) => has(html, `value="${r.reportId}"`)), true);
-  check("barangay_admin: no malicious option", has(html, 'value="malicious"') || has(html, "Malicious report"), false);
-  check("inaccurate option present", has(html, "Inaccurate report"), true);
+  check("barangay_admin: options are inaccurate + spam", optionValues(html), ["inaccurate", "spam"]);
+  check("barangay_admin: no malicious or abusive option", /malicious|abusive/i.test(html.match(/<select[\s\S]*?<\/select>/)[0]), false);
+  check("barangay_admin: plain labels", has(html, "Inaccurate (report was false by mistake)") && has(html, "Spam or repeat misuse"), true);
   check("reason textarea has a 20-500 counter", has(html, "20 to 500 characters. 0 / 500"), true);
   check("nothing is sent before the confirmation: no Apply button at first", has(html, "Apply sanction"), false);
   check("the first step is Review", has(html, "Review sanction"), true);
   check("no hidden-reports line or total", /hidden|withheld|discreet/i.test(html), false);
 }
 {
-  const html = formHtml({ allowMalicious: true });
-  check("senior admin: malicious option present", has(html, 'value="malicious"'), true);
+  const html = formHtml({ tracks: SENIOR_TRACKS });
+  check("senior admin: all four options", optionValues(html), ["inaccurate", "spam", "malicious", "abusive"]);
+  check("senior admin: plain labels", has(html, "Malicious (deliberately false)") && has(html, "Abusive content"), true);
 }
 {
   const big = reports.slice(0, 12).map((id) => ({ ...history[0], reportId: id }));
-  const html = renderToStaticMarkup(h(form.SanctionForm, { card, history: big, allowMalicious: false, initialEvidence: reports.slice(0, 10) }));
+  const html = renderToStaticMarkup(h(form.SanctionForm, { card, history: big, tracks: ADMIN_TRACKS, initialEvidence: reports.slice(0, 10) }));
   check("at 10 chosen the other boxes are disabled", (html.match(/disabled=""/g) ?? []).length >= 2, true);
   check("count line says 10 of 10", has(html, "10 of 10 chosen"), true);
   check("first chosen is marked Primary", has(html, "Primary"), true);
@@ -279,8 +317,20 @@ const formHtml = (props) => renderToStaticMarkup(h(form.SanctionForm, { card, hi
   check("confirmation: states the cooldown from the strike counts (1 strike -> 2nd = 24 h)", has(html, "24-hour cooldown") && has(html, "0.10"), true);
   check("confirmation: says the resident is notified and the action audited", has(html, "will be notified") && has(html, "audit log"), true);
   check("confirmation: says how many evidence reports", has(html, "Evidence reports: 2."), true);
-  const susp = renderToStaticMarkup(h(form.SanctionForm, { card: { ...card, inaccurateStrikes: 2 }, history, allowMalicious: false, initialConfirming: true, initialEvidence: [reports[0]], initialReason: "x".repeat(25) }));
+  const susp = renderToStaticMarkup(h(form.SanctionForm, { card: { ...card, inaccurateStrikes: 2 }, history, tracks: ADMIN_TRACKS, initialConfirming: true, initialEvidence: [reports[0]], initialReason: "x".repeat(25) }));
   check("confirmation: suspension on the 3rd inaccurate strike", has(susp, "suspends the resident until lifted") && has(susp, "A barangay admin can lift it."), true);
+  // Spam / abusive wording from resident_sanction_strikes, and the generic fallback without it.
+  const confirm = (track, strikes, c = card) => renderToStaticMarkup(h(form.SanctionForm, { card: c, history, tracks: SENIOR_TRACKS, strikes, initialConfirming: true, initialEvidence: [reports[0]], initialReason: "x".repeat(25) }));
+  const tr = (k, v) => MESSAGES[k].en.replace(/\{(\w+)\}/g, (_, n) => String(v?.[n] ?? ""));
+  check("confirmation: spam 3rd = suspension, barangay admin can lift", form.effectText(tr, "spam", card, { spamStrikes: 2, abusiveStrikes: 0 }).includes("suspends the resident until lifted. A barangay admin can lift it."), true);
+  check("confirmation: abusive 1st (translate keys) names 0.10", form.effectText((k, v) => `${k}|${v?.delta}|${v?.duration}`, "abusive", card, { spamStrikes: 0, abusiveStrikes: 0 }), "resident.sanction.effect.cooldown|0.10|resident.duration.24|undefined|undefined");
+  check("confirmation: abusive 2nd = suspension, senior lifts", form.effectText((k, v) => `${k}|${v?.delta}|${v?.lift}`, "abusive", card, { spamStrikes: 0, abusiveStrikes: 1 }), "resident.sanction.effect.suspension|0.10|resident.sanction.lift.senior_barangay_admin|undefined|undefined");
+  check("fallback: spam without strike counts is generic", form.effectText((k) => k, "spam", card, null), "resident.sanction.effect.generic");
+  check("fallback: abusive without strike counts is generic", form.effectText((k) => k, "abusive", card, null), "resident.sanction.effect.generic");
+  check("fallback: inaccurate and malicious still use the card", [form.effectText((k) => k, "inaccurate", card, null), form.effectText((k) => k, "malicious", card, null)], ["resident.sanction.effect.cooldown", "resident.sanction.effect.cooldown"]);
+  const generic = MESSAGES["resident.sanction.effect.generic"].en;
+  check("fallback wording names no rung or duration", /\d|hour|day/i.test(generic), false);
+  check("fallback form still renders the confirmation", has(confirm("spam", null), 'role="alertdialog"'), true);
   check("the server action was never called by rendering", (globalThis.__sanctionCalls ?? []).length, 0);
 }
 {
@@ -289,6 +339,14 @@ const formHtml = (props) => renderToStaticMarkup(h(form.SanctionForm, { card, hi
   check("card shows the cooldown time", has(html, "Cooldown (inaccurate) until"), true);
   const susp = renderToStaticMarkup(h(view.ResidentCardView, { card: { ...card, sanctionState: "suspended-malicious" } }));
   check("card shows a suspension", has(susp, "Suspended (malicious) until lifted"), true);
+  const stateHtml = (sanctionState) => renderToStaticMarkup(h(view.ResidentCardView, { card: { ...card, sanctionState, cooldownUntil: "2026-10-22T01:00:00Z" } }));
+  check("card: cooldown-spam", has(stateHtml("cooldown-spam"), "Cooldown (spam) until"), true);
+  check("card: cooldown-abusive", has(stateHtml("cooldown-abusive"), "Cooldown (abusive) until"), true);
+  check("card: suspended-spam", has(stateHtml("suspended-spam"), "Suspended (spam) until lifted"), true);
+  check("card: suspended-abusive", has(stateHtml("suspended-abusive"), "Suspended (abusive) until lifted"), true);
+  const unknown = stateHtml("suspended-future-track");
+  check("card: an unknown future state reads 'Sanctioned', never the raw value", has(unknown, "Sanctioned") && !has(unknown, "future-track"), true);
+  check("card: none still reads no active sanction", has(stateHtml("none"), "No active sanction"), true);
 }
 {
   const html = renderToStaticMarkup(h(view.HistoryTable, { rows: history }));
@@ -308,6 +366,7 @@ const formHtml = (props) => renderToStaticMarkup(h(form.SanctionForm, { card, hi
   const panel = read("components/queue/ReportDetailPanel.tsx");
   check("drawer: the link calls findResidentLink only when offered", /if \(!offerResidentProfile\) return;[\s\S]*findResidentLink\(report\.id\)/.test(panel), true);
   check("drawer: link renders only once the backend returned a path", /\{residentLink && \(/.test(panel), true);
+  check("page: strikes loaded alongside the card, failure is non-fatal", /loadSanctionStrikes\(supabase, params\.id\)/.test(page) && !/!strikes/.test(page), true);
   const queue = read("app/queue/QueueClient.tsx");
   check("queue: only admin roles offer the link", has(queue, "offerResidentProfile={canViewResidentProfile(official.role)}"), true);
   const action = read("app/actions/residentProfile.ts");

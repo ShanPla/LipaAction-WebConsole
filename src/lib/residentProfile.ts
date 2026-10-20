@@ -11,6 +11,8 @@
 //   resident_profile_card(p_resident_id) -> one row, or ZERO rows (= 404)
 //   resident_report_history(p_resident_id) -> newest first, max 200 rows, no withheld or discreet report
 //   apply_manual_sanction(p_resident_id, p_report_id, p_track, p_reason, p_more_report_ids) -> uuid
+//   resident_sanction_strikes(p_resident_id) -> spam_strike_count, abusive_strike_count  (migration 20261210120000;
+//     for the confirmation text only, the screen works without it)
 //
 // Privacy: a withheld or discreet report never appears here. No count is
 // computed from rows the database did not hand over; visible_report_count is
@@ -23,6 +25,7 @@ export const RPC = {
   card: "resident_profile_card",
   history: "resident_report_history",
   sanction: "apply_manual_sanction",
+  strikes: "resident_sanction_strikes",
 } as const;
 
 export const REASON_MIN = 20;
@@ -30,7 +33,10 @@ export const REASON_MAX = 500;
 /** Evidence reports per sanction, primary included. */
 export const MAX_EVIDENCE = 10;
 
-export type Track = "inaccurate" | "malicious";
+export type Track = "inaccurate" | "malicious" | "spam" | "abusive";
+/** Offer order in the track selector. */
+export const TRACKS: readonly Track[] = ["inaccurate", "spam", "malicious", "abusive"];
+const isTrack = (v: unknown): v is Track => typeof v === "string" && (TRACKS as readonly string[]).includes(v);
 
 /** The page path for a resident (the barangay console uses the real resident id). */
 export const residentProfilePath = (residentId: string) => `/residents/${residentId}`;
@@ -41,9 +47,15 @@ export function canViewResidentProfile(role: string | null | undefined): boolean
   return role === "barangay_admin" || role === "senior_barangay_admin";
 }
 export const canSanction = canViewResidentProfile;
-/** Malicious track: senior_barangay_admin only. */
+/** Malicious and abusive tracks: senior_barangay_admin only. */
 export function canSanctionMalicious(role: string | null | undefined): boolean {
   return role === "senior_barangay_admin";
+}
+/** The tracks the selector offers: barangay_admin inaccurate + spam; senior admin all four; anyone else none. */
+export function tracksForRole(role: string | null | undefined): Track[] {
+  if (role === "senior_barangay_admin") return [...TRACKS];
+  if (role === "barangay_admin") return ["inaccurate", "spam"];
+  return [];
 }
 
 // ---- rows ----
@@ -61,6 +73,9 @@ export type ResidentCard = {
   maliciousStrikes: number;
   visibleReportCount: number;
 };
+
+/** resident_sanction_strikes' row. Absent (null) = unknown: zero rows, an error, or the migration is not pushed yet. */
+export type ExtraStrikes = { spamStrikes: number; abusiveStrikes: number };
 
 export type HistoryRow = {
   reportId: string;
@@ -124,14 +139,29 @@ export type SanctionEffect = {
   liftedBy: "barangay_admin" | "senior_barangay_admin" | null;
 };
 
-/** What the NEXT strike on a track does, from the card's strike counts. */
-export function sanctionEffect(track: Track, card: Pick<ResidentCard, "inaccurateStrikes" | "maliciousStrikes">): SanctionEffect {
+export type StrikeCounts = Pick<ResidentCard, "inaccurateStrikes" | "maliciousStrikes"> & Partial<ExtraStrikes>;
+
+/**
+ * What the NEXT strike on a track does, from the strike counts, or null when
+ * the count it needs is unknown (spam / abusive before migration 20261210120000
+ * is pushed): the caller then shows generic ladder wording.
+ */
+export function sanctionEffect(track: Track, counts: StrikeCounts): SanctionEffect | null {
   if (track === "malicious") {
-    return card.maliciousStrikes + 1 === 1
+    return counts.maliciousStrikes + 1 === 1
       ? { delta: -0.2, kind: "cooldown", cooldownHours: 168, liftedBy: null }
       : { delta: -0.2, kind: "suspension", cooldownHours: null, liftedBy: "senior_barangay_admin" };
   }
-  const strike = card.inaccurateStrikes + 1;
+  if (track === "abusive") {
+    if (typeof counts.abusiveStrikes !== "number") return null;
+    return counts.abusiveStrikes + 1 === 1
+      ? { delta: -0.1, kind: "cooldown", cooldownHours: 24, liftedBy: null }
+      : { delta: -0.1, kind: "suspension", cooldownHours: null, liftedBy: "senior_barangay_admin" };
+  }
+  // inaccurate and spam share one ladder, each on its own counter.
+  const own = track === "spam" ? counts.spamStrikes : counts.inaccurateStrikes;
+  if (typeof own !== "number") return null;
+  const strike = own + 1;
   if (strike === 1) return { delta: -0.05, kind: "cooldown", cooldownHours: 1, liftedBy: null };
   if (strike === 2) return { delta: -0.1, kind: "cooldown", cooldownHours: 24, liftedBy: null };
   return { delta: -0.1, kind: "suspension", cooldownHours: null, liftedBy: "barangay_admin" };
@@ -164,7 +194,7 @@ export function normalizeSanctionInput(raw: {
   residentId?: unknown; reportIds?: unknown; track?: unknown; reason?: unknown;
 }): SanctionInput | InputProblem {
   if (!isUuid(raw.residentId)) return "resident";
-  if (raw.track !== "inaccurate" && raw.track !== "malicious") return "track";
+  if (!isTrack(raw.track)) return "track";
   if (!Array.isArray(raw.reportIds) || raw.reportIds.length === 0) return "evidence";
   if (raw.reportIds.length > MAX_EVIDENCE) return "tooManyEvidence";
   if (!raw.reportIds.every(isUuid)) return "evidence";
@@ -256,6 +286,27 @@ export async function loadResidentCard(supabase: RpcClient, residentId: string):
     return { ok: true, card: normalizeCard(data) };
   } catch {
     return { ok: false };
+  }
+}
+
+/**
+ * The spam and abusive strike counts for the confirmation text, or null for
+ * anything but one clean row (zero rows, any error, a malformed row). Never
+ * fatal: before migration 20261210120000 is pushed the function does not
+ * exist, and the form then uses the generic ladder wording.
+ */
+export async function loadSanctionStrikes(supabase: RpcClient, residentId: string): Promise<ExtraStrikes | null> {
+  try {
+    const { data, error } = await supabase.rpc(RPC.strikes, { p_resident_id: residentId });
+    if (error) {
+      console.error(`[${RPC.strikes}] unavailable`, error.code);
+      return null;
+    }
+    const r = rows(data)[0];
+    if (!r || typeof r.spam_strike_count !== "number" || typeof r.abusive_strike_count !== "number") return null;
+    return { spamStrikes: int(r.spam_strike_count), abusiveStrikes: int(r.abusive_strike_count) };
+  } catch {
+    return null;
   }
 }
 
