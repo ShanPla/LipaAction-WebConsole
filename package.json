@@ -9,7 +9,8 @@
     "lint": "next lint",
     "check:cdrrmo": "node scripts/check-cdrrmo-dispatch.mjs",
     "check:recall": "node scripts/check-recall.mjs",
-    "check:autorouting": "node scripts/check-auto-routing.mjs"
+    "check:autorouting": "node scripts/check-auto-routing.mjs",
+    "check:residentprofile": "node scripts/check-resident-profile.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
