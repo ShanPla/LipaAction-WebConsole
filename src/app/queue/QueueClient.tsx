@@ -17,6 +17,7 @@ import { ClusterCard } from "@/components/queue/ClusterCard";
 import { DuplicateGroup } from "@/components/queue/DuplicateGroup";
 import { QueueTabs, queuePanelDomId, queueTabDomId } from "@/components/queue/QueueTabs";
 import { ReportRow } from "@/components/queue/ReportRow";
+import { canViewResidentProfile } from "@/lib/residentProfile";
 import { ReportDetailPanel } from "@/components/queue/ReportDetailPanel";
 import { isReviewable, type Verdict } from "@/components/queue/useReportReview";
 import { everyAgencyReturned } from "@/components/queue/routing";
@@ -273,6 +274,18 @@ export function QueueClient({
     () => (selected ? findReport(selected.id) ?? selected : null),
     [selected, findReport]
   );
+
+  // Deep link from the resident profile (/queue?report=<id>): open that
+  // report once, if it is on this page. A report that has left every queue
+  // tab is not here and nothing opens. Read once, on arrival.
+  const deepLinkTried = useRef(false);
+  useEffect(() => {
+    if (deepLinkTried.current) return;
+    deepLinkTried.current = true;
+    const id = new URLSearchParams(window.location.search).get("report");
+    const found = id ? findReport(id) : null;
+    if (found) setSelected(found);
+  }, [findReport]);
 
   // RECALL-UI: the one Recall dialog (RecallContext), and the header badge
   // for unread [routed without you] notifications. Ids marked read this page
@@ -1054,6 +1067,7 @@ export function QueueClient({
           key={selected.id}
           report={selectedReport}
           focusChat={chatFocus}
+          offerResidentProfile={canViewResidentProfile(official.role)}
           onClose={() => setSelected(null)}
           onResolved={(verdict) =>
             setResolved((prev) => ({ ...prev, [selected.id]: verdict }))

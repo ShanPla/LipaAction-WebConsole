@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { logReportView } from "@/app/actions/audit";
+import { findResidentLink } from "@/app/actions/residentProfile";
 import { callAction } from "@/lib/callAction";
 import { reportsAlreadyResolved } from "@/lib/utils";
 import { CopyIdButton } from "@/components/ui/CopyIdButton";
@@ -90,6 +92,7 @@ export function ReportDetailPanel({
   onClose,
   onResolved,
   focusChat = false,
+  offerResidentProfile = false,
 }: {
   report: QueueReport;
   onClose: () => void;
@@ -97,6 +100,10 @@ export function ReportDetailPanel({
   // Opened from a row's [Chat] button: land on the thread's composer. The
   // header's Validate and Reject are the same ones the row has.
   focusChat?: boolean;
+  // barangay_admin and senior_barangay_admin only (the database refuses
+  // anyone else). The link still shows only if the backend names a resident
+  // for this report and returns a card for them.
+  offerResidentProfile?: boolean;
 }) {
   const { isPending, isRejecting, openReject, cancelReject, validate, reject } = useReportReview(
     report.id,
@@ -129,6 +136,20 @@ export function ReportDetailPanel({
   });
   const { showToast } = useToast();
   const t = useT();
+
+  // "View resident profile": null until the backend names the resident behind
+  // this report, and it stays null for a withheld or discreet report.
+  const [residentLink, setResidentLink] = useState<string | null>(null);
+  useEffect(() => {
+    if (!offerResidentProfile) return;
+    let cancelled = false;
+    void callAction(() => findResidentLink(report.id)).then((href) => {
+      if (!cancelled) setResidentLink(href ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [offerResidentProfile, report.id]);
 
   // RECALL-UI: the countdown and the Recall / Record recall button for a
   // report routed without a review here (src/lib/recall.ts). The dialog is
@@ -388,7 +409,19 @@ export function ReportDetailPanel({
         {t("drawer.section.submission")}
       </p>
       <div>
-        <Row label={t("field.reporter")} value={<ReporterChip reporter={report.reporter} />} />
+        <Row
+          label={t("field.reporter")}
+          value={
+            <div className="flex flex-col items-end gap-1.5">
+              <ReporterChip reporter={report.reporter} />
+              {residentLink && (
+                <Link href={residentLink} className="inline-flex min-h-11 items-center text-xs font-medium text-brand-600 underline hover:text-brand-700">
+                  {t("resident.link")}
+                </Link>
+              )}
+            </div>
+          }
+        />
         <Row label={t("drawer.submitted")} value={formatTimestamp(d.submittedAt)} />
       </div>
 
