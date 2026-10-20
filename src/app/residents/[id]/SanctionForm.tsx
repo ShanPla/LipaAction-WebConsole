@@ -11,9 +11,11 @@ import {
   REASON_MAX,
   REASON_MIN,
   sanctionEffect,
+  TRACKS,
   toggleEvidence,
   type HistoryRow,
   type InputProblem,
+  type ExtraStrikes,
   type ResidentCard,
   type SanctionFailure,
   type Track,
@@ -46,9 +48,14 @@ export function reviewProblem(evidenceCount: number, reason: string): InputProbl
   return null;
 }
 
-/** The ladder sentence for the confirmation, from the card's strike counts. */
-export function effectText(t: Translate, track: Track, card: ResidentCard): string {
-  const effect = sanctionEffect(track, card);
+/**
+ * The ladder sentence for the confirmation, from the card's strike counts and,
+ * for spam / abusive, resident_sanction_strikes. When the count it needs is
+ * unknown the wording is generic (no rung is named).
+ */
+export function effectText(t: Translate, track: Track, card: ResidentCard, strikes: ExtraStrikes | null = null): string {
+  const effect = sanctionEffect(track, { ...card, ...strikes });
+  if (!effect) return t("resident.sanction.effect.generic");
   const delta = Math.abs(effect.delta).toFixed(2);
   if (effect.kind === "cooldown") {
     return t("resident.sanction.effect.cooldown", {
@@ -64,21 +71,25 @@ export function effectText(t: Translate, track: Track, card: ResidentCard): stri
 
 /**
  * "Sanction this resident". Rendered only for barangay_admin and
- * senior_barangay_admin; the malicious track only for the senior admin. The
+ * senior_barangay_admin; `tracks` is tracksForRole(): the malicious and abusive
+ * tracks only for the senior admin. The
  * evidence list is exactly the history rows (no typed ids). Nothing is sent
  * until the confirmation step.
  */
 export function SanctionForm({
   card,
   history,
-  allowMalicious,
+  tracks,
+  strikes = null,
   initialConfirming = false,
   initialEvidence = [],
   initialReason = "",
 }: {
   card: ResidentCard;
   history: HistoryRow[];
-  allowMalicious: boolean;
+  tracks: readonly Track[];
+  /** spam / abusive strike counts, or null when unknown (generic wording). */
+  strikes?: ExtraStrikes | null;
   // For the self-check, which renders the form to HTML in a given state.
   initialConfirming?: boolean;
   initialEvidence?: string[];
@@ -86,7 +97,7 @@ export function SanctionForm({
 }) {
   const t = useT();
   const ids = useId();
-  const [track, setTrack] = useState<Track>("inaccurate");
+  const [track, setTrack] = useState<Track>(tracks[0] ?? "inaccurate");
   const [evidence, setEvidence] = useState<string[]>(initialEvidence);
   const [reason, setReason] = useState(initialReason);
   const [confirming, setConfirming] = useState(initialConfirming);
@@ -145,8 +156,9 @@ export function SanctionForm({
           onChange={(e) => changeTrack(e.target.value as Track)}
           className="mt-1 block min-h-11 w-full max-w-xs rounded-md border border-ink-100 bg-ink-50 px-3 text-sm text-ink-900"
         >
-          <option value="inaccurate">{t("resident.sanction.track.inaccurate")}</option>
-          {allowMalicious && <option value="malicious">{t("resident.sanction.track.malicious")}</option>}
+          {TRACKS.filter((x) => tracks.includes(x)).map((x) => (
+            <option key={x} value={x}>{t(`resident.sanction.track.${x}` as MessageKey)}</option>
+          ))}
         </select>
       </div>
 
@@ -209,7 +221,7 @@ export function SanctionForm({
         <div role="alertdialog" aria-labelledby={`${ids}-ch`} aria-describedby={`${ids}-cd`} className="mt-4 rounded-md border border-priority-critical/30 bg-priority-criticalBg p-4">
           <h3 id={`${ids}-ch`} className="text-sm font-semibold text-priority-critical">{t("resident.sanction.confirmTitle")}</h3>
           <p id={`${ids}-cd`} className="mt-1 text-sm text-ink-900">
-            {effectText(t, track, card)} {t("resident.sanction.confirmEvidence", { n: evidence.length })} {t("resident.sanction.notified")}
+            {effectText(t, track, card, strikes)} {t("resident.sanction.confirmEvidence", { n: evidence.length })} {t("resident.sanction.notified")}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button type="button" variant="danger" disabled={pending} onClick={apply}>

@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
 import { useT, type MessageKey, type Translate } from "@/lib/i18n";
 import { ownValue, manilaDate, manilaDateTime, sanitizeName } from "@/lib/utils";
-import { canSanctionMalicious, canSanction, type HistoryRow, type ResidentCard } from "@/lib/residentProfile";
+import { canSanction, tracksForRole, type ExtraStrikes, type HistoryRow, type ResidentCard } from "@/lib/residentProfile";
 import type { BarangayAdminProfile } from "@/lib/auth";
 import { SanctionForm } from "./SanctionForm";
 
@@ -16,6 +16,10 @@ const STATE_KEYS: Record<string, MessageKey> = {
   "cooldown-malicious": "resident.state.cooldown-malicious",
   "suspended-inaccurate": "resident.state.suspended-inaccurate",
   "suspended-malicious": "resident.state.suspended-malicious",
+  "cooldown-spam": "resident.state.cooldown-spam",
+  "cooldown-abusive": "resident.state.cooldown-abusive",
+  "suspended-spam": "resident.state.suspended-spam",
+  "suspended-abusive": "resident.state.suspended-abusive",
 };
 
 const TIER_KEYS: Record<string, MessageKey> = {
@@ -26,7 +30,8 @@ const TIER_KEYS: Record<string, MessageKey> = {
 /** The sanction state in words, with the cooldown end time when one is running. */
 export function stateText(t: Translate, card: ResidentCard): string {
   const key = ownValue(STATE_KEYS, card.sanctionState);
-  if (!key) return card.sanctionState;
+  // A state this console doesn't know yet is still a sanction; never print the raw value.
+  if (!key) return t("resident.state.other");
   return t(key, { until: card.cooldownUntil ? manilaDateTime(card.cooldownUntil) : "—" });
 }
 
@@ -118,10 +123,12 @@ export function ResidentProfileClient({
   official,
   card,
   history,
+  strikes = null,
 }: {
   official: BarangayAdminProfile;
   card: ResidentCard;
   history: HistoryRow[];
+  strikes?: ExtraStrikes | null;
 }) {
   const t = useT();
   return (
@@ -134,7 +141,7 @@ export function ResidentProfileClient({
           <HistoryTable rows={history} />
         </section>
         {canSanction(official.role) && history.length > 0 && (
-          <SanctionForm card={card} history={history} allowMalicious={canSanctionMalicious(official.role)} />
+          <SanctionForm card={card} history={history} tracks={tracksForRole(official.role)} strikes={strikes} />
         )}
       </div>
     </AppShell>
