@@ -105,9 +105,10 @@ const historyColumns: string = BARANGAY_RESOLVE_LIVE
  * Fetches this barangay's reviewed reports (validated — including those since
  * routed or resolved — and rejected) —
  * built on top of the review_report() cutover (reviewed_by/reviewed_at/
- * review_reason), so no audit_logs involvement is needed at all: barangay
- * roles can already SELECT incident_reports table-wide for their own
- * barangay, unlike audit_logs, which no barangay role can read.
+ * review_reason), so no audit_logs involvement is needed at all. The report
+ * columns come from incident_reports (this barangay's rows); reviewed_by and
+ * review_reason come from report_review_stamps (loadReviewStamps), because
+ * authenticated may no longer select those two on incident_reports.
  *
  * reviewed_by references auth.users(id), NOT profiles(id) directly — there's
  * no direct FK from incident_reports to profiles, so PostgREST's automatic
@@ -155,8 +156,11 @@ historyColumns)
   }
 
   const baseRows = data as unknown as Omit<RawReviewedReport, "reviewed_by" | "review_reason">[];
-  // Without the stamps a rejected row would show no official and no reason,
-  // which reads as a fact about the review. Fail the page instead.
+  // If the stamps can't be read at all, a rejected row would show no official
+  // and no reason, which reads as a fact about the review: fail the page
+  // instead. A row the view doesn't return (it shouldn't: both reads are
+  // scoped to the desk's own barangay) keeps null stamps, shown as
+  // [Unknown official] like a pre-cutover row.
   const stamps = await loadReviewStamps(supabase, baseRows.map((r) => r.id));
   if (stamps === null) return failedValidationHistoryData();
   const rows: RawReviewedReport[] = baseRows.map((r) => ({
