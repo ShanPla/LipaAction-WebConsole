@@ -127,8 +127,12 @@ export function ReasonPromptModal({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder={t("reason.placeholder")}
-          className="mb-4 w-full resize-none rounded-md border border-ink-100 bg-ink-50 px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-brand-500 focus:outline-none"
+          aria-describedby="reason-prompt-resident-reads"
+          className="mb-1 w-full resize-none rounded-md border border-ink-100 bg-ink-50 px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-brand-500 focus:outline-none"
         />
+        <p id="reason-prompt-resident-reads" className="mb-4 text-xs text-ink-500">
+          {t("reason.residentReads")}
+        </p>
 
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" disabled={busy} onClick={onCancel}>
