@@ -508,6 +508,12 @@ export const MESSAGES = {
   "reason.note": { en: "Note", tl: "Tala" },
   "reason.noteOptional": { en: "optional", tl: "opsyonal" },
   "reason.noteRequired": { en: "required for Other", tl: "kailangan para sa Iba pa" },
+  // Under the reject note: the resident app shows the rejection reason to the
+  // reporter (SuryaZZDev/LipaAction #424, my_rejection_reason()).
+  "reason.residentReads": {
+    en: "The resident will read this reason in the app. Do not write names, phone numbers or internal notes.",
+    tl: "Mababasa ng residente ang dahilang ito sa app. Huwag isulat ang mga pangalan, numero ng telepono, o mga panloob na tala.",
+  },
   // English names come from REJECT_REASON_LABELS, which the CSV also uses.
   "rejectReason.wrong_category": { en: REJECT_REASON_LABELS.wrong_category, tl: "Maling kategorya" },
   "rejectReason.already_resolved": { en: REJECT_REASON_LABELS.already_resolved, tl: "Naayos na" },

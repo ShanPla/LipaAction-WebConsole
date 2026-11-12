@@ -67,8 +67,30 @@ interface RawPartyDecision {
 
 const HISTORY_LIMIT = 50;
 
+// reviewed_by and review_reason are NOT in this list: once the backend's
+// resident-cannot-read-review-fields migration is live (SuryaZZDev/LipaAction
+// #425, 20261210170000), naming either one on incident_reports fails the
+// whole query (42501), because residents share the authenticated role. They
+// come from loadReviewStamps() instead. reviewed_at stays readable.
 const HISTORY_COLUMNS =
-  "id, category, priority_name, status, entry_tier, identity_withheld, reviewed_by, reviewed_at, review_reason, created_at";
+  "id, category, priority_name, status, entry_tier, identity_withheld, reviewed_at, created_at";
+
+// The view the reviewer and the reason are read from after that migration:
+// the same rows the desk already reads on incident_reports (its own
+// barangay), owner-rights, SELECT only.
+const REVIEW_STAMPS_VIEW = "report_review_stamps";
+const REVIEW_STAMP_COLUMNS = "id, reviewed_by, review_reason";
+// PostgREST / Postgres codes for "that relation does not exist". Before the
+// migration is pushed the view is missing, and the two columns are still
+// readable on incident_reports, so the old read is used. Any other error is
+// a real failure.
+const MISSING_RELATION_CODES = new Set(["PGRST205", "42P01"]);
+
+interface RawReviewStamp {
+  id: string;
+  reviewed_by: string | null;
+  review_reason: string | null;
+}
 
 // barangay_resolved_at arrives with the resolve-at-barangay migration.
 // Naming it before then would fail the query, and so the page.
@@ -83,9 +105,10 @@ const historyColumns: string = BARANGAY_RESOLVE_LIVE
  * Fetches this barangay's reviewed reports (validated — including those since
  * routed or resolved — and rejected) —
  * built on top of the review_report() cutover (reviewed_by/reviewed_at/
- * review_reason), so no audit_logs involvement is needed at all: barangay
- * roles can already SELECT incident_reports table-wide for their own
- * barangay, unlike audit_logs, which no barangay role can read.
+ * review_reason), so no audit_logs involvement is needed at all. The report
+ * columns come from incident_reports (this barangay's rows); reviewed_by and
+ * review_reason come from report_review_stamps (loadReviewStamps), because
+ * authenticated may no longer select those two on incident_reports.
  *
  * reviewed_by references auth.users(id), NOT profiles(id) directly — there's
  * no direct FK from incident_reports to profiles, so PostgREST's automatic
@@ -132,7 +155,19 @@ historyColumns)
     return failedValidationHistoryData();
   }
 
-  const rows = data as unknown as RawReviewedReport[];
+  const baseRows = data as unknown as Omit<RawReviewedReport, "reviewed_by" | "review_reason">[];
+  // If the stamps can't be read at all, a rejected row would show no official
+  // and no reason, which reads as a fact about the review: fail the page
+  // instead. A row the view doesn't return (it shouldn't: both reads are
+  // scoped to the desk's own barangay) keeps null stamps, shown as
+  // [Unknown official] like a pre-cutover row.
+  const stamps = await loadReviewStamps(supabase, baseRows.map((r) => r.id));
+  if (stamps === null) return failedValidationHistoryData();
+  const rows: RawReviewedReport[] = baseRows.map((r) => ({
+    ...r,
+    reviewed_by: stamps.get(r.id)?.reviewed_by ?? null,
+    review_reason: stamps.get(r.id)?.review_reason ?? null,
+  }));
 
   const partyRows = cdrrmoDispatch ? await loadPartyDecisions(supabase, rows.map((r) => r.id)) : null;
 
@@ -249,6 +284,31 @@ function resolutionOf(r: RawReviewedReport, outcomes: RawOutcome[] | null): Reso
   if (has("confirmed-false")) return "confirmedFalse";
   if (has("duplicate")) return "duplicate";
   return "returned";
+}
+
+/**
+ * Who reviewed each report and why, by report id, or null when it can't be
+ * read. From report_review_stamps; while that view doesn't exist yet
+ * (MISSING_RELATION_CODES), from incident_reports as before. A row the view
+ * doesn't return keeps a null stamp, which the page shows as
+ * [Unknown official], as for a pre-cutover row.
+ */
+async function loadReviewStamps(
+  supabase: ReturnType<typeof createClient>,
+  reportIds: string[]
+): Promise<Map<string, RawReviewStamp> | null> {
+  if (reportIds.length === 0) return new Map();
+  const read = (relation: string) =>
+    supabase.from(relation).select(REVIEW_STAMP_COLUMNS).in("id", reportIds);
+  let { data, error } = await read(REVIEW_STAMPS_VIEW);
+  if (error && MISSING_RELATION_CODES.has(error.code ?? "")) {
+    ({ data, error } = await read("incident_reports"));
+  }
+  if (error) {
+    console.error("[validation-history] review stamps failed", error.code, error.message);
+    return null;
+  }
+  return new Map(((data ?? []) as unknown as RawReviewStamp[]).map((s) => [s.id, s]));
 }
 
 /**
