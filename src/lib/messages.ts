@@ -1649,7 +1649,7 @@ export const MESSAGES = {
   "city.tile.average": { en: "Daily average, 7 days", tl: "Karaniwan bawat araw, 7 araw" },
   "city.tile.awaiting": { en: "Awaiting review", tl: "Naghihintay ng pagsusuri" },
   "city.tile.critical": { en: "Critical awaiting review", tl: "Critical na naghihintay" },
-  "city.tile.pastSla": { en: "Emergencies past {minutes} min", tl: "Emergency na lampas {minutes} min" },
+  "city.tile.pastSla": { en: "Emergencies waiting over {minutes} min", tl: "Emergency na naghihintay nang higit {minutes} min" },
   "city.col.barangay": { en: "Barangay", tl: "Barangay" },
   "city.col.daily": { en: "Last 7 days, by day", tl: "Nakaraang 7 araw, bawat araw" },
   "city.col.week": { en: "7 days", tl: "7 araw" },
@@ -1721,11 +1721,11 @@ export const MESSAGES = {
   },
   "city.response.footer": {
     en:
-      "Automatic routing is off, so each clock starts when a barangay routed the report. " +
+      "Each clock starts when the report was routed to the agency, whether by a barangay, CDRRMO, the Critical timer or automatic routing. " +
       "Reports returned out of scope are counted apart and kept out of the resolution time. " +
       "The 95th percentile appears once an agency has {min} timings.",
     tl:
-      "Naka-off ang awtomatikong pag-route, kaya nagsisimula ang bawat orasan nang i-route ng barangay ang ulat. " +
+      "Nagsisimula ang bawat orasan nang i-route ang ulat sa ahensya, ito man ay ng barangay, ng CDRRMO, ng timer para sa Critical, o ng awtomatikong pag-route. " +
       "Hiwalay na binibilang ang mga ibinalik bilang labas sa saklaw at hindi isinasama sa oras ng paglutas. " +
       "Lumalabas ang ika-95 na percentile kapag may {min} nang naorasan ang ahensya.",
   },

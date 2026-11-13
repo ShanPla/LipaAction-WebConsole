@@ -70,9 +70,10 @@ const ID_CHUNK = 100;
  * the last 30 Manila days, how long each agency took to acknowledge it, and
  * how long from acknowledgement to resolution.
  *
- * The paper times acknowledgement from the auto-route. Automatic routing is
- * off, so every routing here is a desk's, and the clock starts when the
- * agency row was written (routed_at, or created_at where that is empty).
+ * The paper times acknowledgement from the auto-route. Every routing counts
+ * here, whoever made it (a barangay desk, CDRRMO, the Critical timer or
+ * automatic routing), and the clock starts when the agency row was written
+ * (routed_at, or created_at where that is empty).
  * Out-of-scope closures are counted apart and kept out of the resolution
  * time: sending a report back is not fixing it.
  *
